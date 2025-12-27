@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+jinja2
+httpx
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+requests
+pychromecast
+python-dotenv
+aiofiles

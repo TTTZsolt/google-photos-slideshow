@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Databases
+*.db
+*.sqlite3
+
+# Sensitive Google Cloud Files
+client_secrets.json
+token.json
+
+# Diagnostic scripts (optional, but safer to keep out if they have hardcoded paths)
+debug_auth.py
+debug_auth_fixed.py
+
+# OS files
+.DS_Store
+Thumbs.db
