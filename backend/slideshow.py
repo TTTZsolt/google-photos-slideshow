@@ -12,6 +12,7 @@ class SlideshowController:
         self._stop_event = threading.Event()
         self._thread = None
         self._last_error = None
+        self._b2_clients = {}  # Cache: {account_id: B2Client}
         self._current_image_data = {
             "url": None, 
             "filename": None,
@@ -42,6 +43,7 @@ class SlideshowController:
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
+        self._b2_clients.clear()  # Clear cache on stop
         logger.info("Slideshow stopped")
 
     def get_current_image_data(self):
@@ -62,9 +64,14 @@ class SlideshowController:
                     if media_item.b2_account_id:
                         from .models import B2Account
                         from .utils.b2_client import B2Client
+                        
                         b2_acc = db.query(B2Account).filter(B2Account.id == media_item.b2_account_id).first()
                         if b2_acc:
-                            client = B2Client(b2_acc.key_id, b2_acc.application_key)
+                            # Reuse or create B2 client
+                            if b2_acc.id not in self._b2_clients:
+                                self._b2_clients[b2_acc.id] = B2Client(b2_acc.key_id, b2_acc.application_key)
+                            
+                            client = self._b2_clients[b2_acc.id]
                             display_url = client.get_download_url(b2_acc.bucket_name, media_item.file_name)
                             
                             # Update state - the receiver will poll this
