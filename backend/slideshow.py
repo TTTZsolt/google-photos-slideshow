@@ -12,7 +12,12 @@ class SlideshowController:
         self._stop_event = threading.Event()
         self._thread = None
         self._last_error = None
-        self._current_image_data = {"url": None, "interval": 20}
+        self._current_image_data = {
+            "url": None, 
+            "filename": None,
+            "interval": 20, 
+            "show_filename": False
+        }
 
     def is_running(self):
         return self._thread is not None and self._thread.is_alive()
@@ -21,16 +26,17 @@ class SlideshowController:
         """Removed as Chromecast integration is disabled."""
         return []
 
-    def start(self, interval: int = 20):
+    def start(self, interval: int = 20, show_filename: bool = False):
         if self._thread and self._thread.is_alive():
             logger.warning("Slideshow already running")
             return
 
         self._stop_event.clear()
         self._current_image_data["interval"] = interval
+        self._current_image_data["show_filename"] = show_filename
         self._thread = threading.Thread(target=self._run_loop, args=(interval,))
         self._thread.start()
-        logger.info("Slideshow loop started")
+        logger.info(f"Slideshow loop started (show_filename={show_filename})")
 
     def stop(self):
         self._stop_event.set()
@@ -63,6 +69,7 @@ class SlideshowController:
                             
                             # Update state - the receiver will poll this
                             self._current_image_data["url"] = display_url
+                            self._current_image_data["filename"] = media_item.file_name
                         
                 except Exception as e:
                     logger.error(f"Error in slideshow loop: {e}")

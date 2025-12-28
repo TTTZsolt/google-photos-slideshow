@@ -30,12 +30,33 @@
         .active {
             opacity: 1;
         }
+
+        .filename-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 1.2rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            transition: opacity 1.0s ease-in-out;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .filename-visible {
+            opacity: 1;
+        }
     </style>
 </head>
 
 <body>
     <div id="img1" class="image-container"></div>
     <div id="img2" class="image-container"></div>
+    <div id="filename" class="filename-overlay"></div>
 
     <script>
         let currentImg = 1;
@@ -47,6 +68,14 @@
                 const response = await fetch('/slideshow/current-image');
                 if (!response.ok) return;
                 const data = await response.json();
+
+                const filenameEl = document.getElementById('filename');
+                if (data.show_filename && data.filename) {
+                    filenameEl.textContent = data.filename;
+                    filenameEl.classList.add('filename-visible');
+                } else {
+                    filenameEl.classList.remove('filename-visible');
+                }
 
                 if (data.url && data.url !== lastUrl) {
                     lastUrl = data.url;

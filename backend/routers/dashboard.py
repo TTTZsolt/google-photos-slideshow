@@ -84,14 +84,14 @@ from ..slideshow import SlideshowController
 controller = SlideshowController()
 
 @router.post("/slideshow/start")
-def start_slideshow(interval: int = 20, db: Session = Depends(get_db)):
+def start_slideshow(interval: int = 20, show_filename: bool = False, db: Session = Depends(get_db)):
     # Check if there are any media items
     count = db.query(MediaItem).count()
     if count == 0:
         raise HTTPException(status_code=400, detail="No media items found. Please sync your B2 bucket first!")
     
-    controller.start(interval)
-    return {"message": f"Slideshow started with {interval}s interval"}
+    controller.start(interval, show_filename)
+    return {"message": f"Slideshow started with {interval}s interval (show_filename={show_filename})"}
 
 @router.post("/slideshow/stop")
 def stop_slideshow():
