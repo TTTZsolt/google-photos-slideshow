@@ -28,6 +28,14 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "b2_accounts": b2_accounts
     })
 
+@router.get("/receiver")
+def get_receiver(request: Request):
+    import datetime
+    client_ip = request.client.host
+    now = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4]
+    print(f"[{now}] DEBUG: Connection attempt to /receiver from IP: {client_ip}")
+    return templates.TemplateResponse("receiver.html", {"request": request})
+
 @router.post("/b2/connect")
 def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Simple check if already exists
@@ -75,24 +83,24 @@ def delete_b2_account(account_id: int, db: Session = Depends(get_db)):
 from ..slideshow import SlideshowController
 controller = SlideshowController()
 
-@router.get("/devices")
-def list_devices():
-    return {"devices": controller.discover_devices()}
-
 @router.post("/slideshow/start")
-def start_slideshow(device_name: str = "Family Room TV", interval: int = 20, db: Session = Depends(get_db)):
+def start_slideshow(interval: int = 20, db: Session = Depends(get_db)):
     # Check if there are any media items
     count = db.query(MediaItem).count()
     if count == 0:
         raise HTTPException(status_code=400, detail="No media items found. Please sync your B2 bucket first!")
     
-    controller.start(device_name, interval)
-    return {"message": f"Slideshow started on {device_name} with {interval}s interval"}
+    controller.start(interval)
+    return {"message": f"Slideshow started with {interval}s interval"}
 
 @router.post("/slideshow/stop")
 def stop_slideshow():
     controller.stop()
     return {"message": "Slideshow stopped"}
+
+@router.get("/slideshow/current-image")
+def get_current_image():
+    return controller.get_current_image_data()
 
 @router.get("/slideshow/status")
 def get_slideshow_status():
