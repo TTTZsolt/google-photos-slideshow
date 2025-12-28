@@ -5,9 +5,7 @@ import random
 import pychromecast
 from sqlalchemy.sql import func
 from .database import SessionLocal
-from .models import MediaItem, Account
-from .auth import get_credentials_for_account
-from .utils.google_photos import GooglePhotosClient
+from .models import MediaItem
 
 logger = logging.getLogger(__name__)
 
@@ -80,40 +78,55 @@ class SlideshowController:
                         time.sleep(5)
                         continue
 
-                    # 2. Refresh Base URL (it expires!)
-                    creds = get_credentials_for_account(db, media_item.account_id)
-                    if not creds:
-                        logger.error(f"No credentials for account {media_item.account_id}")
+                    # 2. Get image URL (Google or B2)
+                    display_url = None
+                    file_info = ""
+
+                    if media_item.b2_account_id:
+                        from .models import B2Account
+                        from .utils.b2_client import B2Client
+                        b2_acc = db.query(B2Account).filter(B2Account.id == media_item.b2_account_id).first()
+                        if not b2_acc:
+                            logger.error(f"B2 account {media_item.b2_account_id} not found")
+                            continue
+                        
+                        client = B2Client(b2_acc.key_id, b2_acc.application_key)
+                        display_url = client.get_download_url(b2_acc.bucket_name, media_item.file_name)
+                        file_info = media_item.file_name
+                    else:
+                        logger.error(f"Media item {media_item.id} has no B2 account associated")
                         continue
-                    
-                    client = GooglePhotosClient(creds)
-                    fresh_item = client.get_media_item(media_item.id)
-                    image_url = fresh_item['baseUrl']
-                    
-                    # Update DB with fresh URL just in case
-                    media_item.base_url = image_url
-                    db.commit()
 
                 # 3. Cast
-                    # Google Photos images usually need some parameters to size/crop? 
-                    #Appending '=w1920-h1080' helps for TV resolution.
-                    display_url = f"{image_url}=w1920-h1080"
-                    
-                    logger.info(f"Casting: {media_item.filename} (Mime: {media_item.mime_type})")
-                    logger.info(f"URL: {display_url}")
-                    
-                    # Default to jpeg if none
+                    from datetime import datetime
+                    now = datetime.now().strftime("%H:%M:%S.%f")[:-4]
+                    print(f"[{now}] DEBUG: Initializing cast for: {file_info}")
+                    logger.info(f"Casting: {file_info}")
                     content_type = media_item.mime_type if media_item.mime_type else 'image/jpeg'
                     mc.play_media(display_url, content_type)
-                    mc.block_until_active()
+                    
+                    # Wait for the Chromecast to acknowledge and start loading
+                    print(f"[{now}] DEBUG: Waiting for TV to start loading...")
+                    mc.block_until_active(timeout=15)
+                    
+                    # Final check status for logs
+                    status = mc.status
+                    print(f"[{now}] DEBUG: Cast status: {status.player_state}")
+                    logger.info(f"Cast status: {status.player_state}")
                     
                 except Exception as e:
+                    now = datetime.now().strftime("%H:%M:%S.%f")[:-4]
+                    print(f"[{now}] ERROR in slideshow loop: {e}")
                     logger.error(f"Error in slideshow loop: {e}")
+                    self._last_error = f"Loop error: {str(e)}"
                 finally:
                     db.close()
 
                 # Wait for interval or stop signal
+                now = datetime.now().strftime("%H:%M:%S.%f")[:-4]
+                print(f"[{now}] DEBUG: Waiting {interval} seconds...")
                 if self._stop_event.wait(interval):
+                    print(f"[{now}] DEBUG: Stop event received, exiting loop.")
                     break
         
         except Exception as e:

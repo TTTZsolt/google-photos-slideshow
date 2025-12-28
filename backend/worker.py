@@ -1,102 +1,76 @@
 import logging
 from sqlalchemy.orm import Session
+from sqlalchemy import delete, func
 from .database import SessionLocal
-from .models import Account, MediaItem
-from .auth import get_credentials_for_account
-from .utils.google_photos import GooglePhotosClient
+from .models import MediaItem, B2Account
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def sync_account_worker(account_id: int):
+# Backblaze B2 Sync Worker
+
+def sync_b2_worker(b2_account_id: int):
     db = SessionLocal()
     try:
-        account = db.query(Account).filter(Account.id == account_id).first()
-        if not account:
-            logger.error(f"Account {account_id} not found")
+        from .utils.b2_client import B2Client
+        
+        b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
+        if not b2_account:
+            logger.error(f"B2 Account {b2_account_id} not found")
             return
 
-        logger.info(f"Starting sync for account: {account.email}")
+        logger.info(f"Starting B2 sync for bucket: {b2_account.bucket_name}")
+        client = B2Client(b2_account.key_id, b2_account.application_key)
         
-        creds = get_credentials_for_account(db, account_id)
-        if not creds:
-            logger.error(f"Could not get credentials for account {account_id}")
-            return
-        logger.info(f"Credentials scopes object: {creds.scopes}")
-
-        # DEBUG: Check actual scopes via Google API
-        try:
-            import requests
-            token_info = requests.get(f"https://www.googleapis.com/oauth2/v1/tokeninfo?access_token={creds.token}").json()
-            logger.info(f"DEBUG: Token Inspector response: {token_info}")
-        except Exception as e:
-            logger.error(f"DEBUG: Failed to inspect token: {e}")
-
-        client = GooglePhotosClient(creds)
-        
-        # DEBUG: Try listing albums to check API access
-        try:
-            logger.info("DEBUG: Testing Access with list_albums...")
-            albums = client.service.albums().list(pageSize=1).execute()
-            logger.info(f"DEBUG: Albums response: {albums}")
-        except Exception as e:
-            logger.error(f"DEBUG: Albums list failed: {e}")
+        # Simple implementation: Full re-sync (delete existing for this bucket)
+        db.execute(delete(MediaItem).where(MediaItem.b2_account_id == b2_account_id))
+        db.commit()
 
         count = 0
-        batch = []
-        BATCH_SIZE = 100
-
-        for item in client.list_media_items():
-            # Only index photos (skip videos if needed, but requirements said 'media items')
-            # Assuming we want everything.
+        for file_version in client.list_files(b2_account.bucket_name):
+            # Filter for images
+            mime = file_version.content_type
+            file_name = file_version.file_name
             
+            # Check extension if mime type is generic or missing
+            ext = file_name.lower().split('.')[-1]
+            if mime and not mime.startswith('image/'):
+                if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                    continue
+
             media_item = MediaItem(
-                id=item['id'],
-                account_id=account.id,
-                base_url=item['baseUrl'],
-                mime_type=item.get('mimeType'),
-                filename=item.get('filename'),
-                creation_time=datetime.fromisoformat(item['mediaMetadata']['creationTime'].replace('Z', '+00:00')) if 'mediaMetadata' in item and 'creationTime' in item['mediaMetadata'] else None
+                id=file_version.id_,
+                b2_account_id=b2_account_id,
+                file_name=file_name,
+                mime_type=mime if (mime and mime.startswith('image/')) else f"image/{ext}",
+                size=file_version.size,
+                creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000)
             )
-            
-            # Upsert logic (simplified: merge)
-            # In SQLAlchemy, merge checks primary key.
-            batch.append(media_item)
-            
-            if len(batch) >= BATCH_SIZE:
-                _save_batch(db, batch)
-                count += len(batch)
-                batch = []
-                logger.info(f"Synced {count} items for {account.email}")
-
-        if batch:
-            _save_batch(db, batch)
-            count += len(batch)
+            db.merge(media_item)
+            count += 1
+            if count % 100 == 0:
+                db.commit()
+                logger.info(f"Indexed {count} files from {b2_account.bucket_name}...")
         
-        account.last_synced_at = datetime.now()
+        b2_account.last_synced_at = func.now()
         db.commit()
-        logger.info(f"Finished sync for {account.email}. Total items: {count}")
+        logger.info(f"Finished sync for {b2_account.bucket_name}. Total items: {count}")
 
     except Exception as e:
-        logger.error(f"Error syncing account {account_id}: {e}")
+        logger.exception(f"Error syncing B2 account {b2_account_id}: {e}")
     finally:
         db.close()
-
-def _save_batch(db: Session, items: list[MediaItem]):
-    for item in items:
-        db.merge(item)
-    db.commit()
 
 def sync_all_accounts_worker():
     db = SessionLocal()
     try:
-        accounts = db.query(Account).filter(Account.is_active == True).all()
-        for account in accounts:
-            sync_account_worker(account.id)
+        # Syncing B2 accounts
+        b2_accounts = db.query(B2Account).filter(B2Account.is_active == True).all()
+        for b2_acc in b2_accounts:
+            sync_b2_worker(b2_acc.id)
     finally:
         db.close()
 
 if __name__ == "__main__":
-    # Allow running as a script
     sync_all_accounts_worker()

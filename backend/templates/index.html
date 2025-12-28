@@ -13,38 +13,46 @@
         <h1 class="text-3xl font-bold mb-8 text-gray-800">Global Slideshow Dashboard</h1>
 
         <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">Connected Accounts</h2>
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">Backblaze B2 Buckets</h2>
             <div class="space-y-4">
-                {% for account in accounts %}
+                {% for b2_account in b2_accounts %}
                 <div class="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
                     <div>
-                        <p class="font-medium text-gray-900">{{ account.email }}</p>
-                        <p class="text-sm text-gray-500">ID: {{ account.id }}</p>
+                        <p class="font-medium text-gray-900">{{ b2_account.bucket_name }}</p>
+                        <p class="text-sm text-gray-500">Key ID: {{ b2_account.key_id }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span
-                            class="px-2 py-1 text-xs rounded-full {{ 'bg-green-100 text-green-800' if account.is_active else 'bg-red-100 text-red-800' }}">
-                            {{ 'Active' if account.is_active else 'Inactive' }}
+                            class="px-2 py-1 text-xs rounded-full {{ 'bg-green-100 text-green-800' if b2_account.is_active else 'bg-red-100 text-red-800' }}">
+                            {{ 'Active' if b2_account.is_active else 'Inactive' }}
                         </span>
-                        <button onclick="syncAccount({{ account.id }})"
+                        <button onclick="syncB2Account({{ b2_account.id }})"
                             class="text-blue-600 hover:text-blue-800 text-sm">Resync</button>
+                        <button onclick="deleteB2Account({{ b2_account.id }})"
+                            class="text-red-600 hover:text-red-800 text-sm">Delete</button>
                     </div>
                 </div>
                 {% else %}
-                <p class="text-gray-500 italic">No accounts connected yet.</p>
+                <p class="text-gray-500 italic">No B2 buckets connected yet.</p>
                 {% endfor %}
             </div>
 
-            <div class="mt-6">
-                <a href="/auth/login"
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                    Connect New Account
-                </a>
+            <div class="mt-6 border-t pt-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">Add B2 Bucket</h3>
+                <form id="b2Form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" id="b2KeyId" placeholder="Key ID" required
+                        class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 shadow-sm">
+                    <input type="password" id="b2AppKey" placeholder="Application Key" required
+                        class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 shadow-sm">
+                    <input type="text" id="b2BucketName" placeholder="Bucket Name" required
+                        class="p-2 border border-gray-300 rounded-md focus:ring-blue-500 shadow-sm">
+                    <div class="md:col-span-3">
+                        <button type="submit"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition">
+                            Connect B2 Bucket
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -53,15 +61,19 @@
             <p class="text-gray-600 mb-4">Worker status: <span id="statusSpan"
                     class="font-mono text-xs bg-gray-200 px-1 rounded">Not
                     Running</span></p>
-            <div class="space-x-4">
-                <button id="startBtn" onclick="startSlideshow()"
-                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed">
-                    Start Slideshow
-                </button>
-                <button id="stopBtn" onclick="stopSlideshow()"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed">
-                    Stop Slideshow
-                </button>
+            <div class="flex items-end gap-4">
+                <div class="flex-1">
+                    <label for="intervalInput" class="block text-sm font-medium text-gray-700">Interval
+                        (seconds)</label>
+                    <input type="number" id="intervalInput" value="20" min="1"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2">
+                </div>
+                <div class="flex items-end gap-2">
+                    <button id="startBtn" onclick="startSlideshow()"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">Start</button>
+                    <button id="stopBtn" onclick="stopSlideshow()"
+                        class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">Stop</button>
+                </div>
             </div>
 
             <div class="mt-4">
@@ -88,16 +100,59 @@
     </div>
 
     <script>
-        async function syncAccount(id) {
+        async function deleteB2Account(id) {
+            if (!confirm('Are you sure you want to delete this bucket and its index?')) return;
             try {
-                const response = await fetch(`/sync/${id}`, { method: 'POST' });
+                const response = await fetch(`/b2/delete/${id}`, { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete B2 account');
+            }
+        }
+
+        async function syncB2Account(id) {
+            try {
+                const response = await fetch(`/b2/sync/${id}`, { method: 'POST' });
                 const data = await response.json();
                 alert(data.message);
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to trigger sync');
+                alert('Failed to trigger B2 sync');
             }
         }
+
+        document.getElementById('b2Form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                key_id: document.getElementById('b2KeyId').value,
+                application_key: document.getElementById('b2AppKey').value,
+                bucket_name: document.getElementById('b2BucketName').value
+            };
+
+            try {
+                const response = await fetch('/b2/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert('B2 Bucket Connected!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            } catch (error) {
+                alert('Failed to connect B2: ' + error);
+            }
+        });
 
         async function updateStatus() {
             try {
@@ -135,9 +190,11 @@
         async function loadDevices() {
             const select = document.getElementById('deviceName');
             const errorMsg = document.getElementById('deviceError');
+            const startBtn = document.getElementById('startBtn');
 
-            select.innerHTML = '<option>Scanning...</option>';
+            select.innerHTML = '<option value="" disabled selected>Scanning...</option>';
             errorMsg.classList.add('hidden');
+            startBtn.disabled = true;
 
             try {
                 const response = await fetch('/devices');
@@ -145,8 +202,9 @@
 
                 select.innerHTML = '';
                 if (data.devices.length === 0) {
-                    select.innerHTML = '<option value="" disabled>No devices found</option>';
+                    select.innerHTML = '<option value="" disabled selected>No devices found</option>';
                     errorMsg.classList.remove('hidden');
+                    startBtn.disabled = true;
                 } else {
                     data.devices.forEach(device => {
                         const option = document.createElement('option');
@@ -156,20 +214,24 @@
                     });
                     // Select first one by default if available
                     select.value = data.devices[0];
+                    startBtn.disabled = false;
                 }
             } catch (error) {
                 console.error("Error loading devices:", error);
-                select.innerHTML = '<option value="" disabled>Error loading devices</option>';
+                select.innerHTML = '<option value="" disabled selected>Error loading devices</option>';
+                startBtn.disabled = true;
             }
         }
 
         async function startSlideshow() {
             const deviceName = document.getElementById('deviceName').value;
-            if (!deviceName) {
-                alert("Please select a device first!");
+            const interval = document.getElementById('intervalInput').value;
+
+            if (!deviceName || deviceName === "" || deviceName === "Scanning...") {
+                alert("Please select a valid device first!");
                 return;
             }
-            await fetch(`/slideshow/start?device_name=${encodeURIComponent(deviceName)}`, { method: 'POST' });
+            await fetch(`/slideshow/start?device_name=${encodeURIComponent(deviceName)}&interval=${interval}`, { method: 'POST' });
             updateStatus();
         }
 
