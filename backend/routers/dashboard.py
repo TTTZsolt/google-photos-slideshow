@@ -116,3 +116,54 @@ def reset_database():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     return {"status": "System reset successfully"}
+
+def get_local_ip():
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+@router.get("/slideshow/devices")
+def scan_devices():
+    import subprocess
+    import re
+    try:
+        # Run catt scan and capture output
+        result = subprocess.run(["catt", "scan"], capture_output=True, text=True, timeout=10)
+        output = result.stdout
+        
+        # Parse output: "192.168.1.181 - Nappali - Google TV"
+        devices = []
+        for line in output.splitlines():
+            if " - " in line:
+                parts = line.split(" - ")
+                if len(parts) >= 2:
+                    device_name = parts[1].strip()
+                    if device_name not in devices:
+                        devices.append(device_name)
+        
+        return {"devices": devices}
+    except Exception as e:
+        print(f"DEBUG: CATT scan error: {e}")
+        return {"devices": [], "error": str(e)}
+
+@router.post("/slideshow/cast")
+def cast_to_device(device_name: str, request: Request):
+    import subprocess
+    local_ip = get_local_ip()
+    port = request.url.port or 8080
+    receiver_url = f"http://{local_ip}:{port}/receiver"
+    
+    print(f"DEBUG: Casting {receiver_url} to device: {device_name}")
+    
+    try:
+        # Run catt cast_site in background (non-blocking)
+        subprocess.Popen(["catt", "-d", device_name, "cast_site", receiver_url])
+        return {"message": f"Casting initiated to {device_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
