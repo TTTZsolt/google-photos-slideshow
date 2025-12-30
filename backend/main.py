@@ -26,3 +26,7 @@ app.include_router(dashboard.router, tags=["dashboard"])
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 templates = Jinja2Templates(directory="backend/templates")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8080, reload=True)
