@@ -1,5 +1,4 @@
 # Web-Based Random Slideshow (V3)
- Riverside
 
 This project is a high-performance, web-based random photo slideshow that pulls images from Backblaze B2. It is designed to be flicker-free and works on any device with a modern web browser.
 
@@ -10,7 +9,7 @@ This project is a high-performance, web-based random photo slideshow that pulls 
 - Smooth CSS `opacity` transitions (cross-fade).
 - Background preloading of the next image to eliminate loading gaps.
 
-### 2. B2 API Optimization (New in v2.7)
+### 2. B2 API Optimization
 - **Client Reuse**: Dramatically reduces authorization calls to Backblaze.
 - **Token Caching**: Caches download authorization tokens for 2 hours.
 - **Improved Reliability**: Fixes "transaction cap exceeded" errors even with fast image switching.
@@ -48,5 +47,5 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
-- **v2.7**: Current version (Optimized B2, Web-based, Flicker-free).
-- **v1.0-chromecast**: Legacy version for direct Chromecast casting (deprecated due to network limitations).
+- **V3**: Stable release (Optimized B2, Web-based, Flicker-free).
+- **v1.0-chromecast**: Legacy version for direct Chromecast casting (deprecated).
