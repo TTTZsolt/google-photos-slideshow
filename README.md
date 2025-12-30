@@ -27,7 +27,10 @@ This project is a high-performance, web-based random photo slideshow that pulls 
 
 ## How to use
 
-1.  **Installation**:
+1.  **Requirement**: Run all commands from the project root directory:
+    `C:\Users\zsolt.tuske\.gemini\antigravity\playground\swift-newton\`
+
+2.  **Installation**:
     ```bash
     pip install -r requirements.txt
     ```
