@@ -1,4 +1,5 @@
-# Web-Based Random Slideshow (v2.7)
+# Web-Based Random Slideshow (V3)
+ Riverside
 
 This project is a high-performance, web-based random photo slideshow that pulls images from Backblaze B2. It is designed to be flicker-free and works on any device with a modern web browser.
 
