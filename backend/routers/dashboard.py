@@ -98,6 +98,11 @@ def stop_slideshow():
     controller.stop()
     return {"message": "Slideshow stopped"}
 
+@router.post("/slideshow/update-config")
+def update_slideshow_config(interval: int = None, show_filename: bool = None):
+    controller.update_config(interval, show_filename)
+    return {"message": "Slideshow configuration updated"}
+
 @router.get("/slideshow/current-image")
 def get_current_image():
     return controller.get_current_image_data()
@@ -165,5 +170,15 @@ def cast_to_device(device_name: str, request: Request):
         # Run catt cast_site in background (non-blocking)
         subprocess.Popen(["catt", "-d", device_name, "cast_site", receiver_url])
         return {"message": f"Casting initiated to {device_name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
+
+@router.post("/slideshow/stop-cast")
+def stop_casting(device_name: str):
+    import subprocess
+    print(f"DEBUG: Stopping cast on device: {device_name}")
+    try:
+        subprocess.run(["catt", "-d", device_name, "stop"])
+        return {"message": f"Casting stopped on {device_name}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")

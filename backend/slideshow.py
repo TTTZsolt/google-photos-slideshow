@@ -35,9 +35,17 @@ class SlideshowController:
         self._stop_event.clear()
         self._current_image_data["interval"] = interval
         self._current_image_data["show_filename"] = show_filename
-        self._thread = threading.Thread(target=self._run_loop, args=(interval,))
+        self._thread = threading.Thread(target=self._run_loop)
         self._thread.start()
         logger.info(f"Slideshow loop started (show_filename={show_filename})")
+
+    def update_config(self, interval: int = None, show_filename: bool = None):
+        if interval is not None:
+            self._current_image_data["interval"] = interval
+            logger.info(f"Slideshow interval updated to: {interval}")
+        if show_filename is not None:
+            self._current_image_data["show_filename"] = show_filename
+            logger.info(f"Slideshow show_filename updated to: {show_filename}")
 
     def stop(self):
         self._stop_event.set()
@@ -49,7 +57,7 @@ class SlideshowController:
     def get_current_image_data(self):
         return self._current_image_data
 
-    def _run_loop(self, interval):
+    def _run_loop(self):
         try:
             while not self._stop_event.is_set():
                 db = SessionLocal()
@@ -83,7 +91,8 @@ class SlideshowController:
                 finally:
                     db.close()
 
-                # Wait for interval
+                # Wait for dynamic interval
+                interval = self._current_image_data.get("interval", 20)
                 if self._stop_event.wait(interval):
                     break
         

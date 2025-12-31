@@ -47,5 +47,6 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
-- **V3**: Stable release (Optimized B2, Web-based, Flicker-free).
+- **V3.1**: Current release (GoogleCast integration via `catt`, Consolidated UI, Dynamic Settings).
+- **V3.0**: Stable release (Optimized B2, Web-based, Flicker-free).
 - **v1.0-chromecast**: Legacy version for direct Chromecast casting (deprecated).
