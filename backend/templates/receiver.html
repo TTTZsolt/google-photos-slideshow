@@ -58,6 +58,65 @@
         .filename-visible {
             opacity: 1;
         }
+
+        .music-controls {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            z-index: 200;
+            display: flex;
+            gap: 10px;
+            opacity: 0.3;
+            transition: opacity 0.3s ease;
+        }
+
+        .music-controls:hover {
+            opacity: 1;
+        }
+
+        .music-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(30, 215, 96, 0.9);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .music-btn:hover {
+            background: rgba(30, 215, 96, 1);
+            transform: scale(1.1);
+        }
+
+        .music-btn:active {
+            transform: scale(0.95);
+        }
+
+        .music-status {
+            position: absolute;
+            bottom: 140px;
+            right: 20px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 12px;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .music-status.visible {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -65,6 +124,15 @@
     <div id="img1" class="image-container"></div>
     <div id="img2" class="image-container"></div>
     <div id="filename" class="filename-overlay"></div>
+
+    <!-- Spotify Music Controls -->
+    <div id="musicStatus" class="music-status"></div>
+    <div id="musicControls" class="music-controls" style="display: none;">
+        <button id="playPauseBtn" class="music-btn" onclick="togglePlayback()">▶</button>
+    </div>
+
+    <!-- Spotify Web Playback SDK -->
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
 
     <script>
         let currentImg = 1;
@@ -119,6 +187,156 @@
         // Loop for polling
         // We poll more frequently than the interval to catch the update as soon as it's ready
         setInterval(updateImage, 3000);
+
+        // ========== SPOTIFY WEB PLAYBACK SDK ==========
+        let spotifyPlayer = null;
+        let deviceId = null;
+        let isPlaying = false;
+        let currentPlaylistUri = null;
+
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            initializeSpotify();
+        };
+
+        async function initializeSpotify() {
+            try {
+                // Get Spotify config
+                const configRes = await fetch('/spotify/config');
+                const config = await configRes.json();
+
+                if (!config.authenticated || !config.music_enabled) {
+                    console.log('Spotify not authenticated or music disabled');
+                    return;
+                }
+
+                // Get access token
+                const tokenRes = await fetch('/spotify/token');
+                const tokenData = await tokenRes.json();
+
+                // Initialize player
+                spotifyPlayer = new Spotify.Player({
+                    name: 'B2 Slideshow Receiver',
+                    getOAuthToken: cb => { cb(tokenData.access_token); },
+                    volume: 0.5
+                });
+
+                // Error handling
+                spotifyPlayer.addListener('initialization_error', ({ message }) => {
+                    console.error('Spotify init error:', message);
+                });
+                spotifyPlayer.addListener('authentication_error', ({ message }) => {
+                    console.error('Spotify auth error:', message);
+                    showMusicStatus('Auth Error', true);
+                });
+                spotifyPlayer.addListener('account_error', ({ message }) => {
+                    console.error('Spotify account error:', message);
+                    showMusicStatus('Premium Required', true);
+                });
+
+                // Ready
+                spotifyPlayer.addListener('ready', ({ device_id }) => {
+                    console.log('Spotify Ready with Device ID', device_id);
+                    deviceId = device_id;
+                    document.getElementById('musicControls').style.display = 'flex';
+
+                    // Auto-start playback if playlist is selected
+                    if (config.selected_playlist_uri) {
+                        currentPlaylistUri = config.selected_playlist_uri;
+                        startPlayback();
+                    }
+                });
+
+                // Player state changed
+                spotifyPlayer.addListener('player_state_changed', state => {
+                    if (state) {
+                        isPlaying = !state.paused;
+                        updatePlayPauseButton();
+                    }
+                });
+
+                // Connect to the player
+                spotifyPlayer.connect();
+
+            } catch (error) {
+                console.error('Spotify initialization failed:', error);
+            }
+        }
+
+        async function startPlayback() {
+            if (!deviceId || !currentPlaylistUri) return;
+
+            try {
+                const tokenRes = await fetch('/spotify/token');
+                const tokenData = await tokenRes.json();
+
+                await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${tokenData.access_token}`
+                    },
+                    body: JSON.stringify({
+                        context_uri: currentPlaylistUri,
+                        position_ms: 0
+                    })
+                });
+
+                isPlaying = true;
+                updatePlayPauseButton();
+                showMusicStatus('Playing', false);
+            } catch (error) {
+                console.error('Failed to start playback:', error);
+                showMusicStatus('Playback Error', true);
+            }
+        }
+
+        async function togglePlayback() {
+            if (!spotifyPlayer) return;
+
+            try {
+                await spotifyPlayer.togglePlay();
+            } catch (error) {
+                console.error('Toggle playback error:', error);
+            }
+        }
+
+        function updatePlayPauseButton() {
+            const btn = document.getElementById('playPauseBtn');
+            btn.textContent = isPlaying ? '⏸' : '▶';
+        }
+
+        function showMusicStatus(message, isError) {
+            const statusEl = document.getElementById('musicStatus');
+            statusEl.textContent = message;
+            statusEl.style.color = isError ? '#ff6b6b' : 'white';
+            statusEl.classList.add('visible');
+            setTimeout(() => {
+                statusEl.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Check for Spotify config changes periodically
+        setInterval(async () => {
+            try {
+                const configRes = await fetch('/spotify/config');
+                const config = await configRes.json();
+
+                // If music was disabled, pause
+                if (!config.music_enabled && isPlaying && spotifyPlayer) {
+                    await spotifyPlayer.pause();
+                }
+
+                // If playlist changed, restart playback
+                if (config.selected_playlist_uri && config.selected_playlist_uri !== currentPlaylistUri) {
+                    currentPlaylistUri = config.selected_playlist_uri;
+                    if (spotifyPlayer && deviceId) {
+                        await startPlayback();
+                    }
+                }
+            } catch (e) {
+                console.error('Config check error:', e);
+            }
+        }, 5000);
     </script>
 </body>
 

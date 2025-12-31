@@ -251,6 +251,62 @@
                     </div>
                 </div>
 
+                <!-- Spotify Settings -->
+                <div class="glass-panel rounded-3xl p-6 shadow-lg">
+                    <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
+                        <i data-lucide="music" class="w-5 h-5 text-green-500"></i>
+                        Spotify Music
+                    </h2>
+                    <div class="space-y-4">
+                        <!-- Spotify Status -->
+                        <div id="spotifyStatus" class="text-center py-3">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-widest">Loading...</span>
+                        </div>
+
+                        <!-- Spotify Credentials (if not set) -->
+                        <div id="spotifyCredentials" class="space-y-3" style="display: none;">
+                            <input type="text" id="spotifyClientId" placeholder="Client ID"
+                                class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-green-500 shadow-sm">
+                            <input type="password" id="spotifyClientSecret" placeholder="Client Secret"
+                                class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-green-500 shadow-sm">
+                            <button onclick="saveSpotifyCredentials()"
+                                class="w-full bg-green-600 text-white font-bold p-3 rounded-xl hover:bg-green-700 transition shadow-lg flex items-center justify-center gap-2">
+                                <i data-lucide="save" class="w-5 h-5"></i> Save Credentials
+                            </button>
+                        </div>
+
+                        <!-- Connect Button -->
+                        <button id="spotifyConnectBtn" onclick="connectSpotify()" style="display: none;"
+                            class="w-full bg-green-600 text-white font-bold p-3 rounded-xl hover:bg-green-700 transition shadow-lg flex items-center justify-center gap-2">
+                            <i data-lucide="link" class="w-5 h-5"></i> Connect Spotify
+                        </button>
+
+                        <!-- Playlist Selection -->
+                        <div id="spotifyPlaylistSection" style="display: none;" class="space-y-3">
+                            <select id="playlistSelect"
+                                class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-green-500 shadow-sm">
+                                <option value="">Select Playlist...</option>
+                            </select>
+                            <button onclick="selectPlaylist()"
+                                class="w-full bg-slate-900 text-white font-bold p-3 rounded-xl hover:bg-slate-800 transition shadow-lg">
+                                Set Playlist
+                            </button>
+
+                            <!-- Music Toggle -->
+                            <div class="flex items-center justify-between p-3 bg-white/50 rounded-xl">
+                                <span class="text-sm font-bold text-slate-700">Enable Music</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="musicToggle" class="sr-only switch-peer"
+                                        onchange="toggleMusic()">
+                                    <div
+                                        class="w-11 h-6 bg-slate-200 rounded-full transition-all switch-target after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all shadow-inner">
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- System -->
                 <div class="flex justify-center">
                     <button onclick="resetDatabase()"
@@ -414,9 +470,153 @@
             }
         }
 
+        // ========== SPOTIFY FUNCTIONS ==========
+        async function updateSpotifyUI() {
+            try {
+                const response = await fetch('/spotify/config');
+                const config = await response.json();
+
+                const statusEl = document.getElementById('spotifyStatus');
+                const credsEl = document.getElementById('spotifyCredentials');
+                const connectBtn = document.getElementById('spotifyConnectBtn');
+                const playlistSection = document.getElementById('spotifyPlaylistSection');
+                const musicToggle = document.getElementById('musicToggle');
+
+                if (!config.client_id_set) {
+                    // Show credentials form
+                    statusEl.innerHTML = '<span class="text-xs text-slate-400 font-bold uppercase tracking-widest">Setup Required</span>';
+                    credsEl.style.display = 'block';
+                    connectBtn.style.display = 'none';
+                    playlistSection.style.display = 'none';
+                } else if (!config.authenticated) {
+                    // Show connect button
+                    statusEl.innerHTML = '<span class="text-xs text-green-500 font-bold uppercase tracking-widest">Ready to Connect</span>';
+                    credsEl.style.display = 'none';
+                    connectBtn.style.display = 'block';
+                    playlistSection.style.display = 'none';
+                } else {
+                    // Show playlist selection
+                    statusEl.innerHTML = '<span class="text-xs text-green-500 font-bold uppercase tracking-widest flex items-center justify-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>Connected</span>';
+                    credsEl.style.display = 'none';
+                    connectBtn.style.display = 'none';
+                    playlistSection.style.display = 'block';
+                    musicToggle.checked = config.music_enabled;
+
+                    // Load playlists if not already loaded
+                    const playlistSelect = document.getElementById('playlistSelect');
+                    if (playlistSelect.options.length === 1) {
+                        await loadPlaylists();
+                    }
+
+                    // Set selected playlist
+                    if (config.selected_playlist_uri) {
+                        playlistSelect.value = config.selected_playlist_uri;
+                    }
+                }
+            } catch (e) {
+                console.error('Spotify UI update error:', e);
+            }
+        }
+
+        async function saveSpotifyCredentials() {
+            const clientId = document.getElementById('spotifyClientId').value;
+            const clientSecret = document.getElementById('spotifyClientSecret').value;
+
+            if (!clientId || !clientSecret) {
+                alert('Please enter both Client ID and Secret');
+                return;
+            }
+
+            try {
+                await fetch('/spotify/credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret })
+                });
+                updateSpotifyUI();
+            } catch (e) {
+                alert('Failed to save credentials');
+            }
+        }
+
+        async function connectSpotify() {
+            try {
+                const response = await fetch('/spotify/auth');
+                const data = await response.json();
+                window.open(data.auth_url, '_blank');
+
+                // Poll for authentication completion
+                const checkAuth = setInterval(async () => {
+                    const config = await fetch('/spotify/config');
+                    const configData = await config.json();
+                    if (configData.authenticated) {
+                        clearInterval(checkAuth);
+                        updateSpotifyUI();
+                    }
+                }, 2000);
+            } catch (e) {
+                alert('Failed to initiate Spotify connection');
+            }
+        }
+
+        async function loadPlaylists() {
+            try {
+                const response = await fetch('/spotify/playlists');
+                const data = await response.json();
+                const playlistSelect = document.getElementById('playlistSelect');
+
+                playlistSelect.innerHTML = '<option value="">Select Playlist...</option>';
+                data.playlists.forEach(pl => {
+                    const opt = document.createElement('option');
+                    opt.value = pl.uri;
+                    opt.textContent = `${pl.name} (${pl.tracks} tracks)`;
+                    playlistSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load playlists:', e);
+            }
+        }
+
+        async function selectPlaylist() {
+            const playlistSelect = document.getElementById('playlistSelect');
+            const selectedUri = playlistSelect.value;
+            const selectedName = playlistSelect.options[playlistSelect.selectedIndex].text;
+
+            if (!selectedUri) {
+                alert('Please select a playlist');
+                return;
+            }
+
+            try {
+                await fetch('/spotify/playlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ playlist_uri: selectedUri, playlist_name: selectedName })
+                });
+                alert('Playlist selected!');
+            } catch (e) {
+                alert('Failed to select playlist');
+            }
+        }
+
+        async function toggleMusic() {
+            const enabled = document.getElementById('musicToggle').checked;
+            try {
+                await fetch('/spotify/music-toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+            } catch (e) {
+                console.error('Failed to toggle music:', e);
+            }
+        }
+
         setInterval(updateStatus, 2000);
         updateStatus();
         refreshDevices();
+        updateSpotifyUI();
+        setInterval(updateSpotifyUI, 10000); // Update Spotify UI every 10 seconds
     </script>
 </body>
 
