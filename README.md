@@ -1,4 +1,7 @@
-# Web-Based Random Slideshow (V3)
+# Web-Based Random Slideshow (V4.1 - Development)
+
+**Cél**: Kiegészítés Spotify-val
+
 
 This project is a high-performance, web-based random photo slideshow that pulls images from Backblaze B2. It is designed to be flicker-free and works on any device with a modern web browser.
 
@@ -47,6 +50,9 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
-- **V3.1**: Current release (GoogleCast integration via `catt`, Consolidated UI, Dynamic Settings).
+- **V4.1**: Development branch (Spotify integration - in progress).
+- **V3.2**: Current stable release (Refined UX design).
+- **V3.1**: GoogleCast integration via `catt`, Consolidated UI, Dynamic Settings.
 - **V3.0**: Stable release (Optimized B2, Web-based, Flicker-free).
 - **v1.0-chromecast**: Legacy version for direct Chromecast casting (deprecated).
+
