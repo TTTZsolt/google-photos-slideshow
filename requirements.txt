@@ -9,4 +9,4 @@ pychromecast
 python-dotenv
 aiofiles
 b2sdk
-spotipy
+

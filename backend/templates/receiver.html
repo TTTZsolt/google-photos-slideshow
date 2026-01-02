@@ -125,14 +125,16 @@
     <div id="img2" class="image-container"></div>
     <div id="filename" class="filename-overlay"></div>
 
-    <!-- Spotify Music Controls -->
-    <div id="musicStatus" class="music-status"></div>
+    <!-- YouTube Player (Hidden) -->
+    <div id="youtubePlayer" style="display: none;"></div>
+
+    <!-- Music Controls Overlay -->
     <div id="musicControls" class="music-controls" style="display: none;">
         <button id="playPauseBtn" class="music-btn" onclick="togglePlayback()">▶</button>
     </div>
 
-    <!-- Spotify Web Playback SDK -->
-    <script src="https://sdk.scdn.co/spotify-player.js"></script>
+    <!-- YouTube API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
 
     <script>
         let currentImg = 1;
@@ -188,115 +190,85 @@
         // We poll more frequently than the interval to catch the update as soon as it's ready
         setInterval(updateImage, 3000);
 
-        // ========== SPOTIFY WEB PLAYBACK SDK ==========
-        let spotifyPlayer = null;
-        let deviceId = null;
+        // ========== YOUTUBE IFRAME API ==========
+        let player = null;
         let isPlaying = false;
-        let currentPlaylistUri = null;
+        let currentPlaylistId = null;
+        let musicEnabled = false;
 
-        window.onSpotifyWebPlaybackSDKReady = () => {
-            initializeSpotify();
-        };
+        function onYouTubeIframeAPIReady() {
+            console.log('YouTube API Ready');
+            initializeYouTube();
+        }
 
-        async function initializeSpotify() {
+        async function initializeYouTube() {
             try {
-                // Get Spotify config
-                const configRes = await fetch('/spotify/config');
+                // Get Music config
+                const configRes = await fetch('/music/config');
                 const config = await configRes.json();
 
-                if (!config.authenticated || !config.music_enabled) {
-                    console.log('Spotify not authenticated or music disabled');
+                musicEnabled = config.music_enabled;
+                currentPlaylistId = config.youtube_playlist_id;
+
+                if (!currentPlaylistId) {
+                    console.log('No playlist configured');
                     return;
                 }
 
-                // Get access token
-                const tokenRes = await fetch('/spotify/token');
-                const tokenData = await tokenRes.json();
-
-                // Initialize player
-                spotifyPlayer = new Spotify.Player({
-                    name: 'B2 Slideshow Receiver',
-                    getOAuthToken: cb => { cb(tokenData.access_token); },
-                    volume: 0.5
-                });
-
-                // Error handling
-                spotifyPlayer.addListener('initialization_error', ({ message }) => {
-                    console.error('Spotify init error:', message);
-                });
-                spotifyPlayer.addListener('authentication_error', ({ message }) => {
-                    console.error('Spotify auth error:', message);
-                    showMusicStatus('Auth Error', true);
-                });
-                spotifyPlayer.addListener('account_error', ({ message }) => {
-                    console.error('Spotify account error:', message);
-                    showMusicStatus('Premium Required', true);
-                });
-
-                // Ready
-                spotifyPlayer.addListener('ready', ({ device_id }) => {
-                    console.log('Spotify Ready with Device ID', device_id);
-                    deviceId = device_id;
-                    document.getElementById('musicControls').style.display = 'flex';
-
-                    // Auto-start playback if playlist is selected
-                    if (config.selected_playlist_uri) {
-                        currentPlaylistUri = config.selected_playlist_uri;
-                        startPlayback();
+                player = new YT.Player('youtubePlayer', {
+                    height: '0',
+                    width: '0',
+                    playerVars: {
+                        'listType': 'playlist',
+                        'list': currentPlaylistId,
+                        'autoplay': musicEnabled ? 1 : 0,
+                        'controls': 0,
+                        'loop': 1,
+                        'playsinline': 1
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange,
+                        'onError': onPlayerError
                     }
                 });
-
-                // Player state changed
-                spotifyPlayer.addListener('player_state_changed', state => {
-                    if (state) {
-                        isPlaying = !state.paused;
-                        updatePlayPauseButton();
-                    }
-                });
-
-                // Connect to the player
-                spotifyPlayer.connect();
 
             } catch (error) {
-                console.error('Spotify initialization failed:', error);
+                console.error('YouTube initialization failed:', error);
             }
         }
 
-        async function startPlayback() {
-            if (!deviceId || !currentPlaylistUri) return;
+        function onPlayerReady(event) {
+            console.log('YouTube Player Ready');
+            event.target.setVolume(50); // Default volume
+            if (musicEnabled) {
+                event.target.playVideo();
+                document.getElementById('musicControls').style.display = 'flex';
+            }
+        }
 
-            try {
-                const tokenRes = await fetch('/spotify/token');
-                const tokenData = await tokenRes.json();
-
-                await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${tokenData.access_token}`
-                    },
-                    body: JSON.stringify({
-                        context_uri: currentPlaylistUri,
-                        position_ms: 0
-                    })
-                });
-
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING) {
                 isPlaying = true;
                 updatePlayPauseButton();
-                showMusicStatus('Playing', false);
-            } catch (error) {
-                console.error('Failed to start playback:', error);
-                showMusicStatus('Playback Error', true);
+                // showMusicStatus('Playing', false);
+            } else if (event.data == YT.PlayerState.PAUSED) {
+                isPlaying = false;
+                updatePlayPauseButton();
             }
         }
 
-        async function togglePlayback() {
-            if (!spotifyPlayer) return;
+        function onPlayerError(event) {
+            console.error('YouTube Player Error:', event.data);
+            // showMusicStatus('Playback Error', true);
+        }
 
-            try {
-                await spotifyPlayer.togglePlay();
-            } catch (error) {
-                console.error('Toggle playback error:', error);
+        function togglePlayback() {
+            if (!player) return;
+            if (isPlaying) {
+                player.pauseVideo();
+            } else {
+                player.playVideo();
             }
         }
 
@@ -305,32 +277,39 @@
             btn.textContent = isPlaying ? '⏸' : '▶';
         }
 
-        function showMusicStatus(message, isError) {
-            const statusEl = document.getElementById('musicStatus');
-            statusEl.textContent = message;
-            statusEl.style.color = isError ? '#ff6b6b' : 'white';
-            statusEl.classList.add('visible');
-            setTimeout(() => {
-                statusEl.classList.remove('visible');
-            }, 3000);
-        }
-
-        // Check for Spotify config changes periodically
+        // Check for Music config changes periodically
         setInterval(async () => {
             try {
-                const configRes = await fetch('/spotify/config');
+                const configRes = await fetch('/music/config');
                 const config = await configRes.json();
 
-                // If music was disabled, pause
-                if (!config.music_enabled && isPlaying && spotifyPlayer) {
-                    await spotifyPlayer.pause();
+                // Update Volume
+                if (player && typeof player.setVolume === 'function') {
+                    player.setVolume(config.volume);
                 }
 
-                // If playlist changed, restart playback
-                if (config.selected_playlist_uri && config.selected_playlist_uri !== currentPlaylistUri) {
-                    currentPlaylistUri = config.selected_playlist_uri;
-                    if (spotifyPlayer && deviceId) {
-                        await startPlayback();
+                // Handle Enable/Disable
+                if (musicEnabled !== config.music_enabled) {
+                    musicEnabled = config.music_enabled;
+                    if (musicEnabled) {
+                        if (player) player.playVideo();
+                        document.getElementById('musicControls').style.display = 'flex';
+                    } else {
+                        if (player) player.pauseVideo();
+                        document.getElementById('musicControls').style.display = 'none';
+                    }
+                }
+
+                // Handle Playlist Change
+                if (config.youtube_playlist_id && config.youtube_playlist_id !== currentPlaylistId) {
+                    currentPlaylistId = config.youtube_playlist_id;
+                    if (player) {
+                        player.loadPlaylist({
+                            list: currentPlaylistId,
+                            listType: 'playlist'
+                        });
+                    } else {
+                        initializeYouTube();
                     }
                 }
             } catch (e) {
