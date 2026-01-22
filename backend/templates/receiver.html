@@ -120,203 +120,237 @@
     </style>
 </head>
 
-<body>
-    <div id="img1" class="image-container"></div>
-    <div id="img2" class="image-container"></div>
-    <div id="filename" class="filename-overlay"></div>
 
-    <!-- YouTube Player (Hidden) -->
-    <div id="youtubePlayer" style="display: none;"></div>
+<div id="img1" class="image-container"></div>
+<div id="img2" class="image-container"></div>
+<div id="filename" class="filename-overlay"></div>
 
-    <!-- Music Controls Overlay -->
-    <div id="musicControls" class="music-controls" style="display: none;">
-        <button id="playPauseBtn" class="music-btn" onclick="togglePlayback()">▶</button>
-    </div>
+<!-- YouTube Player (Hidden) -->
+<div id="youtubePlayer" style="display: none;"></div>
 
-    <!-- YouTube API -->
-    <script src="https://www.youtube.com/iframe_api"></script>
+<!-- Music Status Overlay -->
+<div id="musicStatus" class="music-status"></div>
 
-    <script>
-        let currentImg = 1;
-        let interval = 20000;
-        let lastUrl = "";
+<!-- Music Controls Overlay -->
+<div id="musicControls" class="music-controls" style="display: none;">
+    <button id="playPauseBtn" class="music-btn" onclick="togglePlayback()">▶</button>
+</div>
 
-        async function updateImage() {
-            try {
-                const response = await fetch('/slideshow/current-image');
-                if (!response.ok) return;
-                const data = await response.json();
+<!-- YouTube API -->
+<script src="https://www.youtube.com/iframe_api"></script>
 
-                const filenameEl = document.getElementById('filename');
-                if (data.show_filename && data.filename) {
-                    filenameEl.textContent = data.filename;
-                    filenameEl.classList.add('filename-visible');
-                } else {
-                    filenameEl.classList.remove('filename-visible');
-                }
+<script>
+    let currentImg = 1;
+    let interval = 20000;
+    let lastUrl = "";
 
-                if (data.url && data.url !== lastUrl) {
-                    lastUrl = data.url;
-                    const nextId = currentImg === 1 ? 'img2' : 'img1';
-                    const currId = currentImg === 1 ? 'img1' : 'img2';
+    async function updateImage() {
+        try {
+            const response = await fetch('/slideshow/current-image');
+            if (!response.ok) return;
+            const data = await response.json();
 
-                    const nextEl = document.getElementById(nextId);
-                    const currEl = document.getElementById(currId);
-
-                    // Preload next image
-                    const img = new Image();
-                    img.src = data.url;
-                    img.onload = () => {
-                        // Switch background and transition
-                        nextEl.style.backgroundImage = `url('${data.url}')`;
-                        nextEl.classList.add('active');
-                        currEl.classList.remove('active');
-                        currentImg = currentImg === 1 ? 2 : 1;
-                    };
-                }
-
-                if (data.interval) {
-                    interval = data.interval * 1000;
-                }
-            } catch (e) {
-                console.error("Receiver error:", e);
-            }
-        }
-
-        // Initial check
-        updateImage();
-
-        // Loop for polling
-        // We poll more frequently than the interval to catch the update as soon as it's ready
-        setInterval(updateImage, 3000);
-
-        // ========== YOUTUBE IFRAME API ==========
-        let player = null;
-        let isPlaying = false;
-        let currentPlaylistId = null;
-        let musicEnabled = false;
-
-        function onYouTubeIframeAPIReady() {
-            console.log('YouTube API Ready');
-            initializeYouTube();
-        }
-
-        async function initializeYouTube() {
-            try {
-                // Get Music config
-                const configRes = await fetch('/music/config');
-                const config = await configRes.json();
-
-                musicEnabled = config.music_enabled;
-                currentPlaylistId = config.youtube_playlist_id;
-
-                if (!currentPlaylistId) {
-                    console.log('No playlist configured');
-                    return;
-                }
-
-                player = new YT.Player('youtubePlayer', {
-                    height: '0',
-                    width: '0',
-                    playerVars: {
-                        'listType': 'playlist',
-                        'list': currentPlaylistId,
-                        'autoplay': musicEnabled ? 1 : 0,
-                        'controls': 0,
-                        'loop': 1,
-                        'playsinline': 1
-                    },
-                    events: {
-                        'onReady': onPlayerReady,
-                        'onStateChange': onPlayerStateChange,
-                        'onError': onPlayerError
-                    }
-                });
-
-            } catch (error) {
-                console.error('YouTube initialization failed:', error);
-            }
-        }
-
-        function onPlayerReady(event) {
-            console.log('YouTube Player Ready');
-            event.target.setVolume(50); // Default volume
-            if (musicEnabled) {
-                event.target.playVideo();
-                document.getElementById('musicControls').style.display = 'flex';
-            }
-        }
-
-        function onPlayerStateChange(event) {
-            if (event.data == YT.PlayerState.PLAYING) {
-                isPlaying = true;
-                updatePlayPauseButton();
-                // showMusicStatus('Playing', false);
-            } else if (event.data == YT.PlayerState.PAUSED) {
-                isPlaying = false;
-                updatePlayPauseButton();
-            }
-        }
-
-        function onPlayerError(event) {
-            console.error('YouTube Player Error:', event.data);
-            // showMusicStatus('Playback Error', true);
-        }
-
-        function togglePlayback() {
-            if (!player) return;
-            if (isPlaying) {
-                player.pauseVideo();
+            const filenameEl = document.getElementById('filename');
+            if (data.show_filename && data.filename) {
+                filenameEl.textContent = data.filename;
+                filenameEl.classList.add('filename-visible');
             } else {
-                player.playVideo();
+                filenameEl.classList.remove('filename-visible');
             }
-        }
 
-        function updatePlayPauseButton() {
-            const btn = document.getElementById('playPauseBtn');
-            btn.textContent = isPlaying ? '⏸' : '▶';
-        }
+            if (data.url && data.url !== lastUrl) {
+                lastUrl = data.url;
+                const nextId = currentImg === 1 ? 'img2' : 'img1';
+                const currId = currentImg === 1 ? 'img1' : 'img2';
 
-        // Check for Music config changes periodically
-        setInterval(async () => {
-            try {
-                const configRes = await fetch('/music/config');
-                const config = await configRes.json();
+                const nextEl = document.getElementById(nextId);
+                const currEl = document.getElementById(currId);
 
-                // Update Volume
-                if (player && typeof player.setVolume === 'function') {
-                    player.setVolume(config.volume);
-                }
-
-                // Handle Enable/Disable
-                if (musicEnabled !== config.music_enabled) {
-                    musicEnabled = config.music_enabled;
-                    if (musicEnabled) {
-                        if (player) player.playVideo();
-                        document.getElementById('musicControls').style.display = 'flex';
-                    } else {
-                        if (player) player.pauseVideo();
-                        document.getElementById('musicControls').style.display = 'none';
-                    }
-                }
-
-                // Handle Playlist Change
-                if (config.youtube_playlist_id && config.youtube_playlist_id !== currentPlaylistId) {
-                    currentPlaylistId = config.youtube_playlist_id;
-                    if (player) {
-                        player.loadPlaylist({
-                            list: currentPlaylistId,
-                            listType: 'playlist'
-                        });
-                    } else {
-                        initializeYouTube();
-                    }
-                }
-            } catch (e) {
-                console.error('Config check error:', e);
+                // Preload next image
+                const img = new Image();
+                img.src = data.url;
+                img.onload = () => {
+                    // Switch background and transition
+                    nextEl.style.backgroundImage = `url('${data.url}')`;
+                    nextEl.classList.add('active');
+                    currEl.classList.remove('active');
+                    currentImg = currentImg === 1 ? 2 : 1;
+                };
             }
-        }, 5000);
-    </script>
+
+            if (data.interval) {
+                interval = data.interval * 1000;
+            }
+        } catch (e) {
+            console.error("Receiver error:", e);
+        }
+    }
+
+    // Initial check
+    updateImage();
+
+    // Loop for polling
+    // We poll more frequently than the interval to catch the update as soon as it's ready
+    setInterval(updateImage, 3000);
+
+    // ========== YOUTUBE IFRAME API ==========
+    let player = null;
+    let isPlaying = false;
+    let currentPlaylistId = null;
+    let musicEnabled = false;
+
+    function onYouTubeIframeAPIReady() {
+        console.log('YouTube API Ready');
+        initializeYouTube();
+    }
+
+    async function initializeYouTube() {
+        try {
+            // Get Music config
+            const configRes = await fetch('/music/config');
+            const config = await configRes.json();
+
+            musicEnabled = config.music_enabled;
+            currentPlaylistId = config.youtube_playlist_id;
+
+            if (!currentPlaylistId) {
+                console.log('No playlist configured');
+                return;
+            }
+
+            let playerConfig = {
+                height: '0',
+                width: '0',
+                playerVars: {
+                    'autoplay': musicEnabled ? 1 : 0,
+                    'controls': 0,
+                    'loop': 1,
+                    'playsinline': 1,
+                    'origin': window.location.origin
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange,
+                    'onError': onPlayerError
+                }
+            };
+
+            // Check if it's a Playlist (starts with PL) or a Video ID
+            if (currentPlaylistId.startsWith('PL')) {
+                playerConfig.playerVars.listType = 'playlist';
+                playerConfig.playerVars.list = currentPlaylistId;
+            } else {
+                // Assume Single Video
+                playerConfig.videoId = currentPlaylistId;
+                playerConfig.playerVars.playlist = currentPlaylistId; // Loop single video
+            }
+
+            player = new YT.Player('youtubePlayer', playerConfig);
+
+        } catch (error) {
+            console.error('YouTube initialization failed:', error);
+        }
+    }
+
+    function onPlayerReady(event) {
+        console.log('YouTube Player Ready');
+        event.target.setVolume(100);
+        if (musicEnabled) {
+            attemptPlay();
+        }
+    }
+
+    function attemptPlay() {
+        if (player && typeof player.playVideo === 'function') {
+            player.playVideo();
+        }
+    }
+
+    function onPlayerStateChange(event) {
+        if (event.data == YT.PlayerState.PLAYING) {
+            isPlaying = true;
+            updatePlayPauseButton();
+        } else if (event.data == YT.PlayerState.PAUSED) {
+            isPlaying = false;
+            updatePlayPauseButton();
+        }
+    }
+
+    function showMusicStatus(msg, isError) {
+        const statusEl = document.getElementById('musicStatus');
+        if (isError) {
+            statusEl.textContent = msg;
+            statusEl.style.opacity = 1;
+            statusEl.classList.add('visible');
+            statusEl.style.color = 'red';
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusEl.style.opacity = 0;
+                statusEl.classList.remove('visible');
+            }, 5000);
+        }
+    }
+
+
+    function onPlayerError(event) {
+        console.error('YouTube Player Error:', event.data);
+        showMusicStatus('YouTube Error Code: ' + event.data, true);
+    }
+
+    function togglePlayback() {
+        if (!player) return;
+        if (isPlaying) {
+            player.pauseVideo();
+        } else {
+            player.playVideo();
+        }
+    }
+
+    function updatePlayPauseButton() {
+        const btn = document.getElementById('playPauseBtn');
+        btn.textContent = isPlaying ? '⏸' : '▶';
+    }
+
+    // Check for Music config changes periodically
+    setInterval(async () => {
+        try {
+            const configRes = await fetch('/music/config');
+            const config = await configRes.json();
+
+            // Update Volume
+            if (player && typeof player.setVolume === 'function') {
+                player.setVolume(config.volume);
+            }
+
+            // Handle Enable/Disable
+            if (musicEnabled !== config.music_enabled) {
+                musicEnabled = config.music_enabled;
+                if (musicEnabled) {
+                    if (player) player.playVideo();
+                    document.getElementById('musicControls').style.display = 'flex';
+                } else {
+                    if (player) player.pauseVideo();
+                    document.getElementById('musicControls').style.display = 'none';
+                }
+            }
+
+            // Handle Playlist Change
+            if (config.youtube_playlist_id && config.youtube_playlist_id !== currentPlaylistId) {
+                currentPlaylistId = config.youtube_playlist_id;
+                if (player) {
+                    player.loadPlaylist({
+                        list: currentPlaylistId,
+                        listType: 'playlist'
+                    });
+                } else {
+                    initializeYouTube();
+                }
+            }
+        } catch (e) {
+            console.error('Config check error:', e);
+        }
+    }, 5000);
+</script>
 </body>
 
 </html>

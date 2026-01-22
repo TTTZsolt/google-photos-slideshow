@@ -160,9 +160,12 @@ def scan_devices():
 @router.post("/slideshow/cast")
 def cast_to_device(device_name: str, request: Request):
     import subprocess
+    import time
     local_ip = get_local_ip()
     port = request.url.port or 8080
-    receiver_url = f"http://{local_ip}:{port}/receiver"
+    # Add timestamp to force cache busting on Chromecast
+    ts = int(time.time())
+    receiver_url = f"http://{local_ip}:{port}/receiver?ts={ts}"
     
     print(f"DEBUG: Casting {receiver_url} to device: {device_name}")
     
