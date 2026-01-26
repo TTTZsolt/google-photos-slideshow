@@ -21,6 +21,10 @@ def sync_b2_worker(b2_account_id: int):
             return
 
         logger.info(f"Starting B2 sync for bucket: {b2_account.bucket_name}")
+        b2_account.sync_status = "Syncing"
+        b2_account.sync_count = 0
+        db.commit()
+
         client = B2Client(b2_account.key_id, b2_account.application_key)
         
         # Simple implementation: Full re-sync (delete existing for this bucket)
@@ -51,14 +55,25 @@ def sync_b2_worker(b2_account_id: int):
             count += 1
             if count % 100 == 0:
                 db.commit()
+                # Update account progress
+                b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
+                b2_account.sync_count = count
+                db.commit()
                 logger.info(f"Indexed {count} files from {b2_account.bucket_name}...")
         
+        b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
         b2_account.last_synced_at = func.now()
+        b2_account.sync_status = "Finished"
+        b2_account.sync_count = count
         db.commit()
         logger.info(f"Finished sync for {b2_account.bucket_name}. Total items: {count}")
 
     except Exception as e:
         logger.exception(f"Error syncing B2 account {b2_account_id}: {e}")
+        b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
+        if b2_account:
+            b2_account.sync_status = f"Error: {str(e)[:50]}"
+            db.commit()
     finally:
         db.close()
 

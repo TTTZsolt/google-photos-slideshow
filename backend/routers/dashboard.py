@@ -28,6 +28,11 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "b2_accounts": b2_accounts
     })
 
+@router.get("/b2/accounts")
+def get_b2_accounts(db: Session = Depends(get_db)):
+    accounts = db.query(B2Account).all()
+    return accounts
+
 @router.get("/receiver")
 def get_receiver(request: Request):
     import datetime

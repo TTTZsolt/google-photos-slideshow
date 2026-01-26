@@ -25,9 +25,10 @@ class B2Client:
 
     def list_files(self, bucket_name: str):
         bucket = self.b2_api.get_bucket_by_name(bucket_name)
-        # generator for listing files
-        for file_version, folder_name in bucket.ls():
-            yield file_version
+        # generator for listing files recursively
+        for file_version, folder_name in bucket.ls(latest_only=True, recursive=True):
+            if file_version:
+                yield file_version
 
     def get_download_url(self, bucket_name: str, file_name: str, valid_duration_seconds: int = 7200):
         import urllib.parse

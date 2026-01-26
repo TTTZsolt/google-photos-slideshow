@@ -11,6 +11,8 @@ class B2Account(Base):
     bucket_name = Column(String)
     is_active = Column(Boolean, default=True)
     last_synced_at = Column(DateTime(timezone=True), nullable=True)
+    sync_status = Column(String, default="Idle") # Idle, Syncing, Finished, Error
+    sync_count = Column(Integer, default=0) # Number of items indexed in last/current sync
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class MediaItem(Base):
