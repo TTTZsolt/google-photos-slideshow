@@ -7,12 +7,15 @@ from .models import MediaItem
 
 logger = logging.getLogger(__name__)
 
+import random
+
 class SlideshowController:
     def __init__(self):
         self._stop_event = threading.Event()
         self._thread = None
         self._last_error = None
         self._b2_clients = {}  # Cache: {account_id: B2Client}
+        self._media_id_deck = [] # List of MediaItem IDs to show
         self._current_image_data = {
             "url": None, 
             "filename": None,
@@ -52,19 +55,44 @@ class SlideshowController:
         if self._thread:
             self._thread.join(timeout=5)
         self._b2_clients.clear()  # Clear cache on stop
+        self._media_id_deck = [] # Clear deck
         logger.info("Slideshow stopped")
 
     def get_current_image_data(self):
         return self._current_image_data
+
+    def _get_next_media_item(self, db):
+        """Returns the next media item from the deck, refilling it if empty."""
+        if not self._media_id_deck:
+            logger.info("Deck empty or starting, refilling from database...")
+            all_ids = [row[0] for row in db.query(MediaItem.id).all()]
+            if not all_ids:
+                return None
+            random.shuffle(all_ids)
+            self._media_id_deck = all_ids
+            logger.info(f"Refilled deck with {len(self._media_id_deck)} items and shuffled.")
+
+        next_id = self._media_id_deck.pop(0)
+        return db.query(MediaItem).filter(MediaItem.id == next_id).first()
+
+    def _format_caption(self, file_path):
+        """Converts '2023/12/Xmas/img.jpg' to '2023 - 12 - Xmas'."""
+        parts = file_path.split('/')
+        if len(parts) > 1:
+            # Join all parts except the actual filename
+            return " - ".join(parts[:-1])
+        return file_path # Fallback to filename if no directories
 
     def _run_loop(self):
         try:
             while not self._stop_event.is_set():
                 db = SessionLocal()
                 try:
-                    # Pick random media item
-                    media_item = db.query(MediaItem).order_by(func.random()).first()
+                    # Pick next media item from deck
+                    media_item = self._get_next_media_item(db)
+                    
                     if not media_item:
+                        logger.warning("No media items found in database.")
                         time.sleep(5)
                         continue
 
@@ -82,9 +110,12 @@ class SlideshowController:
                             client = self._b2_clients[b2_acc.id]
                             display_url = client.get_download_url(b2_acc.bucket_name, media_item.file_name)
                             
+                            # Format caption based on directory structure
+                            caption = self._format_caption(media_item.file_name)
+                            
                             # Update state - the receiver will poll this
                             self._current_image_data["url"] = display_url
-                            self._current_image_data["filename"] = media_item.file_name
+                            self._current_image_data["filename"] = caption
                         
                 except Exception as e:
                     logger.error(f"Error in slideshow loop: {e}")
