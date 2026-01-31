@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import dashboard, music
+from .routers import dashboard, music, remote
 from .database import engine, Base
 
 app = FastAPI(title="B2 Random Slideshow")
@@ -22,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 # Routes
 app.include_router(dashboard.router, tags=["dashboard"])
 app.include_router(music.router, tags=["music"])
+app.include_router(remote.router, tags=["remote"])
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")

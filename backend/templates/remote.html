@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Slideshow Remote</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-sm space-y-8">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-indigo-400">Tablet Remote</h1>
+            <p class="text-slate-400 mt-2">v5.1 Control Center</p>
+        </div>
+
+        <div class="space-y-4">
+            <!-- START BUTTON -->
+            <button onclick="control('start')"
+                class="w-full h-32 bg-indigo-600 hover:bg-indigo-500 rounded-3xl text-2xl font-bold shadow-2xl transition-all active:scale-95 flex flex-col items-center justify-center gap-2">
+                <span>START</span>
+                <span class="text-xs font-normal opacity-70">Slideshow & Dashboard Link</span>
+            </button>
+
+            <!-- DASHBOARD LINK (Hidden until start) -->
+            <div id="dash-link" class="hidden">
+                <a href="/"
+                    class="block w-full text-center p-4 bg-slate-800 rounded-2xl text-indigo-300 font-bold border border-indigo-900/50">
+                    Open Control Center
+                </a>
+            </div>
+
+            <!-- STOP BUTTON -->
+            <button onclick="control('stop')"
+                class="w-full h-32 bg-rose-600 hover:bg-rose-500 rounded-3xl text-2xl font-bold shadow-2xl transition-all active:scale-95 flex flex-col items-center justify-center gap-2">
+                <span>STOP ALL</span>
+                <span class="text-xs font-normal opacity-70">Cast & Server Shutdown</span>
+            </button>
+        </div>
+
+        <div id="status" class="text-center text-sm font-bold tracking-widest text-slate-500 uppercase">
+            Ready
+        </div>
+    </div>
+
+    <script>
+        async function control(cmd) {
+            const status = document.getElementById('status');
+            const dashLink = document.getElementById('dash-link');
+
+            status.innerText = 'Sending...';
+
+            try {
+                const response = await fetch(`/remote/${cmd}`, { method: 'POST' });
+                if (response.ok) {
+                    if (cmd === 'start') {
+                        status.innerText = 'Slideshow Started';
+                        status.className = 'text-center text-sm font-bold tracking-widest text-green-500 uppercase';
+                        dashLink.classList.remove('hidden');
+                    } else {
+                        status.innerText = 'System Shutting Down';
+                        status.className = 'text-center text-sm font-bold tracking-widest text-rose-500 uppercase';
+                        alert('System is shutting down. The link will become unresponsive.');
+                    }
+                } else {
+                    status.innerText = 'Error occurred';
+                }
+            } catch (e) {
+                status.innerText = 'Connection Lost';
+            }
+        }
+    </script>
+</body>
+
+</html>
