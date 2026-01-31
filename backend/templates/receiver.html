@@ -382,16 +382,25 @@
     }, 5000);
 
     function toggleFullscreen() {
+        const btn = document.querySelector('.fs-btn');
         if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
+            document.documentElement.requestFullscreen().then(() => {
+                btn.style.display = 'none';
+            }).catch(err => {
                 alert(`Error: ${err.message}`);
             });
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
         }
     }
+
+    // Automatically show/hide button based on fullscreen state
+    document.addEventListener('fullscreenchange', () => {
+        const btn = document.querySelector('.fs-btn');
+        if (document.fullscreenElement) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'block';
+        }
+    });
 </script>
 </body>
 
