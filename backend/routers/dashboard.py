@@ -84,9 +84,8 @@ def delete_b2_account(account_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "B2 Bucket and associated index deleted successfully"}
 
-# Singleton controller
-from ..slideshow import SlideshowController
-controller = SlideshowController()
+# Use shared singleton controller
+from ..slideshow import controller
 
 @router.post("/slideshow/start")
 def start_slideshow(interval: int = 20, show_filename: bool = False, db: Session = Depends(get_db)):

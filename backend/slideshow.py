@@ -135,3 +135,6 @@ class SlideshowController:
 
     def get_last_error(self):
         return self._last_error
+
+# Global singleton instance
+controller = SlideshowController()
