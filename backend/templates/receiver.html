@@ -12,6 +12,27 @@
             height: 100%;
             background-color: black;
             overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .fs-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            z-index: 1000;
+            cursor: pointer;
+            opacity: 0.2;
+            transition: opacity 0.3s;
+            font-size: 14px;
+        }
+
+        .fs-btn:hover {
+            opacity: 1;
         }
 
         .image-container {
@@ -118,6 +139,8 @@
             opacity: 1;
         }
     </style>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -140,6 +163,8 @@
 <div id="musicControls" class="music-controls" style="display: none;">
     <button id="playPauseBtn" class="music-btn" onclick="togglePlayback()">▶</button>
 </div>
+
+<button class="fs-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
 
 <!-- YouTube API -->
 <script src="https://www.youtube.com/iframe_api"></script>
@@ -355,6 +380,18 @@
             console.error('Config check error:', e);
         }
     }, 5000);
+
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                alert(`Error: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
 </script>
 </body>
 
