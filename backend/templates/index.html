@@ -210,7 +210,7 @@
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2BucketName" placeholder="Bucket Name" required
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        <input type="url" id="b2CloudflareUrl" placeholder="Cloudflare Worker URL (Opcionális)"
+                        <input type="text" id="b2CloudflareUrl" placeholder="Cloudflare Worker URL (Opcionális)"
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <p class="text-[10px] text-slate-400">Pl: https://b2-proxy.username.workers.dev a limit
                             elkerüléséhez</p>
@@ -491,18 +491,31 @@
 
         document.getElementById('b2Form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            const cfUrlValue = document.getElementById('b2CloudflareUrl').value.trim();
             const payload = {
                 key_id: document.getElementById('b2KeyId').value,
                 application_key: document.getElementById('b2AppKey').value,
                 bucket_name: document.getElementById('b2BucketName').value,
-                cloudflare_proxy_url: document.getElementById('b2CloudflareUrl').value
+                cloudflare_proxy_url: cfUrlValue === "" ? null : cfUrlValue
             };
-            const response = await fetch('/b2/connect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (response.ok) window.location.reload();
+
+            try {
+                const response = await fetch('/b2/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const errorData = await response.json();
+                    alert("Hiba a mentés során: " + (errorData.detail || "Ismeretlen hiba"));
+                }
+            } catch (err) {
+                alert("Hálózati hiba történt az elküldés során.");
+            }
         });
 
         async function resetDatabase() {
