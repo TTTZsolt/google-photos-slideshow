@@ -210,6 +210,10 @@
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2BucketName" placeholder="Bucket Name" required
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                        <input type="url" id="b2CloudflareUrl" placeholder="Cloudflare Worker URL (Opcionális)"
+                            class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                        <p class="text-[10px] text-slate-400">Pl: https://b2-proxy.username.workers.dev a limit
+                            elkerüléséhez</p>
                         <button type="submit"
                             class="w-full bg-slate-900 text-white font-bold p-3 rounded-xl hover:bg-slate-800 transition shadow-lg mt-2 flex items-center justify-center gap-2">
                             <i data-lucide="plus" class="w-5 h-5"></i> Link B2
@@ -490,7 +494,8 @@
             const payload = {
                 key_id: document.getElementById('b2KeyId').value,
                 application_key: document.getElementById('b2AppKey').value,
-                bucket_name: document.getElementById('b2BucketName').value
+                bucket_name: document.getElementById('b2BucketName').value,
+                cloudflare_proxy_url: document.getElementById('b2CloudflareUrl').value
             };
             const response = await fetch('/b2/connect', {
                 method: 'POST',

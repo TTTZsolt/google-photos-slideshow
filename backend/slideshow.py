@@ -108,7 +108,11 @@ class SlideshowController:
                                 self._b2_clients[b2_acc.id] = B2Client(b2_acc.key_id, b2_acc.application_key)
                             
                             client = self._b2_clients[b2_acc.id]
-                            display_url = client.get_download_url(b2_acc.bucket_name, media_item.file_name)
+                            display_url = client.get_download_url(
+                                b2_acc.bucket_name, 
+                                media_item.file_name, 
+                                b2_acc.cloudflare_proxy_url
+                            )
                             
                             # Format caption based on directory structure
                             caption = self._format_caption(media_item.file_name)

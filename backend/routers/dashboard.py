@@ -12,6 +12,7 @@ class B2ConnectRequest(BaseModel):
     key_id: str
     application_key: str
     bucket_name: str
+    cloudflare_proxy_url: str = None
 
 def get_db():
     db = SessionLocal()
@@ -49,12 +50,14 @@ def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Ses
         account = B2Account(
             key_id=req.key_id,
             application_key=req.application_key,
-            bucket_name=req.bucket_name
+            bucket_name=req.bucket_name,
+            cloudflare_proxy_url=req.cloudflare_proxy_url
         )
         db.add(account)
     else:
         account.application_key = req.application_key
         account.bucket_name = req.bucket_name
+        account.cloudflare_proxy_url = req.cloudflare_proxy_url
     
     db.commit()
     db.refresh(account)
