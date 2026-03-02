@@ -258,6 +258,7 @@
         let currentImg = 1;
         let lastUrl = "";
         let currentPath = ""; // Empty string means root
+        const sessionId = Math.random().toString(36).substring(2, 15); // Unique session ID for smart shuffle deck
 
         // DOM Elements
         const modal = document.getElementById('setupModal');
@@ -409,8 +410,12 @@
 
         async function fetchNextImage() {
             try {
-                const queryStr = config.folder ? `?folder=${encodeURIComponent(config.folder)}` : '';
-                const response = await fetch(`/api/media/random${queryStr}`);
+                const queryParams = new URLSearchParams({ session_id: sessionId });
+                if (config.folder) {
+                    queryParams.append('folder', config.folder);
+                }
+
+                const response = await fetch(`/api/media/random?${queryParams.toString()}`);
                 if (!response.ok) return;
                 const data = await response.json();
 

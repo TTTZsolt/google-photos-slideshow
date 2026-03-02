@@ -100,10 +100,10 @@ def get_folders(parent: str = None, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/media/random")
-def get_random_media(folder: str = None, db: Session = Depends(get_db)):
-    """Returns a random media item, optionally filtered by folder."""
+def get_random_media(folder: str = None, session_id: str = "default", db: Session = Depends(get_db)):
+    """Returns a random media item, optionally filtered by folder and session."""
     try:
-        media_item = controller.get_random_image(db, folder=folder)
+        media_item = controller.get_random_image(db, folder=folder, session_id=session_id)
         if not media_item:
             raise HTTPException(status_code=404, detail="No media items found for the given folder.")
         return media_item

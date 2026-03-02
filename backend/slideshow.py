@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 class SlideshowController:
     def __init__(self):
         self._b2_clients = {}  # Cache: {account_id: B2Client}
+        self._decks = {}  # Cache: {(session_id, folder): [shuffled_ids]}
 
     def _get_b2_client(self, db: Session, account_id: int):
         if account_id not in self._b2_clients:
@@ -54,23 +55,33 @@ class SlideshowController:
         folders = [{"name": folder, "path": f"{parent_path}{folder}" if parent_path else folder} for folder in sorted(list(seen_folders))]
         return folders
 
-    def get_random_image(self, db: Session, folder: str = None):
-        """Fetches a random image, optionally filtered by folder prefix."""
+    def get_random_image(self, db: Session, folder: str = None, session_id: str = "default"):
+        """Fetches a random image, filtered by folder. Uses a 'deck' system per session to avoid repetition."""
         query = db.query(MediaItem)
-        if folder:
-            if not folder.endswith('/'):
-                folder += '/'
-            query = query.filter(MediaItem.file_name.like(f"{folder}%"))
-            
-        # Optimization: count first, then random offset, or fetch all IDs and pick one
-        # Fetching all IDs is fast enough for SQLite with indexing
-        all_ids = [row[0] for row in query.with_entities(MediaItem.id).all()]
         
-        if not all_ids:
-            return None
+        folder_prefix = folder
+        if folder_prefix and not folder_prefix.endswith('/'):
+            folder_prefix += '/'
+
+        deck_key = (session_id, folder_prefix)
+
+        # Initialize or refill deck if empty
+        if deck_key not in self._decks or not self._decks[deck_key]:
+            if folder_prefix:
+                query = query.filter(MediaItem.file_name.like(f"{folder_prefix}%"))
+            all_ids = [row[0] for row in query.with_entities(MediaItem.id).all()]
             
-        random_id = random.choice(all_ids)
-        media_item = db.query(MediaItem).filter(MediaItem.id == random_id).first()
+            if not all_ids:
+                return None
+            
+            random.shuffle(all_ids)
+            self._decks[deck_key] = all_ids
+            logger.info(f"Refilled deck for session '{session_id}' (folder '{folder_prefix}') with {len(all_ids)} items.")
+
+        # Pop from deck
+        next_id = self._decks[deck_key].pop(0)
+
+        media_item = db.query(MediaItem).filter(MediaItem.id == next_id).first()
         
         if not media_item or not media_item.b2_account_id:
             return None
