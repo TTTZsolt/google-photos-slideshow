@@ -90,36 +90,27 @@ def delete_b2_account(account_id: int, db: Session = Depends(get_db)):
 # Use shared singleton controller
 from ..slideshow import controller
 
-@router.post("/slideshow/start")
-def start_slideshow(interval: int = 20, show_filename: bool = False, db: Session = Depends(get_db)):
-    # Check if there are any media items
-    count = db.query(MediaItem).count()
-    if count == 0:
-        raise HTTPException(status_code=400, detail="No media items found. Please sync your B2 bucket first!")
-    
-    controller.start(interval, show_filename)
-    return {"message": f"Slideshow started with {interval}s interval (show_filename={show_filename})"}
+@router.get("/api/folders")
+def get_folders(parent: str = None, db: Session = Depends(get_db)):
+    """Returns subdirectories under the given parent directory."""
+    try:
+        folders = controller.get_folders(db, parent_path=parent)
+        return {"folders": folders}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/slideshow/stop")
-def stop_slideshow():
-    controller.stop()
-    return {"message": "Slideshow stopped"}
-
-@router.post("/slideshow/update-config")
-def update_slideshow_config(interval: int = None, show_filename: bool = None):
-    controller.update_config(interval, show_filename)
-    return {"message": "Slideshow configuration updated"}
-
-@router.get("/slideshow/current-image")
-def get_current_image():
-    return controller.get_current_image_data()
-
-@router.get("/slideshow/status")
-def get_slideshow_status():
-    return {
-        "running": controller.is_running(),
-        "error": controller.get_last_error()
-    }
+@router.get("/api/media/random")
+def get_random_media(folder: str = None, db: Session = Depends(get_db)):
+    """Returns a random media item, optionally filtered by folder."""
+    try:
+        media_item = controller.get_random_image(db, folder=folder)
+        if not media_item:
+            raise HTTPException(status_code=404, detail="No media items found for the given folder.")
+        return media_item
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/reset")
 def reset_database():
