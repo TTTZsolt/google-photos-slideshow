@@ -253,7 +253,8 @@
             folder: null,
             intervalMs: 20000,
             showFilename: false,
-            isRunning: false
+            isRunning: false,
+            deviceName: null
         };
         let currentImg = 1;
         let lastUrl = "";
@@ -270,6 +271,12 @@
         // Initialization
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
+
+            // Try memory for device name, then URL
+            config.deviceName = urlParams.get('device_name') || localStorage.getItem('b2_device_name') || null;
+            if (config.deviceName) {
+                localStorage.setItem('b2_device_name', config.deviceName);
+            }
 
             // Auto-start check
             if (urlParams.has('folder') || urlParams.has('start_global')) {
@@ -416,7 +423,11 @@
         async function sendHeartbeat() {
             if (!config.isRunning) return;
             try {
-                const res = await fetch(`/api/heartbeat/${sessionId}`, { method: 'POST' });
+                const params = new URLSearchParams();
+                if (config.folder) params.append("folder", config.folder);
+                if (config.deviceName) params.append("device_name", config.deviceName);
+
+                const res = await fetch(`/api/heartbeat/${sessionId}?${params.toString()}`, { method: 'POST' });
                 if (!res.ok) {
                     if (res.status === 403) {
                         stopEngineAdmin();

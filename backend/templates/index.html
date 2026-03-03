@@ -140,6 +140,18 @@
                                 <span class="font-bold text-sm">Minden Szál Bezárása</span>
                             </button>
                         </div>
+
+                        <!-- v7.4 Connected Clients List -->
+                        <div class="mt-8 border-t border-slate-200/50 pt-6">
+                            <h3
+                                class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <i data-lucide="users" class="w-4 h-4"></i> Csatlakoztatott Eszközök
+                            </h3>
+                            <div id="activeClientsList" class="space-y-3">
+                                <!-- Populated by JS -->
+                                <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -514,6 +526,49 @@
                 } else {
                     container.classList.add('bg-rose-50', 'border-rose-200');
                     container.classList.remove('bg-white/60', 'border-slate-100');
+                }
+
+                // Render Connected Clients List
+                const listContainer = document.getElementById('activeClientsList');
+                if (data.sessions && Object.keys(data.sessions).length > 0) {
+                    listContainer.innerHTML = '';
+                    const sessions = Object.entries(data.sessions).sort((a, b) => b[1].last_seen - a[1].last_seen);
+
+                    for (const [sid, info] of sessions) {
+                        const secondsAgo = Math.round((Date.now() / 1000) - info.last_seen);
+
+                        const el = document.createElement('div');
+                        el.className = "p-4 bg-white/50 border border-slate-100 rounded-2xl flex items-center justify-between hover:bg-white/80 transition-colors";
+                        el.innerHTML = `
+                            <div class="flex items-center gap-4 min-w-0">
+                                <div class="relative shrink-0 flex items-center justify-center w-10 h-10 bg-indigo-50 rounded-full text-indigo-500 border border-indigo-100 shadow-sm">
+                                    <i data-lucide="monitor-smartphone" class="w-5 h-5"></i>
+                                    <div class="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="font-bold text-slate-800 text-sm truncate flex items-center gap-2">
+                                        ${info.device_name}
+                                        <span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded tracking-tighter">${info.ip}</span>
+                                    </p>
+                                    <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                                        <i data-lucide="folder-open" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                        <span class="truncate font-medium">${info.folder}</span>
+                                        <span class="hidden sm:inline-block text-[10px] ml-2 text-slate-400">(${secondsAgo} mp. pring)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        listContainer.appendChild(el);
+                    }
+                    lucide.createIcons();
+                } else {
+                    listContainer.innerHTML = `
+                        <div class="text-center py-6 bg-white/40 border border-dashed border-slate-200 rounded-2xl">
+                            <i data-lucide="monitor-off" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+                            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Nincsenek aktív kijelzők</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
                 }
 
             } catch (e) {

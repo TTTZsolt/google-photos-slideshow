@@ -104,8 +104,28 @@ def kill_all_sessions():
     return {"message": "All active sessions have been killed."}
 
 @router.post("/api/heartbeat/{session_id}")
-def heartbeat(session_id: str):
-    is_alive = controller.heartbeat(session_id)
+def heartbeat(request: Request, session_id: str, device_name: str = None, folder: str = None):
+    # Extract client metadata
+    client_ip = request.client.host if request.client else "Unknown"
+    user_agent = request.headers.get("user-agent", "Unknown")
+    
+    # Simplify common user agents for UI display
+    ua_str = "Készülék"
+    if "Android" in user_agent: ua_str = "Android"
+    elif "iPhone" in user_agent or "iPad" in user_agent: ua_str = "iOS"
+    elif "Windows" in user_agent: ua_str = "Windows PC"
+    elif "Macintosh" in user_agent: ua_str = "Mac"
+    elif "CrOS" in user_agent: ua_str = "Chrome OS"
+    elif "SmartTV" in user_agent or "Tizen" in user_agent or "Web0S" in user_agent: ua_str = "Smart TV"
+    
+    client_info = {
+        "ip": client_ip,
+        "user_agent": ua_str,
+        "device_name": device_name or ua_str,
+        "folder": folder or "Összes (Root)"
+    }
+    
+    is_alive = controller.heartbeat(session_id, client_info)
     if not is_alive:
         raise HTTPException(status_code=403, detail="Session stopped by administrator")
     return {"status": "ok"}

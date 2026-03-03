@@ -14,9 +14,9 @@ class SlideshowController:
         self._b2_clients = {}  # Cache: {account_id: B2Client}
         self._decks = {}  # Cache: {(session_id, folder): [shuffled_ids]}
         
-        # v7.3 System Control State
+        # v7.3/v7.4 System Control State
         self.master_switch = True
-        self.active_sessions = {} # {session_id: timestamp_float}
+        self.active_sessions = {} # {session_id: {"last_seen": float, "ip": str, "user_agent": str, "device_name": str, "folder": str}}
         self.killed_sessions = set() # {session_id}
 
     def _get_b2_client(self, db: Session, account_id: int):
@@ -116,26 +116,28 @@ class SlideshowController:
             return " - ".join(parts[:-1])
         return file_path
 
-    # v7.3 System Controls
-    def heartbeat(self, session_id: str) -> bool:
-        """Registers a heartbeat. Returns False if session should stop."""
+    # v7.3/v7.4 System Controls
+    def heartbeat(self, session_id: str, client_info: dict) -> bool:
+        """Registers a heartbeat and client metadata. Returns False if session should stop."""
         if not self.master_switch:
             return False
         if session_id in self.killed_sessions:
             return False
             
-        self.active_sessions[session_id] = time.time()
+        client_info["last_seen"] = time.time()
+        self.active_sessions[session_id] = client_info
         return True
 
     def get_system_status(self) -> dict:
-        """Counts active clients (heartbeat within 10 seconds)."""
+        """Counts active clients (heartbeat within 10 seconds) and returns their metadata."""
         now = time.time()
         # Clean up old sessions
-        self.active_sessions = {sid: ts for sid, ts in self.active_sessions.items() if now - ts < 10.0}
+        self.active_sessions = {sid: info for sid, info in self.active_sessions.items() if now - info.get("last_seen", 0) < 10.0}
         
         return {
             "master_switch": self.master_switch,
-            "active_clients": len(self.active_sessions)
+            "active_clients": len(self.active_sessions),
+            "sessions": self.active_sessions
         }
         
     def toggle_master_switch(self) -> bool:
