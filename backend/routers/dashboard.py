@@ -90,6 +90,26 @@ def delete_b2_account(account_id: int, db: Session = Depends(get_db)):
 # Use shared singleton controller
 from ..slideshow import controller
 
+@router.get("/api/system/status")
+def get_system_status():
+    return controller.get_system_status()
+
+@router.post("/api/system/toggle")
+def toggle_system():
+    return {"master_switch": controller.toggle_master_switch()}
+    
+@router.post("/api/system/kill_all")
+def kill_all_sessions():
+    controller.kill_all_sessions()
+    return {"message": "All active sessions have been killed."}
+
+@router.post("/api/heartbeat/{session_id}")
+def heartbeat(session_id: str):
+    is_alive = controller.heartbeat(session_id)
+    if not is_alive:
+        raise HTTPException(status_code=403, detail="Session stopped by administrator")
+    return {"status": "ok"}
+
 @router.get("/api/folders")
 def get_folders(parent: str = None, db: Session = Depends(get_db)):
     """Returns subdirectories under the given parent directory."""

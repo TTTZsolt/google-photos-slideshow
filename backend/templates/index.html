@@ -95,6 +95,54 @@
             <!-- Left/Center: Slideshow Management (Span 2) -->
             <div class="lg:col-span-2 space-y-8">
 
+                <!-- System Activity Card -->
+                <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-5">
+                        <i data-lucide="server" class="w-32 h-32 text-indigo-500"></i>
+                    </div>
+
+                    <div class="relative z-10">
+                        <h2 class="text-xl font-bold mb-6 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="activity" class="w-6 h-6 text-indigo-500"></i>
+                                System Activity
+                            </div>
+                            <div
+                                class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 shadow-inner">
+                                <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                                <span class="text-indigo-600 font-black text-sm" id="activeClientsCount">0</span>
+                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Active
+                                    Clients</span>
+                            </div>
+                        </h2>
+
+                        <div class="flex flex-col sm:flex-row gap-4 items-stretch">
+                            <!-- Toggle Master Switch -->
+                            <div class="flex-1 bg-white/60 p-5 rounded-2xl border border-slate-100 flex items-center justify-between transition-colors shadow-sm"
+                                id="masterSwitchContainer">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-sm">Főkapcsoló (Master Switch)</h3>
+                                    <p class="text-[11px] text-slate-500 mt-1">Globális adatforgalom engedélyezése</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="masterSwitchToggle" class="sr-only switch-peer"
+                                        onchange="toggleMasterSwitch()">
+                                    <div
+                                        class="w-14 h-7 bg-rose-400 rounded-full transition-all switch-target after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner border border-black/5">
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Kill All -->
+                            <button onclick="killAllSessions()"
+                                class="bg-rose-500 hover:bg-rose-600 text-white p-5 rounded-2xl shadow-lg transition flex items-center justify-center gap-3 group shrink-0 w-full sm:w-auto">
+                                <i data-lucide="skull" class="w-5 h-5 group-hover:animate-bounce"></i>
+                                <span class="font-bold text-sm">Minden Szál Bezárása</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Main Controls Card -->
                 <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-8 opacity-5">
@@ -444,6 +492,57 @@
                 alert('Failed to save music settings');
             }
         }
+
+        // ========== SYSTEM CONTROLS ==========
+        async function fetchSystemStatus() {
+            try {
+                const response = await fetch('/api/system/status');
+                const data = await response.json();
+
+                document.getElementById('activeClientsCount').textContent = data.active_clients;
+                // Avoid replacing checkbox if focused to avoid UI stutter, but handle gracefully
+                const toggle = document.getElementById('masterSwitchToggle');
+                const container = document.getElementById('masterSwitchContainer');
+
+                if (toggle.checked !== data.master_switch) {
+                    toggle.checked = data.master_switch;
+                }
+
+                if (data.master_switch) {
+                    container.classList.remove('bg-rose-50', 'border-rose-200');
+                    container.classList.add('bg-white/60', 'border-slate-100');
+                } else {
+                    container.classList.add('bg-rose-50', 'border-rose-200');
+                    container.classList.remove('bg-white/60', 'border-slate-100');
+                }
+
+            } catch (e) {
+                console.error("System Status failed:", e);
+            }
+        }
+
+        async function toggleMasterSwitch() {
+            try {
+                await fetch('/api/system/toggle', { method: 'POST' });
+                fetchSystemStatus();
+            } catch (e) {
+                alert("Hiba a Főkapcsoló átállításánál.");
+            }
+        }
+
+        async function killAllSessions() {
+            if (confirm("Biztosan megszakítod az összes aktív képlekérdezést?")) {
+                try {
+                    await fetch('/api/system/kill_all', { method: 'POST' });
+                    fetchSystemStatus();
+                } catch (e) {
+                    alert("Hiba a folyamatok kilövésénél.");
+                }
+            }
+        }
+
+        setInterval(fetchSystemStatus, 3000);
+        fetchSystemStatus();
 
         setInterval(updateB2Status, 3000);
         updateB2Status();

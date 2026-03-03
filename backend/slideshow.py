@@ -13,6 +13,11 @@ class SlideshowController:
     def __init__(self):
         self._b2_clients = {}  # Cache: {account_id: B2Client}
         self._decks = {}  # Cache: {(session_id, folder): [shuffled_ids]}
+        
+        # v7.3 System Control State
+        self.master_switch = True
+        self.active_sessions = {} # {session_id: timestamp_float}
+        self.killed_sessions = set() # {session_id}
 
     def _get_b2_client(self, db: Session, account_id: int):
         if account_id not in self._b2_clients:
@@ -111,5 +116,37 @@ class SlideshowController:
             return " - ".join(parts[:-1])
         return file_path
 
+    # v7.3 System Controls
+    def heartbeat(self, session_id: str) -> bool:
+        """Registers a heartbeat. Returns False if session should stop."""
+        if not self.master_switch:
+            return False
+        if session_id in self.killed_sessions:
+            return False
+            
+        self.active_sessions[session_id] = time.time()
+        return True
+
+    def get_system_status(self) -> dict:
+        """Counts active clients (heartbeat within 10 seconds)."""
+        now = time.time()
+        # Clean up old sessions
+        self.active_sessions = {sid: ts for sid, ts in self.active_sessions.items() if now - ts < 10.0}
+        
+        return {
+            "master_switch": self.master_switch,
+            "active_clients": len(self.active_sessions)
+        }
+        
+    def toggle_master_switch(self) -> bool:
+        self.master_switch = not self.master_switch
+        return self.master_switch
+        
+    def kill_all_sessions(self):
+        """Moves all current active sessions to the killed set."""
+        for session_id in self.active_sessions.keys():
+            self.killed_sessions.add(session_id)
+        self.active_sessions.clear()
+        
 # Global singleton instance
 controller = SlideshowController()
