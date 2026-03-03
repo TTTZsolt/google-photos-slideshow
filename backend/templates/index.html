@@ -143,14 +143,21 @@
 
                         <!-- v7.4 Connected Clients List -->
                         <div class="mt-8 border-t border-slate-200/50 pt-6">
-                            <h3
-                                class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <i data-lucide="users" class="w-4 h-4"></i> Csatlakoztatott Eszközök
-                            </h3>
-                            <div id="activeClientsList" class="space-y-3">
-                                <!-- Populated by JS -->
-                                <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
-                            </div>
+                            <details class="group marker:content-['']">
+                                <summary
+                                    class="flex items-center gap-2 cursor-pointer list-none select-none hover:bg-white/40 p-2 -mx-2 rounded-xl transition-colors">
+                                    <h3
+                                        class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2 flex-1">
+                                        <i data-lucide="users" class="w-4 h-4"></i> Csatlakoztatott Eszközök
+                                    </h3>
+                                    <i data-lucide="chevron-down"
+                                        class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform"></i>
+                                </summary>
+                                <div id="activeClientsList" class="space-y-3 mt-4">
+                                    <!-- Populated by JS -->
+                                    <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
+                                </div>
+                            </details>
                         </div>
                     </div>
                 </div>
@@ -532,7 +539,13 @@
                 const listContainer = document.getElementById('activeClientsList');
                 if (data.sessions && Object.keys(data.sessions).length > 0) {
                     listContainer.innerHTML = '';
-                    const sessions = Object.entries(data.sessions).sort((a, b) => b[1].last_seen - a[1].last_seen);
+                    const sessions = Object.entries(data.sessions).sort((a, b) => {
+                        const nameA = (a[1].device_name || "").toLowerCase();
+                        const nameB = (b[1].device_name || "").toLowerCase();
+                        if (nameA < nameB) return -1;
+                        if (nameA > nameB) return 1;
+                        return a[1].ip.localeCompare(b[1].ip);
+                    });
 
                     for (const [sid, info] of sessions) {
                         const secondsAgo = Math.round((Date.now() / 1000) - info.last_seen);
