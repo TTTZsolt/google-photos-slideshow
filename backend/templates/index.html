@@ -95,6 +95,57 @@
             <!-- Left/Center: Slideshow Management (Span 2) -->
             <div class="lg:col-span-2 space-y-8">
 
+                <!-- Main Controls Card -->
+                <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-8 opacity-5">
+                        <i data-lucide="monitor" class="w-32 h-32"></i>
+                    </div>
+
+                    <div class="relative z-10">
+                        <h2 class="text-xl font-bold mb-8 flex items-center gap-2">
+                            <i data-lucide="monitor" class="w-6 h-6 text-indigo-500"></i>
+                            Display Launcher
+                        </h2>
+
+                        <div class="space-y-6">
+                            <!-- Receiver Link -->
+                            <a href="/receiver" target="_blank"
+                                class="w-full btn-gradient-start text-white p-6 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg group">
+                                <i data-lucide="external-link"
+                                    class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
+                                <span class="text-lg font-bold">Open Device Display (Receiver)</span>
+                            </a>
+                            <p class="text-xs font-medium text-slate-500 text-center px-4">
+                                Open the Receiver on this device (or any other) to select a folder and start a
+                                completely independent slideshow session.
+                            </p>
+
+                            <!-- TV Casting -->
+                            <div class="p-6 bg-white/50 rounded-2xl border border-white mt-8">
+                                <h3 class="text-sm font-bold text-slate-500 mb-4 flex items-center gap-2">
+                                    <i data-lucide="cast" class="w-4 h-4"></i> Cast to TV (Global)
+                                </h3>
+                                <div class="flex items-center gap-4">
+                                    <select id="deviceSelect"
+                                        class="flex-1 bg-white border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-green-500 shadow-sm appearance-none">
+                                        <option value="">Scanning for TVs...</option>
+                                    </select>
+                                    <button onclick="castToTVLocal()"
+                                        class="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow transition"
+                                        title="Cast Receiver">
+                                        <i data-lucide="tv" class="w-5 h-5"></i>
+                                    </button>
+                                    <button onclick="stopCastingLocal()"
+                                        class="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-lg shadow transition"
+                                        title="Stop Cast">
+                                        <i data-lucide="square" class="w-5 h-5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- System Activity Card -->
                 <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-8 opacity-5">
@@ -158,57 +209,6 @@
                                     <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
                                 </div>
                             </details>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Main Controls Card -->
-                <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-8 opacity-5">
-                        <i data-lucide="monitor" class="w-32 h-32"></i>
-                    </div>
-
-                    <div class="relative z-10">
-                        <h2 class="text-xl font-bold mb-8 flex items-center gap-2">
-                            <i data-lucide="monitor" class="w-6 h-6 text-indigo-500"></i>
-                            Display Launcher
-                        </h2>
-
-                        <div class="space-y-6">
-                            <!-- Receiver Link -->
-                            <a href="/receiver" target="_blank"
-                                class="w-full btn-gradient-start text-white p-6 rounded-2xl flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg group">
-                                <i data-lucide="external-link"
-                                    class="w-6 h-6 group-hover:scale-110 transition-transform"></i>
-                                <span class="text-lg font-bold">Open Device Display (Receiver)</span>
-                            </a>
-                            <p class="text-xs font-medium text-slate-500 text-center px-4">
-                                Open the Receiver on this device (or any other) to select a folder and start a
-                                completely independent slideshow session.
-                            </p>
-
-                            <!-- TV Casting -->
-                            <div class="p-6 bg-white/50 rounded-2xl border border-white mt-8">
-                                <h3 class="text-sm font-bold text-slate-500 mb-4 flex items-center gap-2">
-                                    <i data-lucide="cast" class="w-4 h-4"></i> Cast to TV (Global)
-                                </h3>
-                                <div class="flex items-center gap-4">
-                                    <select id="deviceSelect"
-                                        class="flex-1 bg-white border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-green-500 shadow-sm appearance-none">
-                                        <option value="">Scanning for TVs...</option>
-                                    </select>
-                                    <button onclick="castToTVLocal()"
-                                        class="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow transition"
-                                        title="Cast Receiver">
-                                        <i data-lucide="tv" class="w-5 h-5"></i>
-                                    </button>
-                                    <button onclick="stopCastingLocal()"
-                                        class="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-lg shadow transition"
-                                        title="Stop Cast">
-                                        <i data-lucide="square" class="w-5 h-5"></i>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
