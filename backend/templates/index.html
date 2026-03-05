@@ -120,27 +120,25 @@
                                 completely independent slideshow session.
                             </p>
 
-                            <!-- TV Casting -->
+                            <!-- TV Casting (Stop Only) -->
                             <div class="p-6 bg-white/50 rounded-2xl border border-white mt-8">
                                 <h3 class="text-sm font-bold text-slate-500 mb-4 flex items-center gap-2">
-                                    <i data-lucide="cast" class="w-4 h-4"></i> Cast to TV (Global)
+                                    <i data-lucide="cast" class="w-4 h-4"></i> Stop TV Cast
                                 </h3>
                                 <div class="flex items-center gap-4">
                                     <select id="deviceSelect"
-                                        class="flex-1 bg-white border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-green-500 shadow-sm appearance-none">
+                                        class="flex-1 bg-white border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-rose-500 shadow-sm appearance-none">
                                         <option value="">Scanning for TVs...</option>
                                     </select>
-                                    <button onclick="castToTVLocal()"
-                                        class="bg-green-500 hover:bg-green-600 text-white p-3 rounded-lg shadow transition"
-                                        title="Cast Receiver">
-                                        <i data-lucide="tv" class="w-5 h-5"></i>
-                                    </button>
                                     <button onclick="stopCastingLocal()"
                                         class="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-lg shadow transition"
                                         title="Stop Cast">
                                         <i data-lucide="square" class="w-5 h-5"></i>
                                     </button>
                                 </div>
+                                <p class="text-[10px] text-slate-400 mt-3 font-medium">Új vetítés elindításához nyisd
+                                    meg a Receiver-t a telefonodon, válaszd ki a mappát, és ott nyomj a TV (Cast)
+                                    ikonra!</p>
                             </div>
                         </div>
                     </div>
@@ -372,13 +370,6 @@
                     deviceSelect.innerHTML = '<option value="">No TVs found</option>';
                 }
             } catch (e) { deviceSelect.innerHTML = '<option value="">Offline</option>'; }
-        }
-
-        async function castToTVLocal() {
-            const dev = deviceSelect.value;
-            if (!dev) return alert("Select a TV first!");
-            await fetch(`/slideshow/cast?device_name=${encodeURIComponent(dev)}`, { method: 'POST' });
-            alert(`Casting initiated to ${dev}`);
         }
 
         async function stopCastingLocal(silent = false) {

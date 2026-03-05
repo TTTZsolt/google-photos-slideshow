@@ -199,11 +199,21 @@ def scan_devices():
 def cast_to_device(device_name: str, request: Request):
     import subprocess
     import time
+    from urllib.parse import urlencode
+
     local_ip = get_local_ip()
     port = request.url.port or 8080
-    # Add timestamp to force cache busting on Chromecast
-    ts = int(time.time())
-    receiver_url = f"http://{local_ip}:{port}/receiver?ts={ts}"
+    
+    # Extract query params from this POST request
+    query_params = dict(request.query_params)
+    
+    # We will pass the device_name to the receiver so the dashboard can identify the TV by name
+    # We don't remove it, we just make sure TS and start_global are appended
+    query_params["ts"] = str(int(time.time()))
+    query_params["start_global"] = "true"
+    
+    query_string = urlencode(query_params)
+    receiver_url = f"http://{local_ip}:{port}/receiver?{query_string}"
     
     print(f"DEBUG: Casting {receiver_url} to device: {device_name}")
     

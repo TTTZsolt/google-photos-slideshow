@@ -158,6 +158,34 @@
             background: rgba(0, 0, 0, 0.8);
             border-color: rgba(99, 102, 241, 0.5);
         }
+
+        .cast-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            z-index: 1000;
+            cursor: pointer;
+            opacity: 0.2;
+            transition: all 0.3s;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .cast-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border-color: rgba(34, 197, 94, 0.5);
+            color: #4ade80;
+        }
     </style>
 </head>
 
@@ -177,6 +205,30 @@
         <i data-lucide="log-out" class="w-4 h-4"></i>
         <span>Change Folder</span>
     </button>
+
+    <button id="castBtn" class="cast-btn hidden" onclick="openCastModal()">
+        <i data-lucide="cast" class="w-5 h-5"></i>
+        <span>Cast to TV</span>
+    </button>
+
+    <!-- Cast Modal Overlay -->
+    <div id="castModal"
+        class="fixed inset-0 z-[3000] flex items-center justify-center bg-black/60 backdrop-blur-md hidden transition-opacity duration-300">
+        <div
+            class="glass-panel w-full max-w-sm rounded-3xl shadow-2xl flex flex-col m-4 overflow-hidden border border-white/40 p-6">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <i data-lucide="cast" class="text-indigo-500 w-5 h-5"></i>
+                Select Display
+            </h2>
+            <div id="castLoading" class="text-center py-4 text-slate-500 font-bold text-sm hidden">
+                <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-400"></i>
+                Searching network...
+            </div>
+            <div id="castDeviceList" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto custom-scrollbar"></div>
+            <button onclick="closeCastModal()"
+                class="mt-6 w-full py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition">Mégse</button>
+        </div>
+    </div>
 
     <!-- Setup Modal Overlay -->
     <div id="setupModal"
@@ -475,9 +527,11 @@
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             heartbeatInterval = setInterval(sendHeartbeat, 5000);
 
-            // Show the Stop/Change Folder button
+            // Show the Stop/Change Folder and Cast buttons
             const backBtn = document.getElementById('backBtn');
+            const castBtn = document.getElementById('castBtn');
             if (backBtn) backBtn.classList.remove('hidden');
+            if (castBtn) castBtn.classList.remove('hidden');
 
             initializeYouTubeMusic();
         }
@@ -490,9 +544,11 @@
             if (slideshowTimer) clearInterval(slideshowTimer);
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
-            // Hide the button
+            // Hide the buttons
             const backBtn = document.getElementById('backBtn');
+            const castBtn = document.getElementById('castBtn');
             if (backBtn) backBtn.classList.add('hidden');
+            if (castBtn) castBtn.classList.add('hidden');
 
             // Clear images & filename
             const img1 = document.getElementById('img1');
@@ -537,6 +593,62 @@
                 }
             } catch (e) {
                 console.log("Heartbeat failed", e);
+            }
+        }
+
+        async function openCastModal() {
+            document.getElementById('castModal').classList.remove('hidden');
+            document.getElementById('castLoading').classList.remove('hidden');
+            document.getElementById('castDeviceList').innerHTML = '';
+
+            try {
+                const response = await fetch('/slideshow/devices');
+                const data = await response.json();
+
+                document.getElementById('castLoading').classList.add('hidden');
+
+                if (data.devices && data.devices.length > 0) {
+                    data.devices.forEach(dev => {
+                        const btn = document.createElement('button');
+                        btn.className = "p-3 bg-white/60 hover:bg-indigo-50 text-slate-700 font-bold rounded-xl border border-slate-200 text-left transition-colors flex items-center gap-3 w-full";
+                        btn.innerHTML = `<i data-lucide="tv" class="w-4 h-4 text-indigo-500 shrink-0"></i> <span class="truncate">${dev}</span>`;
+                        btn.onclick = () => initiateCast(dev);
+                        document.getElementById('castDeviceList').appendChild(btn);
+                    });
+                    lucide.createIcons();
+                } else {
+                    document.getElementById('castDeviceList').innerHTML = '<p class="text-center text-rose-500 font-bold py-4">No TVs found on network</p>';
+                }
+            } catch (e) {
+                document.getElementById('castLoading').classList.add('hidden');
+                document.getElementById('castDeviceList').innerHTML = '<p class="text-center text-rose-500 font-bold py-4">Error searching for TVs</p>';
+            }
+        }
+
+        function closeCastModal() {
+            document.getElementById('castModal').classList.add('hidden');
+        }
+
+        async function initiateCast(device) {
+            closeCastModal();
+
+            // Collect current params to forward to backend
+            const params = new URLSearchParams();
+            if (config.folder) params.append("folder", config.folder);
+            if (config.intervalMs) params.append("interval", config.intervalMs / 1000);
+            if (config.showFilename !== undefined) params.append("show_filename", config.showFilename);
+            if (config.deviceName) params.append("device_name", config.deviceName);
+
+            try {
+                const queryStr = params.toString() ? '&' + params.toString() : '';
+                const res = await fetch(`/slideshow/cast?device_name=${encodeURIComponent(device)}${queryStr}`, { method: 'POST' });
+                if (res.ok) {
+                    alert(`Elküldve a következő TV-re: ${device}!`);
+                } else {
+                    alert('Hiba történt a kiküldés során.');
+                }
+            } catch (e) {
+                alert('Hálózati hiba a casting során.');
             }
         }
 
