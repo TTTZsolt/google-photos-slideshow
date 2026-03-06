@@ -110,21 +110,21 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            padding: 10px 16px;
+            padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 50%;
             z-index: 1000;
             cursor: pointer;
             opacity: 0.2;
             transition: all 0.3s;
-            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-weight: 600;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
         }
 
         .fs-btn:hover {
@@ -136,21 +136,21 @@
             position: absolute;
             bottom: 20px;
             left: 20px;
-            padding: 10px 16px;
+            padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 50%;
             z-index: 1000;
             cursor: pointer;
             opacity: 0.2;
             transition: all 0.3s;
-            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-weight: 600;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
         }
 
         .back-btn:hover {
@@ -163,21 +163,21 @@
             position: absolute;
             bottom: 20px;
             right: 20px;
-            padding: 10px 16px;
+            padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 50%;
             z-index: 1000;
             cursor: pointer;
             opacity: 0.2;
             transition: all 0.3s;
-            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-weight: 600;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
         }
 
         .cast-btn:hover {
@@ -190,23 +190,23 @@
         .flag-btn {
             position: absolute;
             bottom: 20px;
-            right: 140px;
+            right: 76px;
             /* Positioned left of the cast button */
-            padding: 10px 16px;
+            padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
+            border-radius: 50%;
             z-index: 1000;
             cursor: pointer;
             opacity: 0.2;
             transition: all 0.3s;
-            font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-weight: 600;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
         }
 
         .flag-btn:hover {
@@ -252,24 +252,20 @@
     <div id="img2" class="image-container active"></div>
     <div id="filename" class="filename-overlay"></div>
 
-    <button class="fs-btn" onclick="toggleFullscreen()">
-        <i data-lucide="maximize" class="w-4 h-4"></i>
-        <span>Fullscreen</span>
+    <button class="fs-btn" onclick="toggleFullscreen()" title="Fullscreen">
+        <i data-lucide="maximize" class="w-5 h-5"></i>
     </button>
 
-    <button id="backBtn" class="back-btn hidden" onclick="stopAndChangeFolder()">
-        <i data-lucide="log-out" class="w-4 h-4"></i>
-        <span>Change Folder</span>
+    <button id="backBtn" class="back-btn hidden" onclick="stopAndChangeFolder()" title="Change Folder">
+        <i data-lucide="log-out" class="w-5 h-5"></i>
     </button>
 
     <button id="flagBtn" class="flag-btn hidden" onclick="flagCurrentImg()" title="Flag for Retouch (Shortcut: R)">
         <i data-lucide="wand-2" class="w-5 h-5"></i>
-        <span>Flag Image</span>
     </button>
 
-    <button id="castBtn" class="cast-btn hidden" onclick="openCastModal()">
+    <button id="castBtn" class="cast-btn hidden" onclick="openCastModal()" title="Cast to TV">
         <i data-lucide="cast" class="w-5 h-5"></i>
-        <span>Cast to TV</span>
     </button>
 
     <!-- Cast Modal Overlay -->
@@ -819,7 +815,7 @@
 
             // Visual feedback on button
             const fb = document.getElementById('flagBtn');
-            fb.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i><span>Mentés...</span>';
+            fb.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
             lucide.createIcons();
 
             try {
@@ -833,7 +829,7 @@
             } catch (e) {
                 showNotification("Hálózati hiba mentéskor!");
             } finally {
-                fb.innerHTML = '<i data-lucide="wand-2" class="w-5 h-5"></i><span>Flag Image</span>';
+                fb.innerHTML = '<i data-lucide="wand-2" class="w-5 h-5"></i>';
                 lucide.createIcons();
             }
         }
