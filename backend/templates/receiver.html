@@ -403,7 +403,6 @@
     <script>
         lucide.createIcons();
 
-        // Global State
         let config = {
             folder: null,
             intervalMs: 20000,
@@ -413,6 +412,7 @@
         };
         let currentImg = 1;
         let lastUrl = "";
+        let actualCurrentFilename = ""; // Tracks the file name independently of the UI display
         let currentPath = ""; // Empty string means root
         const sessionId = Math.random().toString(36).substring(2, 15); // Unique session ID for smart shuffle deck
         let heartbeatInterval = null;
@@ -754,6 +754,11 @@
                 if (!response.ok) return;
                 const data = await response.json();
 
+                // Save actual file name for Retouch Queue (Flagging), regardless of display setting
+                if (data.filename) {
+                    actualCurrentFilename = data.filename;
+                }
+
                 // Handle Filename Overlay
                 const filenameEl = document.getElementById('filename');
                 if (config.showFilename && data.filename) {
@@ -807,10 +812,8 @@
 
         async function flagCurrentImg() {
             if (!config.isRunning) return;
-            const filenameEl = document.getElementById('filename');
-            const currentFileName = filenameEl.textContent;
 
-            if (!currentFileName || currentFileName === "") return;
+            if (!actualCurrentFilename || actualCurrentFilename === "") return;
 
             // Visual feedback on button
             const fb = document.getElementById('flagBtn');
@@ -821,7 +824,7 @@
                 const res = await fetch('/api/flags', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file_name: currentFileName })
+                    body: JSON.stringify({ file_name: actualCurrentFilename })
                 });
                 const data = await res.json();
                 showNotification(data.message || "Megjelölve!");
