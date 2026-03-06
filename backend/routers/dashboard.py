@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
-from ..models import B2Account, MediaItem
+from ..models import B2Account, MediaItem, FlaggedImage
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -100,8 +100,42 @@ def toggle_system():
     
 @router.post("/api/system/kill_all")
 def kill_all_sessions():
-    controller.kill_all_sessions()
-    return {"message": "All active sessions have been killed."}
+    controller.kill_all()
+    return {"message": "All sessions terminated"}
+
+# --- IMAGE FLAGGING / RETOUCH QUEUE ---
+
+class FlagImageRequest(BaseModel):
+    file_name: str
+
+@router.post("/api/flags")
+def flag_image(req: FlagImageRequest, db: Session = Depends(get_db)):
+    # Check if already flagged
+    existing = db.query(FlaggedImage).filter(FlaggedImage.file_name == req.file_name).first()
+    if existing:
+        return {"message": "Már megjelölve."}
+    
+    new_flag = FlaggedImage(file_name=req.file_name)
+    db.add(new_flag)
+    db.commit()
+    db.refresh(new_flag)
+    return {"message": "Sikeresen megjelölve javításra!"}
+
+@router.get("/api/flags")
+def get_flagged_images(db: Session = Depends(get_db)):
+    # Get all flagged images descending by date
+    from sqlalchemy import desc
+    flags = db.query(FlaggedImage).order_by(desc(FlaggedImage.flagged_at)).all()
+    return [{"id": f.id, "file_name": f.file_name, "flagged_at": f.flagged_at} for f in flags]
+
+@router.delete("/api/flags/{flag_id}")
+def resolve_flagged_image(flag_id: int, db: Session = Depends(get_db)):
+    flag = db.query(FlaggedImage).filter(FlaggedImage.id == flag_id).first()
+    if not flag:
+        raise HTTPException(status_code=404, detail="Jelölés nem található.")
+    db.delete(flag)
+    db.commit()
+    return {"message": "Törölve a listáról."}
 
 @router.post("/api/heartbeat/{session_id}")
 def heartbeat(request: Request, session_id: str, device_name: str = None, folder: str = None):

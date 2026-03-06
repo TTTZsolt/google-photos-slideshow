@@ -9,62 +9,74 @@
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Outfit', sans-serif;
-        }
+    /* Scrollbar styling */
+    .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    }
 
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
+    .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    }
 
-        .btn-gradient-start {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-        }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    }
+    </style>
+    <meta name="mobile-web-app-capable" content="yes">
 
-        .btn-gradient-stop {
-            background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
-        }
+    .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    }
 
-        .status-pulse {
-            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+    .btn-gradient-start {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    }
 
-        @keyframes pulse-ring {
+    .btn-gradient-stop {
+    background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
+    }
 
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
+    .status-pulse {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
 
-            50% {
-                opacity: 0.5;
-                transform: scale(1.1);
-            }
-        }
+    @keyframes pulse-ring {
 
-        .switch-peer:checked~.switch-target {
-            background-color: #22c55e;
-        }
+    0%,
+    100% {
+    opacity: 1;
+    transform: scale(1);
+    }
 
-        .switch-peer:checked~.switch-target::after {
-            transform: translateX(100%);
-        }
+    50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+    }
+    }
 
-        /* Hide Number Spinners */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
+    .switch-peer:checked~.switch-target {
+    background-color: #22c55e;
+    }
 
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
+    .switch-peer:checked~.switch-target::after {
+    transform: translateX(100%);
+    }
+
+    /* Hide Number Spinners */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+    }
+
+    input[type=number] {
+    -moz-appearance: textfield;
+    }
     </style>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -205,6 +217,27 @@
                                 <div id="activeClientsList" class="space-y-3 mt-4">
                                     <!-- Populated by JS -->
                                     <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
+                                </div>
+                            </details>
+                        </div>
+                        <!-- v7.9 Retouch Queue (Digitális Labor) -->
+                        <div class="mt-8 border-t border-slate-200/50 pt-6">
+                            <details class="group marker:content-['']" open>
+                                <summary
+                                    class="flex items-center gap-2 cursor-pointer list-none select-none hover:bg-rose-50/50 p-2 -mx-2 rounded-xl transition-colors">
+                                    <h3
+                                        class="text-xs font-bold text-rose-500 uppercase tracking-widest flex items-center gap-2 flex-1">
+                                        <i data-lucide="wand-2" class="w-4 h-4"></i> Digitális Labor (Javítandó)
+                                        <span id="flagBadge"
+                                            class="hidden bg-rose-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">0</span>
+                                    </h3>
+                                    <i data-lucide="chevron-down"
+                                        class="w-4 h-4 text-rose-300 group-open:rotate-180 transition-transform"></i>
+                                </summary>
+                                <div id="flaggedImagesList"
+                                    class="space-y-3 mt-4 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <!-- Populated by JS -->
+                                    <div class="text-center py-4 text-slate-400 text-sm font-medium">Betöltés...</div>
                                 </div>
                             </details>
                         </div>
@@ -575,6 +608,61 @@
                     lucide.createIcons();
                 }
 
+                // --- Render Retouch Queue (Digitális Labor) ---
+                const flagsContainer = document.getElementById('flaggedImagesList');
+                const badge = document.getElementById('flagBadge');
+
+                try {
+                    const flagsRes = await fetch('/api/flags');
+                    const flagsData = await flagsRes.json();
+
+                    if (flagsData && flagsData.length > 0) {
+                        badge.textContent = flagsData.length;
+                        badge.classList.remove('hidden');
+
+                        flagsContainer.innerHTML = '';
+                        flagsData.forEach(flag => {
+                            const folderParts = flag.file_name.split('/');
+                            const justName = folderParts.pop();
+                            const pathOnly = folderParts.join('/') + '/';
+
+                            const el = document.createElement('div');
+                            el.className = "p-3 bg-rose-50/50 border border-rose-100 rounded-xl flex items-center justify-between hover:bg-rose-50 transition-colors group";
+                            el.innerHTML = `
+                                <div class="min-w-0 flex-1 pr-4">
+                                    <div class="flex items-center gap-2 mb-0.5">
+                                        <i data-lucide="image" class="w-4 h-4 text-rose-400 shrink-0"></i>
+                                        <p class="font-bold text-slate-800 text-sm truncate" title="${justName}">${justName}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                                        <span class="truncate" title="${pathOnly}">${pathOnly}</span>
+                                        <button onclick="copyToClipboard('${flag.file_name.replace(/'/g, "\\'")}')" class="text-indigo-400 hover:text-indigo-600 shrink-0" title="Copy Path">
+                                            <i data-lucide="copy" class="w-3 h-3"></i>
+                                        </button>
+                                        <span class="ml-auto shrink-0 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">${formatDateTime(flag.flagged_at)}</span>
+                                    </div>
+                                </div>
+                                <button onclick="resolveFlag(${flag.id})" class="shrink-0 w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 hover:border-emerald-200 transition-all shadow-sm group-hover:shadow-md">
+                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                </button>
+                            `;
+                            flagsContainer.appendChild(el);
+                        });
+                        lucide.createIcons();
+                    } else {
+                        badge.classList.add('hidden');
+                        flagsContainer.innerHTML = `
+                            <div class="text-center py-4 bg-white/40 border border-dashed border-rose-100 rounded-xl">
+                                <i data-lucide="sparkles" class="w-6 h-6 text-rose-200 mx-auto mb-1"></i>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Nincs javítandó kép</p>
+                            </div>
+                        `;
+                        lucide.createIcons();
+                    }
+                } catch (e) {
+                    console.error("Failed to load flags", e);
+                }
+
             } catch (e) {
                 console.error("System Status failed:", e);
             }
@@ -598,6 +686,33 @@
                     alert("Hiba a folyamatok kilövésénél.");
                 }
             }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.createElement('div');
+                toast.className = "fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-xl shadow-2xl font-bold text-sm z-50 animate-bounce";
+                toast.innerText = "Másolva vágólapra!";
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
+        }
+
+        async function resolveFlag(id) {
+            if (confirm("Biztosan kész vagy a javítással? A kép eltűnik a listáról!")) {
+                try {
+                    await fetch(`/api/flags/${id}`, { method: 'DELETE' });
+                    fetchSystemStatus(); // Frissíti a listát
+                } catch (e) {
+                    alert("Hiba a törlés során!");
+                }
+            }
+        }
+
+        function formatDateTime(isoString) {
+            if (!isoString) return "";
+            const d = new Date(isoString);
+            return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         }
 
         setInterval(fetchSystemStatus, 3000);

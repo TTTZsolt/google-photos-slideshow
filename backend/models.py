@@ -35,3 +35,10 @@ class MusicConfig(Base):
     music_enabled = Column(Boolean, default=False)
     volume = Column(Integer, default=50)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class FlaggedImage(Base):
+    __tablename__ = "flagged_images"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    file_name = Column(Text, unique=True, index=True) # B2 File Path
+    flagged_at = Column(DateTime(timezone=True), server_default=func.now())
