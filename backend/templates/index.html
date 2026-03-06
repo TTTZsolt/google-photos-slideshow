@@ -9,74 +9,77 @@
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    /* Scrollbar styling */
-    .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    }
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
 
-    .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 8px;
-    }
+        /* Scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
 
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 8px;
-    }
-    </style>
-    <meta name="mobile-web-app-capable" content="yes">
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 8px;
+        }
 
-    .glass-panel {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+        }
 
-    .btn-gradient-start {
-    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-    }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
 
-    .btn-gradient-stop {
-    background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
-    }
+        .btn-gradient-start {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
 
-    .status-pulse {
-    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
+        .btn-gradient-stop {
+            background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
+        }
 
-    @keyframes pulse-ring {
+        .status-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
 
-    0%,
-    100% {
-    opacity: 1;
-    transform: scale(1);
-    }
+        @keyframes pulse-ring {
 
-    50% {
-    opacity: 0.5;
-    transform: scale(1.1);
-    }
-    }
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
 
-    .switch-peer:checked~.switch-target {
-    background-color: #22c55e;
-    }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
 
-    .switch-peer:checked~.switch-target::after {
-    transform: translateX(100%);
-    }
+        .switch-peer:checked~.switch-target {
+            background-color: #22c55e;
+        }
 
-    /* Hide Number Spinners */
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-    }
+        .switch-peer:checked~.switch-target::after {
+            transform: translateX(100%);
+        }
 
-    input[type=number] {
-    -moz-appearance: textfield;
-    }
+        /* Hide Number Spinners */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
     </style>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
