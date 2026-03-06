@@ -755,7 +755,9 @@
                 const data = await response.json();
 
                 // Save actual file name for Retouch Queue (Flagging), regardless of display setting
-                if (data.filename) {
+                if (data.file_path) {
+                    actualCurrentFilename = data.file_path;
+                } else if (data.filename) { // Fallback just in case
                     actualCurrentFilename = data.filename;
                 }
 

@@ -106,6 +106,7 @@ class SlideshowController:
         return {
             "url": display_url,
             "filename": caption,
+            "file_path": media_item.file_name,
             "id": media_item.id
         }
 
