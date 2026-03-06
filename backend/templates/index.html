@@ -637,19 +637,23 @@
                                         <i data-lucide="image" class="w-4 h-4 text-rose-400 shrink-0"></i>
                                         <p class="font-bold text-slate-800 text-sm truncate" title="${justName}">${justName}</p>
                                     </div>
-                                    <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
-                                        <span class="truncate" title="${pathOnly}">${pathOnly}</span>
-                                        <button onclick="copyToClipboard('${flag.file_name.replace(/'/g, "\\'")}')" class="text-indigo-400 hover:text-indigo-600 shrink-0" title="Copy Path">
-                                            <i data-lucide="copy" class="w-3 h-3"></i>
+                                    <div class="flex items-center gap-2 text-[10px] text-slate-500 font-mono mt-1">
+                                        <span class="truncate" title="${flag.file_name}">${flag.file_name}</span>
+                                        <button id="copy-btn-${flag.id}" class="text-indigo-400 hover:text-indigo-600 shrink-0 bg-white shadow-sm border border-slate-200 rounded px-1.5 py-0.5 flex items-center gap-1" title="Copy Full Path">
+                                            <i data-lucide="copy" class="w-3 h-3"></i> Másolás
                                         </button>
                                         <span class="ml-auto shrink-0 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">${formatDateTime(flag.flagged_at)}</span>
                                     </div>
                                 </div>
-                                <button onclick="resolveFlag(${flag.id})" class="shrink-0 w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 hover:border-emerald-200 transition-all shadow-sm group-hover:shadow-md">
+                                <button id="resolve-btn-${flag.id}" class="shrink-0 w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 hover:border-emerald-200 transition-all shadow-sm group-hover:shadow-md">
                                     <i data-lucide="check" class="w-4 h-4"></i>
                                 </button>
                             `;
                             flagsContainer.appendChild(el);
+
+                            // Attach event listeners safely
+                            document.getElementById(`copy-btn-${flag.id}`).onclick = () => copyToClipboard(flag.file_name);
+                            document.getElementById(`resolve-btn-${flag.id}`).onclick = () => resolveFlag(flag.id);
                         });
                         lucide.createIcons();
                     } else {
@@ -692,13 +696,35 @@
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                const toast = document.createElement('div');
-                toast.className = "fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-xl shadow-2xl font-bold text-sm z-50 animate-bounce";
-                toast.innerText = "Másolva vágólapra!";
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 2000);
-            });
+            // Modern way (requires HTTPS or localhost)
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(showCopyToast);
+            } else {
+                // Fallback for HTTP (Tailscale/LAN)
+                let textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-999999px";
+                textArea.style.top = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showCopyToast();
+                } catch (err) {
+                    alert("A böngésző biztonsági beállításai miatt nem sikerült a másolás. Kérlek másold ki kézzel!");
+                }
+                textArea.remove();
+            }
+        }
+
+        function showCopyToast() {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-xl shadow-2xl font-bold text-sm z-50 animate-bounce";
+            toast.innerText = "Másolva vágólapra!";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
         }
 
         async function resolveFlag(id) {
