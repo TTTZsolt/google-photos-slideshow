@@ -12,6 +12,7 @@ class B2ConnectRequest(BaseModel):
     key_id: str
     application_key: str
     bucket_name: str
+    archive_bucket_name: str = None
     cloudflare_proxy_url: str = None
 
 def get_db():
@@ -51,12 +52,14 @@ def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Ses
             key_id=req.key_id,
             application_key=req.application_key,
             bucket_name=req.bucket_name,
+            archive_bucket_name=req.archive_bucket_name,
             cloudflare_proxy_url=req.cloudflare_proxy_url
         )
         db.add(account)
     else:
         account.application_key = req.application_key
         account.bucket_name = req.bucket_name
+        account.archive_bucket_name = req.archive_bucket_name
         account.cloudflare_proxy_url = req.cloudflare_proxy_url
     
     db.commit()
@@ -267,3 +270,69 @@ def stop_casting(device_name: str):
         return {"message": f"Casting stopped on {device_name}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
+
+@router.post("/api/photopea/save")
+async def photopea_save(request: Request, db: Session = Depends(get_db)):
+    """ Endpoint that Photopea calls when the user hits Save. """
+    from urllib.parse import unquote
+    
+    # 1. Parse incoming parameters
+    # The image path is passed via query params since Photopea POSTs raw binary data
+    file_path = request.query_params.get("file_path")
+    if not file_path:
+        raise HTTPException(status_code=400, detail="Missing file_path query parameter")
+    
+    file_path = unquote(file_path)
+    
+    # 2. Receive edited binary image data
+    image_bytes = await request.body()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="No image data received")
+    
+    # 3. Retrieve active B2 Account
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="No active B2 account found")
+    
+    if not b2_account.archive_bucket_name:
+        raise HTTPException(status_code=400, detail="No Archive Bucket configured for this B2 Account.")
+        
+    # 4. Initialize B2 Client
+    from ..utils.b2_client import B2Client
+    b2_client = B2Client(b2_account.key_id, b2_account.application_key)
+    
+    try:
+        # 5. Determine new file name
+        # Ex: "2023/Nyaralas/img.jpg" -> "2023/Nyaralas/img-szerkesztett.jpg"
+        parts = file_path.rsplit('.', 1)
+        if len(parts) == 2:
+            new_file_path = f"{parts[0]}-szerkesztett.{parts[1]}"
+        else:
+            new_file_path = f"{file_path}-szerkesztett.jpg"
+            
+        # 6. Upload new edited image to Main Bucket
+        b2_client.upload_byte_stream(
+            bucket_name=b2_account.bucket_name,
+            file_name=new_file_path,
+            file_bytes=image_bytes,
+            content_type="image/jpeg" # Photopea saves as JPG by default based on our format setting
+        )
+        
+        # 7. Move Original image to Archive Bucket
+        b2_client.move_file(
+            source_bucket_name=b2_account.bucket_name,
+            dest_bucket_name=b2_account.archive_bucket_name,
+            file_name=file_path
+        )
+        
+        # 8. Remove from Retouch Queue (FlaggedImage table)
+        from sqlalchemy import delete
+        db.execute(delete(FlaggedImage).where(FlaggedImage.file_name == file_path))
+        db.commit()
+        
+        # 9. Return success back to Photopea iFrame
+        return {"message": "Success", "saved": file_path}
+        
+    except Exception as e:
+        print(f"DEBUG Photopea Save Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

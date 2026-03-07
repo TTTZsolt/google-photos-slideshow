@@ -60,3 +60,39 @@ class B2Client:
                 authorized_url = authorized_url.replace(base_url, proxy_clean, 1)
                 
         return authorized_url
+        
+    def upload_byte_stream(self, bucket_name: str, file_name: str, file_bytes: bytes, content_type: str = "image/jpeg"):
+        """Felölti a memóriában lévő nyers byte tartalmat a megadott vödörbe, megadott néven."""
+        logger.info(f"Uploading file stream to {bucket_name}/{file_name}")
+        bucket = self.b2_api.get_bucket_by_name(bucket_name)
+        file_version = bucket.upload_bytes(
+            file_bytes,
+            file_name,
+            content_type=content_type
+        )
+        return file_version
+        
+    def move_file(self, source_bucket_name: str, dest_bucket_name: str, file_name: str):
+        """
+        Natív B2 másolás a szerveren (letöltés nélkül!), majd az eredeti törlése.
+        Ha a célvödör nem létezik, vagy nincs megadva, hibát dob.
+        """
+        logger.info(f"Moving {file_name} from {source_bucket_name} to {dest_bucket_name}")
+        
+        source_bucket = self.b2_api.get_bucket_by_name(source_bucket_name)
+        dest_bucket = self.b2_api.get_bucket_by_name(dest_bucket_name)
+        
+        # 1. Keresd meg a forrásfájlt pontos ID alapján (a másoláshoz kell)
+        file_version = source_bucket.get_file_info_by_name(file_name)
+        
+        # 2. Másold át a cél vödörbe (ugyanazzal a névvel)
+        self.b2_api.copy_file(
+            file_version.id_,
+            file_name, # Ugyanaz a név a destinácioban is
+            destination_bucket=dest_bucket
+        )
+        
+        # 3. Töröld az eredetit a forrás vödörből
+        source_bucket.delete_file_version(file_version.id_, file_name)
+        logger.info(f"Successfully moved and cleaned up {file_name}")
+        return True

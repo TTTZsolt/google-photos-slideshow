@@ -261,6 +261,8 @@
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2BucketName" placeholder="Bucket Name" required
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                        <input type="text" id="b2ArchiveBucketName" placeholder="Archive Bucket Name (Opcionális)"
+                            class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2CloudflareUrl" placeholder="Cloudflare Worker URL (Opcionális)"
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <p class="text-[10px] text-slate-400">Pl: https://b2-proxy.username.workers.dev a limit
@@ -472,10 +474,12 @@
             e.preventDefault();
 
             const cfUrlValue = document.getElementById('b2CloudflareUrl').value.trim();
+            const archiveBucketValue = document.getElementById('b2ArchiveBucketName').value.trim();
             const payload = {
                 key_id: document.getElementById('b2KeyId').value,
                 application_key: document.getElementById('b2AppKey').value,
                 bucket_name: document.getElementById('b2BucketName').value,
+                archive_bucket_name: archiveBucketValue === "" ? null : archiveBucketValue,
                 cloudflare_proxy_url: cfUrlValue === "" ? null : cfUrlValue
             };
 
@@ -642,10 +646,13 @@
                                         <button id="copy-btn-${flag.id}" class="text-indigo-400 hover:text-indigo-600 shrink-0 bg-white shadow-sm border border-slate-200 rounded px-1.5 py-0.5 flex items-center gap-1" title="Copy Full Path">
                                             <i data-lucide="copy" class="w-3 h-3"></i> Másolás
                                         </button>
+                                        <button id="photopea-btn-${flag.id}" class="text-blue-500 hover:text-blue-700 shrink-0 bg-white shadow-sm border border-slate-200 rounded px-1.5 py-0.5 flex items-center gap-1" title="Edit in Photopea">
+                                            <i data-lucide="edit" class="w-3 h-3"></i> Photopea
+                                        </button>
                                         <span class="ml-auto shrink-0 bg-white px-1.5 py-0.5 rounded shadow-sm border border-slate-100">${formatDateTime(flag.flagged_at)}</span>
                                     </div>
                                 </div>
-                                <button id="resolve-btn-${flag.id}" class="shrink-0 w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 hover:border-emerald-200 transition-all shadow-sm group-hover:shadow-md">
+                                <button id="resolve-btn-${flag.id}" class="shrink-0 w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-full text-slate-400 hover:bg-emerald-50 hover:text-emerald-500 hover:border-emerald-200 transition-all shadow-sm group-hover:shadow-md" title="Mark as Done">
                                     <i data-lucide="check" class="w-4 h-4"></i>
                                 </button>
                             `;
@@ -653,6 +660,7 @@
 
                             // Attach event listeners safely
                             document.getElementById(`copy-btn-${flag.id}`).onclick = () => copyToClipboard(flag.file_name);
+                            document.getElementById(`photopea-btn-${flag.id}`).onclick = () => openPhotopea(flag.file_name);
                             document.getElementById(`resolve-btn-${flag.id}`).onclick = () => resolveFlag(flag.id);
                         });
                         lucide.createIcons();
@@ -735,6 +743,52 @@
                 } catch (e) {
                     alert("Hiba a törlés során!");
                 }
+            }
+        }
+
+        async function openPhotopea(filePath) {
+            // First we need the URL of this image from the server
+            try {
+                // Since this dashboard might be running on Tailscale or Local LAN,
+                // we tell Photopea to call back to the exact URL we are currently accessing
+                const serverBaseUrl = window.location.origin;
+                const saveEndpoint = `${serverBaseUrl}/api/photopea/save?file_path=${encodeURIComponent(filePath)}`;
+
+                // Fetch the active B2 proxy config to generate the direct download URL for the original
+                const b2res = await fetch('/b2/accounts');
+                const accounts = await b2res.json();
+                const activeB2 = accounts.length > 0 ? accounts[0] : null;
+
+                if (!activeB2 || !activeB2.cloudflare_proxy_url) {
+                    alert("HIBA: Photopea integráció csak akkor működik, ha be van állítva a Cloudflare Proxy URL (b2 beállításoknál), különben a Photopea nem tudja letölteni a képet a B2-ből a CORS miatt!");
+                    return;
+                }
+
+                const proxyUrl = activeB2.cloudflare_proxy_url.replace(/\/$/, "");
+                const imageUrl = `${proxyUrl}/file/${activeB2.bucket_name}/${filePath}`;
+
+                // Photopea API Configuration JSON
+                const config = {
+                    "files": [
+                        imageUrl
+                    ],
+                    "resources": [],
+                    "server": {
+                        "version": 1,
+                        "url": saveEndpoint,
+                        "formats": ["jpg"] // Force saving back as JPG
+                    }
+                };
+
+                const encodedConfig = encodeURI(JSON.stringify(config));
+                const photopeaUrl = `https://www.photopea.com#${encodedConfig}`;
+
+                // Open in new tab
+                window.open(photopeaUrl, '_blank');
+
+            } catch (e) {
+                console.error("Failed to configure Photopea:", e);
+                alert("Hálózati hiba a Photopea megnyitásakor");
             }
         }
 

@@ -9,6 +9,7 @@ class B2Account(Base):
     key_id = Column(String, unique=True, index=True)
     application_key = Column(String)
     bucket_name = Column(String)
+    archive_bucket_name = Column(String, nullable=True)
     cloudflare_proxy_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     last_synced_at = Column(DateTime(timezone=True), nullable=True)
