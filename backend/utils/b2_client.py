@@ -86,10 +86,9 @@ class B2Client:
         file_version = source_bucket.get_file_info_by_name(file_name)
         
         # 2. Másold át a cél vödörbe (ugyanazzal a névvel)
-        self.b2_api.copy_file(
-            file_version.id_,
-            file_name, # Ugyanaz a név a destinácioban is
-            destination_bucket=dest_bucket
+        dest_bucket.copy(
+            file_id=file_version.id_,
+            new_file_name=file_name
         )
         
         # 3. Töröld az eredetit a forrás vödörből

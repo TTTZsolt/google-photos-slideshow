@@ -310,36 +310,30 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
     file_path = unquote(file_path)
     
     # 2. Receive edited binary image data
-    # Photopea sends the file as multipart/form-data in a field named 'file' or inside a JSON string if specified,
-    # but based on the URL config we provided, it should be a standard form upload or a raw body.
-    # Let's try parsing as form data first
-    # Fallback to body if no form
+    # Photopea sends a custom ArrayBuffer where the first 2000 bytes are a JSON string padded with spaces, 
+    # and the remaining bytes are the actual image file.
     
+    body = await request.body()
+    if not body:
+        raise HTTPException(status_code=400, detail="No image data received")
+        
     try:
-        form = await request.form()
-        # Photopea uses 'file' or the original filename as the field name. Try 'file' first, then grab the first file available.
-        uploaded_file = form.get("file")
-        if not uploaded_file:
-            # Maybe it used the filename as key
-            for key, value in form.items():
-                if hasattr(value, 'file'):
-                    uploaded_file = value
-                    break
-                    
-        if uploaded_file and hasattr(uploaded_file, 'read'):
-            image_bytes = await uploaded_file.read()
-            print("Extracted image bytes from multipart form")
+        if len(body) > 2000:
+            # Decode the first 2000 bytes, ignoring errors just in case it's raw binary
+            header = body[:2000].decode('utf-8', errors='ignore')
+            # Check if it contains Photopea's expected JSON structure
+            if '{"' in header and '"source"' in header:
+                print("Detected Photopea padded JSON header. Slicing body[2000:]")
+                image_bytes = body[2000:]
+            else:
+                # If it's a standard HTTP POST for some reason
+                image_bytes = body
         else:
-            # Fallback to raw body
-            image_bytes = await request.body()
-            print("Fallback: Using raw request body")
+            image_bytes = body
             
     except Exception as e:
-        print(f"Form parse failed, falling back to body: {e}")
-        image_bytes = await request.body()
-
-    if not image_bytes:
-        raise HTTPException(status_code=400, detail="No image data received")
+        print(f"Error slicing Photopea payload: {e}")
+        image_bytes = body
     
     # 3. Retrieve active B2 Account
     b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
