@@ -30,7 +30,7 @@ class B2Client:
             if file_version:
                 yield file_version
 
-    def get_download_url(self, bucket_name: str, file_name: str, cloudflare_proxy_url: str = None, valid_duration_seconds: int = 7200):
+    def get_download_url(self, bucket_name: str, file_name: str, cloudflare_proxy_url: str = None, valid_duration_seconds: int = 7200, use_proxy: bool = True):
         import urllib.parse
         
         now = time.time()
@@ -53,8 +53,8 @@ class B2Client:
         encoded_file_name = urllib.parse.quote(file_name, safe='/')
         authorized_url = f"{base_url}/file/{bucket_name}/{encoded_file_name}?Authorization={download_auth_token}"
         
-        # If Cloudflare Proxy URL is provided, replace the B2 base URL with the proxy URL
-        if cloudflare_proxy_url:
+        # If Cloudflare Proxy URL is provided and we want to use it, replace the B2 base URL with the proxy URL
+        if cloudflare_proxy_url and use_proxy:
             proxy_clean = cloudflare_proxy_url.strip().rstrip('/')
             if proxy_clean:
                 authorized_url = authorized_url.replace(base_url, proxy_clean, 1)

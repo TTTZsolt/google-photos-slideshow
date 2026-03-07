@@ -284,10 +284,13 @@ def get_photopea_auth_url(file_path: str, db: Session = Depends(get_db)):
     b2_client = B2Client(b2_account.key_id, b2_account.application_key)
     
     try:
+        # Force use_proxy=False because Cloudflare Workers strip or don't forward
+        # the B2 ?Authorization= query parameter required to download from private buckets
         url = b2_client.get_download_url(
             b2_account.bucket_name,
             file_path,
-            b2_account.cloudflare_proxy_url
+            b2_account.cloudflare_proxy_url,
+            use_proxy=False
         )
         return {"url": url}
     except Exception as e:
