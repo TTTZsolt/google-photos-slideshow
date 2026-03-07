@@ -304,7 +304,9 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
     # 1. Parse incoming parameters
     # The image path is passed via query params since Photopea POSTs raw binary data
     file_path = request.query_params.get("file_path")
+    print(f"DEBUG PHOTOPEA: Incoming save request for {file_path}")
     if not file_path:
+        print("DEBUG PHOTOPEA: Missing file_path")
         raise HTTPException(status_code=400, detail="Missing file_path query parameter")
     
     file_path = unquote(file_path)
@@ -313,27 +315,35 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
     # Photopea sends a custom ArrayBuffer where the first 2000 bytes are a JSON string padded with spaces, 
     # and the remaining bytes are the actual image file.
     
-    body = await request.body()
+    print(f"DEBUG PHOTOPEA: Read total body bytes: {len(body)}")
+    
     if not body:
+        print("DEBUG PHOTOPEA: Empty body received")
         raise HTTPException(status_code=400, detail="No image data received")
         
     try:
         if len(body) > 2000:
-            # Decode the first 2000 bytes, ignoring errors just in case it's raw binary
             header = body[:2000].decode('utf-8', errors='ignore')
-            # Check if it contains Photopea's expected JSON structure
+            print(f"DEBUG PHOTOPEA: Header preview: {header[:150]}...")
             if '{"' in header and '"source"' in header:
-                print("Detected Photopea padded JSON header. Slicing body[2000:]")
+                print("DEBUG PHOTOPEA: Slicing Photopea custom ArrayBuffer (removing 2000 bytes)")
                 image_bytes = body[2000:]
             else:
-                # If it's a standard HTTP POST for some reason
+                print("DEBUG PHOTOPEA: Header does not contain typical JSON marks. Assuming raw image bytes.")
                 image_bytes = body
         else:
+            print("DEBUG PHOTOPEA: Body is too small to be a padded JSON. Using raw.")
             image_bytes = body
             
     except Exception as e:
-        print(f"Error slicing Photopea payload: {e}")
+        print(f"DEBUG PHOTOPEA: Error slicing payload: {e}")
+        import traceback
+        traceback.print_exc()
         image_bytes = body
+    
+    print(f"DEBUG PHOTOPEA: Final image_bytes length: {len(image_bytes)}")
+    if not image_bytes or len(image_bytes) == 0:
+        raise HTTPException(status_code=400, detail="No image data received after slicing")
     
     # 3. Retrieve active B2 Account
     b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
@@ -356,16 +366,18 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
         else:
             new_file_path = f"{file_path}-szerkesztett.jpg"
             
-        # 6. Upload new edited image to Main Bucket
+        print(f"DEBUG PHOTOPEA: Uploading to {new_file_path} in bucket {b2_account.bucket_name}")
         b2_client.upload_byte_stream(
             bucket_name=b2_account.bucket_name,
             file_name=new_file_path,
             file_bytes=image_bytes,
             content_type="image/jpeg" # Photopea saves as JPG by default based on our format setting
         )
+        print("DEBUG PHOTOPEA: Upload successful.")
         
         # 7. Move Original image to Archive Bucket
         try:
+            print(f"DEBUG PHOTOPEA: Moving {file_path} to {b2_account.archive_bucket_name}")
             b2_client.move_file(
                 source_bucket_name=b2_account.bucket_name,
                 dest_bucket_name=b2_account.archive_bucket_name,
