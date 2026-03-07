@@ -290,7 +290,7 @@ def get_photopea_auth_url(file_path: str, db: Session = Depends(get_db)):
             b2_account.bucket_name,
             file_path,
             b2_account.cloudflare_proxy_url,
-            use_proxy=False
+            use_proxy=True
         )
         return {"url": url}
     except Exception as e:
