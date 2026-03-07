@@ -754,13 +754,11 @@
             }
         }
 
+        let currentPhotopeaFilePath = null;
+
         async function openPhotopea(filePath) {
-            // First we need the URL of this image from the server
             try {
-                // Since this dashboard might be running on Tailscale or Local LAN,
-                // we tell Photopea to call back to the exact URL we are currently accessing
-                const serverBaseUrl = window.location.origin;
-                const saveEndpoint = `${serverBaseUrl}/api/photopea/save?file_path=${encodeURIComponent(filePath)}`;
+                currentPhotopeaFilePath = filePath;
 
                 // Fetch the authorized, time-limited download URL from our backend
                 const authRes = await fetch(`/api/photopea/auth-url?file_path=${encodeURIComponent(filePath)}`);
@@ -772,29 +770,102 @@
                 const imageUrl = authData.url;
 
                 // Photopea API Configuration JSON
+                // We use customIO to override the default Save action and send the JPG ArrayBuffer directly to our window via postMessage
+                // This bypasses the Mixed Content block that prevents Photopea (HTTPS) from POSTing to our local Python server (HTTP)
                 const config = {
                     "files": [
                         imageUrl
                     ],
                     "resources": [],
-                    "server": {
-                        "version": 1,
-                        "url": saveEndpoint,
-                        "formats": ["jpg"] // Force saving back as JPG
+                    "environment": {
+                        "customIO": {
+                            "save": "app.activeDocument.saveToOE('jpg');"
+                        }
                     }
                 };
 
                 const encodedConfig = encodeURI(JSON.stringify(config));
                 const photopeaUrl = `https://www.photopea.com#${encodedConfig}`;
 
-                // Open in new tab
-                window.open(photopeaUrl, '_blank');
+                // Create full-screen iframe
+                const iframe = document.createElement('iframe');
+                iframe.id = 'photopeaIframe';
+                iframe.src = photopeaUrl;
+                iframe.style.position = 'fixed';
+                iframe.style.top = '0';
+                iframe.style.left = '0';
+                iframe.style.width = '100vw';
+                iframe.style.height = '100vh';
+                iframe.style.border = 'none';
+                iframe.style.zIndex = '999999';
+
+                // Add a close button
+                const closeBtn = document.createElement('button');
+                closeBtn.id = 'photopeaCloseBtn';
+                closeBtn.innerHTML = '<i data-lucide="x" class="w-6 h-6"></i>';
+                closeBtn.className = 'fixed top-4 right-4 bg-slate-800/80 text-white p-3 rounded-full shadow-2xl z-[9999999] hover:bg-rose-600 transition backdrop-blur-md';
+                closeBtn.title = "Szerkesztő bezárása";
+                closeBtn.onclick = () => {
+                    if (confirm("Biztosan be akarod zárni a szerkesztőt? A nem mentett módosítások elvesznek!")) {
+                        document.getElementById('photopeaIframe').remove();
+                        document.getElementById('photopeaCloseBtn').remove();
+                        currentPhotopeaFilePath = null;
+                    }
+                };
+
+                document.body.appendChild(iframe);
+                document.body.appendChild(closeBtn);
+                lucide.createIcons();
 
             } catch (e) {
                 console.error("Failed to configure Photopea:", e);
                 alert("Hálózati hiba a Photopea megnyitásakor");
             }
         }
+
+        // Listen for messages from Photopea iframe
+        window.addEventListener("message", async function (e) {
+            // Photopea sends the saved image as an ArrayBuffer
+            if (e.data instanceof ArrayBuffer) {
+                if (!currentPhotopeaFilePath) return;
+
+                // Show a loading toast overlay
+                const toast = document.createElement('div');
+                toast.id = "photopeaSavingToast";
+                toast.className = "fixed top-4 left-1/2 -translate-x-1/2 bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-2xl font-bold z-[9999999] flex items-center gap-3 animate-pulse";
+                toast.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Mentés és archiválás folyamatban...';
+                document.body.appendChild(toast);
+                lucide.createIcons();
+
+                try {
+                    // Send the raw ArrayBuffer bytes to our local HTTP server
+                    const res = await fetch(`/api/photopea/save?file_path=${encodeURIComponent(currentPhotopeaFilePath)}`, {
+                        method: 'POST',
+                        body: e.data,
+                        headers: {
+                            'Content-Type': 'application/octet-stream'
+                        }
+                    });
+
+                    if (res.ok) {
+                        alert("Sikeresen felküldve a B2-re és archiválva!");
+                        document.getElementById('photopeaIframe').remove();
+                        document.getElementById('photopeaCloseBtn').remove();
+                        fetchSystemStatus();
+                    } else {
+                        const errText = await res.text();
+                        alert("Hiba mentéskor! " + errText);
+                    }
+                } catch (err) {
+                    console.error("Save error:", err);
+                    alert("Hálózati hiba mentés közben!");
+                } finally {
+                    const toastEl = document.getElementById("photopeaSavingToast");
+                    if (toastEl) toastEl.remove();
+                    currentPhotopeaFilePath = null;
+                }
+            }
+        });
 
         function formatDateTime(isoString) {
             if (!isoString) return "";
