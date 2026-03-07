@@ -271,6 +271,28 @@ def stop_casting(device_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
 
+@router.get("/api/photopea/auth-url")
+def get_photopea_auth_url(file_path: str, db: Session = Depends(get_db)):
+    from urllib.parse import unquote
+    file_path = unquote(file_path)
+    
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="No active B2 account found")
+        
+    from ..utils.b2_client import B2Client
+    b2_client = B2Client(b2_account.key_id, b2_account.application_key)
+    
+    try:
+        url = b2_client.get_download_url(
+            b2_account.bucket_name,
+            file_path,
+            b2_account.cloudflare_proxy_url
+        )
+        return {"url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/api/photopea/save")
 async def photopea_save(request: Request, db: Session = Depends(get_db)):
     """ Endpoint that Photopea calls when the user hits Save. """

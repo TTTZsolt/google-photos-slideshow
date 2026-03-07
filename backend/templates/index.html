@@ -762,18 +762,14 @@
                 const serverBaseUrl = window.location.origin;
                 const saveEndpoint = `${serverBaseUrl}/api/photopea/save?file_path=${encodeURIComponent(filePath)}`;
 
-                // Fetch the active B2 proxy config to generate the direct download URL for the original
-                const b2res = await fetch('/b2/accounts');
-                const accounts = await b2res.json();
-                const activeB2 = accounts.length > 0 ? accounts[0] : null;
-
-                if (!activeB2 || !activeB2.cloudflare_proxy_url) {
-                    alert("HIBA: Photopea integráció csak akkor működik, ha be van állítva a Cloudflare Proxy URL (b2 beállításoknál), különben a Photopea nem tudja letölteni a képet a B2-ből a CORS miatt!");
+                // Fetch the authorized, time-limited download URL from our backend
+                const authRes = await fetch(`/api/photopea/auth-url?file_path=${encodeURIComponent(filePath)}`);
+                if (!authRes.ok) {
+                    alert("HIBA: Nem sikerült kommunikálni a B2 szerverrel vagy nincs hozzáadva Cloudflare Proxy!");
                     return;
                 }
-
-                const proxyUrl = activeB2.cloudflare_proxy_url.replace(/\/$/, "");
-                const imageUrl = `${proxyUrl}/file/${activeB2.bucket_name}/${filePath}`;
+                const authData = await authRes.json();
+                const imageUrl = authData.url;
 
                 // Photopea API Configuration JSON
                 const config = {
