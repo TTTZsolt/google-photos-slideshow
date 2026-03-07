@@ -315,6 +315,7 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
     # Photopea sends a custom ArrayBuffer where the first 2000 bytes are a JSON string padded with spaces, 
     # and the remaining bytes are the actual image file.
     
+    body = await request.body()
     print(f"DEBUG PHOTOPEA: Read total body bytes: {len(body)}")
     
     if not body:
