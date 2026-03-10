@@ -339,7 +339,7 @@
                                 <label
                                     class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Interval</label>
                                 <div class="flex items-baseline gap-1">
-                                    <input type="number" id="setupInterval" value="20" min="1"
+                                    <input type="number" id="setupInterval" value="240" min="1"
                                         class="w-10 bg-transparent border-0 p-0 text-lg font-bold focus:ring-0 text-slate-700 h-6">
                                     <span class="text-sm font-bold text-slate-400">s</span>
                                 </div>
@@ -401,7 +401,7 @@
 
         let config = {
             folder: null,
-            intervalMs: 20000,
+            intervalMs: 240000,
             showFilename: false,
             isRunning: false,
             deviceName: null
@@ -439,7 +439,7 @@
             // Auto-start check
             if (urlParams.has('folder') || urlParams.has('start_global')) {
                 config.folder = urlParams.get('folder') || null;
-                config.intervalMs = parseInt(urlParams.get('interval') || 20) * 1000;
+                config.intervalMs = parseInt(urlParams.get('interval') || 240) * 1000;
                 config.showFilename = urlParams.get('show_filename') === 'true';
                 startEngine();
             } else {
@@ -544,7 +544,7 @@
 
         function startSlideshow(folderPath) {
             config.folder = folderPath;
-            config.intervalMs = parseInt(document.getElementById('setupInterval').value || 20) * 1000;
+            config.intervalMs = parseInt(document.getElementById('setupInterval').value || 240) * 1000;
             config.showFilename = document.getElementById('setupShowFilename').checked;
 
             const nameInput = document.getElementById('setupDeviceName');
