@@ -277,6 +277,13 @@
                 <i data-lucide="cast" class="text-indigo-500 w-5 h-5"></i>
                 Select Display
             </h2>
+            <div id="castLoading" class="text-center py-4 text-slate-500 font-bold text-sm hidden">
+                <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-400"></i>
+                Searching network...
+            </div>
+            <div id="castDeviceList" class="flex flex-col gap-2 max-h-[40vh] overflow-y-auto custom-scrollbar"></div>
+            <button onclick="closeCastModal()"
+                class="mt-6 w-full py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition">Mégse</button>
         </div>
     </div>
 
