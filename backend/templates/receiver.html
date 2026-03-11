@@ -180,7 +180,6 @@
             height: 44px;
         }
 
-        .cast-btn.hidden,
         .back-btn.hidden,
         .flag-btn.hidden {
             display: none !important;
@@ -253,6 +252,12 @@
 
 <body>
 
+    <!-- Floating Version Label -->
+    <div
+        class="absolute bottom-4 left-4 z-[9999] pointer-events-none tracking-widest text-[10px] font-bold text-white/30">
+        B2 RECEIVER V8.1
+    </div>
+
     <!-- Slideshow Images -->
     <div id="img1" class="image-container"></div>
     <div id="img2" class="image-container active"></div>
@@ -312,7 +317,7 @@
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                             <i data-lucide="folders" class="text-indigo-500 w-6 h-6"></i>
-                            Slideshow Setup
+                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V8.1</span>
                         </h2>
                         <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Select a folder to
                             begin</p>
