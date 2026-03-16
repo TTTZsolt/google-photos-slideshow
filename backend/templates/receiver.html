@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>B2 Slideshow Receiver - V8.1</title>
+    <title>B2 Slideshow Receiver - V8.2</title>
 
     <!-- Design & Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -311,7 +311,7 @@
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                             <i data-lucide="folders" class="text-indigo-500 w-6 h-6"></i>
-                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V8.1</span>
+                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V8.2</span>
                         </h2>
                         <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Select a folder to
                             begin</p>
@@ -425,6 +425,28 @@
         const sessionId = Math.random().toString(36).substring(2, 15); // Unique session ID for smart shuffle deck
         let heartbeatInterval = null;
         let slideshowTimer = null;
+        let wakeLock = null;
+
+        // --- Screen Wake Lock logic ---
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock is active');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock was released');
+                    });
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && config.isRunning) {
+                await requestWakeLock();
+            }
+        });
 
         // DOM Elements
         const modal = document.getElementById('setupModal');
@@ -608,6 +630,7 @@
             document.addEventListener('keydown', handleKeyboardShortcuts);
 
             initializeYouTubeMusic();
+            requestWakeLock();
         }
 
         function stopAndChangeFolder() {
@@ -655,6 +678,11 @@
                 modal.style.opacity = '1';
                 loadFolders(currentPath); // Refresh the current view
             }, 50);
+
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+            }
         }
 
         async function sendHeartbeat() {

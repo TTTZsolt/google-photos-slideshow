@@ -1,4 +1,4 @@
-# Web-Based Random Slideshow (V8.0)
+# Web-Based Random Slideshow (V8.2)
 
 **Cél**: Kiegészítés Spotify-val
 
@@ -50,7 +50,9 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
-- **V8.0**: Latest release (receiver default interval 240s, minor UI alignment/refinements).
+- **V8.2**: Screen Wake Lock implementation (prevent screen dimming on Android).
+- **V8.1**: UI refinements and minor fixes.
+- **V8.0**: receiver default interval 240s, minor UI alignment/refinements.
 - **V7.9**: Retouch Queue (Digitális Labor), UI button alignment.
 - **V3.1**: GoogleCast integration via `catt`, Consolidated UI, Dynamic Settings.
 - **V3.0**: Stable release (Optimized B2, Web-based, Flicker-free).
