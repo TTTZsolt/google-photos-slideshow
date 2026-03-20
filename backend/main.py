@@ -30,4 +30,26 @@ templates = Jinja2Templates(directory="backend/templates")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8080, reload=True)
+    LOGGING_CONFIG = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {"format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"},
+        },
+        "handlers": {
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "formatter": "default",
+                "filename": "log.txt",
+                "maxBytes": 5 * 1024 * 1024, # 5 MB maximum
+                "backupCount": 1,
+            },
+        },
+        "loggers": {
+            "uvicorn": {"handlers": ["file"], "level": "INFO"},
+            "uvicorn.error": {"level": "INFO"},
+            "uvicorn.access": {"handlers": ["file"], "level": "INFO", "propagate": False},
+            "fastapi": {"handlers": ["file"], "level": "INFO"},
+        },
+    }
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8080, reload=True, log_config=LOGGING_CONFIG)
