@@ -135,7 +135,7 @@
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.13</span></h1>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v10.0</span></h1>
             <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
         <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
@@ -152,33 +152,44 @@
         </div>
     </div>
 
-    <!-- Controls -->
-    <div class="w-full px-6 space-y-4">
-        <div class="grid grid-cols-4 gap-3" id="controlsGrid">
-            <button onclick="triggerSwipe('left')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
-                <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center border border-blue-500/30">
-                    <i data-lucide="plane"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-blue-400">Utazás</span>
-            </button>
-            <button onclick="triggerSwipe('down')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
-                <div class="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center border border-green-500/30">
-                    <i data-lucide="heart"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-green-400">Család</span>
-            </button>
-            <button onclick="triggerSwipe('up')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
-                <div class="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30">
+    <!-- Controls (D-Pad) -->
+    <div class="w-full flex justify-center pb-4">
+        <div class="relative w-64 h-64 rounded-full glass-panel shadow-[0_0_40px_rgba(0,0,0,0.6)] border-4 border-white/5 flex items-center justify-center bg-[#111116]/90 backdrop-blur-xl">
+            
+            <!-- Törlés (Up) -->
+            <button onclick="triggerSwipe('up')" class="absolute top-1 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
+                <div class="w-11 h-11 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
                     <i data-lucide="trash-2"></i>
                 </div>
                 <span class="text-[9px] font-bold uppercase text-red-400">Törlés</span>
             </button>
-            <button onclick="triggerSwipe('right')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
-                <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center border border-purple-500/30">
+
+            <!-- Család (Down) -->
+            <button onclick="triggerSwipe('down')" class="absolute bottom-1 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
+                <div class="w-11 h-11 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                    <i data-lucide="heart"></i>
+                </div>
+                <span class="text-[9px] font-bold uppercase text-green-400">Család</span>
+            </button>
+
+            <!-- Utazás (Left) -->
+            <button onclick="triggerSwipe('left')" class="absolute left-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
+                <div class="w-11 h-11 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                    <i data-lucide="plane"></i>
+                </div>
+                <span class="text-[9px] font-bold uppercase text-blue-400">Utazás</span>
+            </button>
+
+            <!-- Állatok (Right) -->
+            <button onclick="triggerSwipe('right')" class="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
+                <div class="w-11 h-11 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
                     <i data-lucide="paw-print"></i>
                 </div>
                 <span class="text-[9px] font-bold uppercase text-purple-400">Állatok</span>
             </button>
+            
+            <!-- Középső díszítő elem -->
+            <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 shadow-inner"></div>
         </div>
     </div>
 
@@ -255,10 +266,6 @@
                 <div class="card-info p-3 bg-slate-800/80 backdrop-blur-md border-t border-white/5">
                     <p class="text-[10px] truncate font-medium text-slate-400">${data.file_name}</p>
                 </div>
-                <div class="overlay overlay-right">ÁLLATOK</div>
-                <div class="overlay overlay-left">UTAZÁS</div>
-                <div class="overlay overlay-down">CSALÁD</div>
-                <div class="overlay overlay-up">TÖRLÉS</div>
             `;
 
             const imgChecker = new Image();
@@ -326,7 +333,6 @@
                 next.classList.replace('next', 'current');
                 next.style.border = '2px solid rgba(255,255,255,0.05)';
                 next.style.pointerEvents = 'auto';
-                attachDragListeners(next);
             }
 
             // 4. API call (async)
@@ -367,59 +373,7 @@
         }
 
         function attachDragListeners(card) {
-            const onStart = (e) => {
-                if (isAnimating) return;
-                const t = e.type.includes('touch') ? e.touches[0] : e;
-                startDragX = t.clientX;
-                startDragY = t.clientY;
-                card.style.transition = 'none';
-            };
-
-            const onMove = (e) => {
-                if (startDragX === undefined || isAnimating) return;
-                const t = e.type.includes('touch') ? e.touches[0] : e;
-                const dx = t.clientX - startDragX;
-                const dy = t.clientY - startDragY;
-
-                card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx / 15}deg)`;
-                
-                const ox = Math.min(Math.abs(dx) / 80, 1);
-                const oy = Math.min(Math.abs(dy) / 80, 1);
-                
-                card.querySelectorAll('.overlay').forEach(o => o.style.opacity = 0);
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    if (dx > 30) card.querySelector('.overlay-right').style.opacity = ox;
-                    else if (dx < -30) card.querySelector('.overlay-left').style.opacity = ox;
-                } else {
-                    if (dy > 30) card.querySelector('.overlay-down').style.opacity = oy;
-                    else if (dy < -30) card.querySelector('.overlay-up').style.opacity = oy;
-                }
-            };
-
-            const onEnd = (e) => {
-                if (startDragX === undefined || isAnimating) return;
-                const t = e.type.includes('touch') ? e.changedTouches[0] : e;
-                const dx = t.clientX - startDragX;
-                const dy = t.clientY - startDragY;
-                startDragX = undefined;
-
-                const threshold = 75;
-                if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
-                    let dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-                    performSwipe(card, dir, dx, dy);
-                } else {
-                    card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                    card.style.transform = '';
-                    card.querySelectorAll('.overlay').forEach(o => o.style.opacity = 0);
-                }
-            };
-
-            card.addEventListener('mousedown', onStart);
-            card.addEventListener('touchstart', onStart);
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('touchmove', onMove);
-            window.addEventListener('mouseup', onEnd);
-            window.addEventListener('touchend', onEnd);
+            // No-op for swipe: gombokkal irányítunk
         }
 
         function showEmpty(msg) {
