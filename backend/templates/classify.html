@@ -18,12 +18,14 @@
         .card-container {
             position: relative;
             width: 90vw;
-            height: 70vh;
+            height: 65vh;
             max-width: 400px;
             perspective: 1000px;
         }
         .card {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             background-color: #1e293b;
@@ -138,6 +140,7 @@
 
                 if (data.done) {
                     emptyMessage.textContent = data.message;
+                    emptyMessage.style.display = "flex";
                     remainingCount.textContent = "0 kép maradt";
                     return;
                 }
@@ -150,6 +153,7 @@
         }
 
         function createCard(url, fileName) {
+            emptyMessage.style.display = "none";
             const card = document.createElement('div');
             card.className = 'card';
             card.dataset.id = fileName;
