@@ -184,6 +184,20 @@ def get_folders(parent: str = None, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/api/folders/all")
+def get_all_folders(db: Session = Depends(get_db)):
+    """Returns a flat list of all unique folder paths in the active bucket (kepek02)."""
+    try:
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+        if not b2_acc:
+            return {"folders": []}
+        
+        from .dashboard import controller
+        folders = controller.get_all_folders(db, b2_acc.bucket_name)
+        return {"folders": folders}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/api/media/random")
 def get_random_media(folder: str = None, category: str = None, session_id: str = "default", db: Session = Depends(get_db)):
     """Returns a random media item, optionally filtered by folder, category and session."""

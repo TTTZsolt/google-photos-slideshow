@@ -430,7 +430,9 @@
                         
                         <div class="space-y-2">
                             <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Szűrés Mappára</label>
-                            <input type="text" id="bulkReverseFolder" placeholder="Pl: 2024/Kutya/ (opcionális)" class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-rose-500 shadow-sm">
+                            <select id="bulkReverseFolder" class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-rose-500 shadow-sm">
+                                <option value="">Összes mappa (Minden)</option>
+                            </select>
                         </div>
 
                         <div class="space-y-2">
@@ -1042,6 +1044,29 @@
             }
         });
 
+        async function loadBulkReverseFolders() {
+            try {
+                const response = await fetch('/api/folders/all');
+                const data = await response.json();
+                const select = document.getElementById('bulkReverseFolder');
+                if (!select) return;
+                
+                // Keep first (default) option
+                const firstOption = select.options[0];
+                select.innerHTML = '';
+                select.appendChild(firstOption);
+                
+                if (data.folders) {
+                    data.folders.forEach(folder => {
+                        const opt = document.createElement('option');
+                        opt.value = folder;
+                        opt.textContent = folder;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error("Error loading folders:", e); }
+        }
+
         function formatDateTime(isoString) {
             if (!isoString) return "";
             const d = new Date(isoString);
@@ -1058,6 +1083,7 @@
         updateB2Status();
         refreshDevices();
         loadMusicSettings();
+        loadBulkReverseFolders();
     </script>
 </body>
 

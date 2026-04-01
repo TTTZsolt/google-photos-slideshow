@@ -62,6 +62,22 @@ class SlideshowController:
         folders = [{"name": folder, "path": f"{parent_path}{folder}" if parent_path else folder} for folder in sorted(list(seen_folders))]
         return folders
 
+    def get_all_folders(self, db: Session, bucket_name: str) -> list:
+        """Returns a flat list of all unique folder paths in the given bucket."""
+        # Query all file names in bucket
+        results = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == bucket_name).all()
+        
+        seen_folders = set()
+        for row in results:
+            file_path = row[0]
+            parts = file_path.split('/')
+            if len(parts) > 1:
+                # Join all but the last part (filename)
+                folder_path = "/".join(parts[:-1])
+                seen_folders.add(folder_path)
+        
+        return sorted(list(seen_folders))
+
     def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default"):
         """Fetches a random image, filtered by folder and category. Uses a 'deck' system per session to avoid repetition."""
         
