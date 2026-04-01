@@ -106,23 +106,36 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         logger.exception("Unexpected error in get_next_for_classification")
         raise HTTPException(status_code=500, detail=f"Váratlan hiba: {str(e)}")
 
+def b2_move_background_task(key_id: str, app_key: str, source_bucket: str, dest_bucket: str, file_name: str):
+    try:
+        client = B2Client(key_id, app_key)
+        client.move_file(source_bucket, dest_bucket, file_name)
+        logger.info(f"Background B2 move successful: {file_name} -> {dest_bucket}")
+    except Exception as e:
+        logger.error(f"Background B2 move failed for {file_name}: {e}")
+
 @router.post("/api/classify")
-def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
+def classify_image(req: ClassificationRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
     if not b2_account:
         raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
-
-    client = B2Client(b2_account.key_id, b2_account.application_key)
 
     try:
         if req.action == "delete":
             if not b2_account.trash_bucket_name:
                 raise HTTPException(status_code=400, detail="Lomtár vödör (torles-elott) nincs beállítva.")
             
-            # 1. Move in B2
-            client.move_file(b2_account.source_bucket_name, b2_account.trash_bucket_name, req.file_name)
+            # 1. Queue Background B2 Move
+            background_tasks.add_task(
+                b2_move_background_task, 
+                b2_account.key_id, 
+                b2_account.application_key, 
+                b2_account.source_bucket_name, 
+                b2_account.trash_bucket_name, 
+                req.file_name
+            )
             
-            # 2. Update DB
+            # 2. Update DB Immediately
             classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
             if not classification:
                 classification = MediaClassification(file_name=req.file_name)
@@ -131,7 +144,7 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             classification.is_deleted = True
             classification.category = None
             
-            # Delete from MediaItem (so it doesn't show up in next calls)
+            # Delete from MediaItem list so it never shows up again
             db.execute(delete(MediaItem).where(MediaItem.file_name == req.file_name, MediaItem.bucket_name == b2_account.source_bucket_name))
             
         else:
@@ -139,10 +152,17 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             if not b2_account.bucket_name:
                 raise HTTPException(status_code=400, detail="Cél vödör (kepek02) nincs beállítva.")
             
-            # 1. Move in B2 (Copy to kepek02, Delete from forras)
-            new_version = client.move_file(b2_account.source_bucket_name, b2_account.bucket_name, req.file_name)
+            # 1. Queue Background B2 Move
+            background_tasks.add_task(
+                b2_move_background_task, 
+                b2_account.key_id, 
+                b2_account.application_key, 
+                b2_account.source_bucket_name, 
+                b2_account.bucket_name, 
+                req.file_name
+            )
             
-            # 2. Update/Create Classification
+            # 2. Update DB Immediately
             classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
             if not classification:
                 classification = MediaClassification(file_name=req.file_name)
@@ -151,20 +171,8 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             classification.category = req.action
             classification.is_deleted = False
             
-            # 3. Update MediaItem record
-            # Remove from forras
+            # 3. Update MediaItem list instantly
             db.execute(delete(MediaItem).where(MediaItem.file_name == req.file_name, MediaItem.bucket_name == b2_account.source_bucket_name))
-            
-            # Add to kepek02 (or Update)
-            new_item = MediaItem(
-                id=new_version.id_,
-                b2_account_id=b2_account.id,
-                bucket_name=b2_account.bucket_name,
-                file_name=req.file_name,
-                mime_type="image/jpeg", # TODO: detect properly or keep from before
-                # size and creation_time could be copied from previous record but let's keep it simple
-            )
-            db.merge(new_item)
 
         db.commit()
         return {"status": "ok"}
