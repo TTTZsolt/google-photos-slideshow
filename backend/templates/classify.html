@@ -135,7 +135,7 @@
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.9</span></h1>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.10</span></h1>
             <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
         <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
@@ -334,7 +334,10 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ file_name: currentFileName, action: action })
-            }).finally(() => {
+            }).then(() => {
+                activeFileNames.delete(currentFileName);
+            }).catch(e => {
+                console.error("Save error:", e);
                 activeFileNames.delete(currentFileName);
             });
 
