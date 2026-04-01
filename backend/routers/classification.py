@@ -187,7 +187,10 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
                 folder_path += '/'
             query = query.filter(MediaItem.file_name.startswith(folder_path))
         
-        if category_filter:
+        if category_filter == "all":
+            # No filtering by category, move everything in the folder
+            pass
+        elif category_filter:
             query = query.filter(MediaClassification.category == category_filter)
         else:
             # uncategorized: either no record or null category
