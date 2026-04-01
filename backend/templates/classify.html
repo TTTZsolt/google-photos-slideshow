@@ -135,7 +135,7 @@
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.8</span></h1>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.9</span></h1>
             <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
         <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
@@ -309,9 +309,14 @@
             // 1. Immediate UI update
             updateRemainingUI(currentRemaining - 1);
 
+            // Calculate throw trajectory to ensure it leaves the screen
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY) || 1;
+            const throwX = (deltaX / distance) * 1500;
+            const throwY = (deltaY / distance) * 1500;
+
             // 2. Animate current card out
-            card.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s';
-            card.style.transform = `translate(${deltaX * 3}px, ${deltaY * 3}px) rotate(${deltaX / 10}deg)`;
+            card.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s';
+            card.style.transform = `translate(${throwX}px, ${throwY}px) rotate(${deltaX / 5}deg)`;
             card.style.opacity = '0';
 
             // 3. Promote next card
