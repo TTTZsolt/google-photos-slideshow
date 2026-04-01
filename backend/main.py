@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import dashboard, music, classification
 from .database import engine, Base
 
-app = FastAPI(title="B2 Random Slideshow")
+app = FastAPI(title="B2 Random Slideshow - V9.0")
 
 # CORS
 app.add_middleware(

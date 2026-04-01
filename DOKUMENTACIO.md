@@ -1,4 +1,4 @@
-# Google Photos Slideshow - Rendszer Dokumentáció (V8.3)
+# Google Photos Slideshow - Rendszer Dokumentáció (V9.0)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 

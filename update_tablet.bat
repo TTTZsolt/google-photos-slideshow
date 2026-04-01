@@ -1,14 +1,14 @@
 @echo off
 echo --- Frissites: Slideshow Szerver a Tableten ---
-echo Pulling latest changes from GitHub...
+echo Pulling latest changes from GitHub (v9.0 branch)...
 
 :: Megprobaljuk a rendszer SSH-t
 where ssh >nul 2>nul
 if %errorlevel% equ 0 (
-    ssh -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git pull origin main"
+    ssh -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git fetch origin && git checkout v9.0 && git pull origin v9.0"
 ) else (
     echo A rendszer SSH nem talalhato, probalom a Git mappabol...
-    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git pull origin main"
+    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git fetch origin && git checkout v9.0 && git pull origin v9.0"
 )
 
 echo.
@@ -23,3 +23,4 @@ if %errorlevel% equ 0 (
 echo.
 echo Most mar elindithatod a szervert a start_tablet.bat-tal!
 pause
+
