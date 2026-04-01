@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks, Query
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from ..models import B2Account, MediaItem, MediaClassification
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import logging
 from ..utils.b2_client import B2Client
 from sqlalchemy import delete, and_, or_
