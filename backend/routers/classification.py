@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import logging
 from ..utils.b2_client import B2Client
-from sqlalchemy import delete
+from sqlalchemy import delete, and_, or_
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -42,43 +42,54 @@ def classify_page(request: Request):
 @router.get("/api/classify/next")
 def get_next_for_classification(db: Session = Depends(get_db)):
     """ Returns the next unclassified image from the source bucket. """
-    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
-    if not b2_account or not b2_account.source_bucket_name:
-        raise HTTPException(status_code=400, detail="Forrás vödör nincs beállítva.")
+    try:
+        b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+        if not b2_account:
+            raise HTTPException(status_code=400, detail="Nincs aktív B2 fiók konfigurálva.")
+        
+        if not b2_account.source_bucket_name:
+            raise HTTPException(status_code=400, detail="A 'forras' vödör neve nincs megadva a beállításoknál.")
 
-    # Find a MediaItem that is in the source bucket AND not in MediaClassification (or not marked classified)
-    # Join with MediaClassification
-    from sqlalchemy import or_
-    
-    # We look for files in source_bucket_name that ARE NOT in classifications OR are in classifications but category is null and is_deleted is false
-    media_item = db.query(MediaItem).outerjoin(
-        MediaClassification, MediaItem.file_name == MediaClassification.file_name
-    ).filter(
-        MediaItem.bucket_name == b2_account.source_bucket_name
-    ).filter(
-        or_(
-            MediaClassification.file_name == None,
-            (MediaClassification.category == None) & (MediaClassification.is_deleted == False)
-        )
-    ).first()
+        # Query for the next item
+        media_item = db.query(MediaItem).outerjoin(
+            MediaClassification, MediaItem.file_name == MediaClassification.file_name
+        ).filter(
+            MediaItem.bucket_name == b2_account.source_bucket_name
+        ).filter(
+            or_(
+                MediaClassification.file_name == None,
+                and_(MediaClassification.category == None, MediaClassification.is_deleted == False)
+            )
+        ).first()
 
-    if not media_item:
-        return {"done": True, "message": "Nincs több kép a várólistán!"}
+        if not media_item:
+            return {"done": True, "message": "Nincs több kép a várólistán (forras vödör üres vagy minden kész)."}
 
-    # Generate Authorized URL
-    client = B2Client(b2_account.key_id, b2_account.application_key)
-    url = client.get_download_url(
-        b2_account.source_bucket_name,
-        media_item.file_name,
-        b2_account.cloudflare_proxy_url
-    )
+        # Generate Authorized URL
+        try:
+            client = B2Client(b2_account.key_id, b2_account.application_key)
+            url = client.get_download_url(
+                b2_account.source_bucket_name,
+                media_item.file_name,
+                b2_account.cloudflare_proxy_url
+            )
+        except Exception as b2_err:
+            logger.error(f"B2 URL generation failed for {media_item.file_name}: {b2_err}")
+            raise HTTPException(status_code=500, detail=f"B2 hiba: {str(b2_err)}")
 
-    return {
-        "done": False,
-        "url": url,
-        "file_name": media_item.file_name,
-        "total_remaining": db.query(MediaItem).filter(MediaItem.bucket_name == b2_account.source_bucket_name).count() # Rough count
-    }
+        total_count = db.query(MediaItem).filter(MediaItem.bucket_name == b2_account.source_bucket_name).count()
+
+        return {
+            "done": False,
+            "url": url,
+            "file_name": media_item.file_name,
+            "total_remaining": total_count
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error in get_next_for_classification")
+        raise HTTPException(status_code=500, detail=f"Váratlan hiba: {str(e)}")
 
 @router.post("/api/classify")
 def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):

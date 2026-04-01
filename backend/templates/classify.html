@@ -136,6 +136,12 @@
         async function loadNextCard() {
             try {
                 const res = await fetch('/api/classify/next');
+                if (!res.ok) {
+                    const errData = await res.json();
+                    emptyMessage.textContent = "Hiba: " + (errData.detail || "Ismeretlen szerver hiba");
+                    emptyMessage.style.display = "flex";
+                    return;
+                }
                 const data = await res.json();
 
                 if (data.done) {
