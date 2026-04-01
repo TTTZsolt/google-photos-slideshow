@@ -33,7 +33,7 @@ def auto_migrate():
             cursor = conn.cursor()
             
             # Add missing B2Account columns
-            for col in ["source_bucket_name", "trash_bucket_name"]:
+            for col in ["source_bucket_name", "trash_bucket_name", "archive_bucket_name"]:
                 try:
                     cursor.execute(f"ALTER TABLE b2_accounts ADD COLUMN {col} TEXT;")
                 except sqlite3.OperationalError:

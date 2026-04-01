@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
+from typing import Optional
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
@@ -12,10 +13,10 @@ class B2ConnectRequest(BaseModel):
     key_id: str
     application_key: str
     bucket_name: str
-    archive_bucket_name: str = None
-    source_bucket_name: str = None
-    trash_bucket_name: str = None
-    cloudflare_proxy_url: str = None
+    archive_bucket_name: Optional[str] = None
+    source_bucket_name: Optional[str] = None
+    trash_bucket_name: Optional[str] = None
+    cloudflare_proxy_url: Optional[str] = None
 
 def get_db():
     db = SessionLocal()

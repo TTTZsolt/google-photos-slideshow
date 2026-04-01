@@ -307,7 +307,7 @@
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2TrashBucketName" placeholder="Sorting Trash (torles-elott)"
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        <input type="text" id="b2CloudflareUrl" placeholder="Cloudflare Worker URL (Opcionális)"
+                        <input type="text" id="b2CloudflareUrl" placeholder="Cloudflare Proxy (Gyorsítás & B2 Limit elkerülése)"
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <p class="text-[10px] text-slate-400">Pl: https://b2-proxy.username.workers.dev a limit
                             elkerüléséhez</p>
@@ -597,10 +597,16 @@
                     window.location.reload();
                 } else {
                     const errorData = await response.json();
-                    alert("Hiba a mentés során: " + (errorData.detail || "Ismeretlen hiba"));
+                    let errMsg = "Hiba a mentés során: ";
+                    if (typeof errorData.detail === 'object') {
+                        errMsg += JSON.stringify(errorData.detail, null, 2);
+                    } else {
+                        errMsg += (errorData.detail || "Ismeretlen hiba");
+                    }
+                    alert(errMsg);
                 }
             } catch (err) {
-                alert("Hálózati hiba történt az elküldés során.");
+                alert("Hálózati hiba történt az elküldés során: " + err.message);
             }
         });
 
