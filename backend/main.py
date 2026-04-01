@@ -4,6 +4,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import dashboard, music, classification
 from .database import engine, Base
+import sqlite3
+import os
 
 app = FastAPI(title="B2 Random Slideshow - V9.0")
 
@@ -18,6 +20,47 @@ app.add_middleware(
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+def auto_migrate():
+    db_path = "photos_app.db"
+    if not os.path.exists(db_path):
+        if os.path.exists("backend/photos_app.db"):
+            db_path = "backend/photos_app.db"
+    
+    if os.path.exists(db_path):
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Add missing B2Account columns
+            for col in ["source_bucket_name", "trash_bucket_name"]:
+                try:
+                    cursor.execute(f"ALTER TABLE b2_accounts ADD COLUMN {col} TEXT;")
+                except sqlite3.OperationalError:
+                    pass
+
+            # Add missing MediaItem columns
+            try:
+                cursor.execute("ALTER TABLE media_items ADD COLUMN bucket_name TEXT;")
+            except sqlite3.OperationalError:
+                pass
+
+            # Ensure media_classifications exists
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS media_classifications (
+                    file_name TEXT PRIMARY KEY,
+                    category TEXT,
+                    is_deleted BOOLEAN DEFAULT 0,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Migration error: {e}")
+
+auto_migrate()
 
 # Routes
 app.include_router(dashboard.router, tags=["dashboard"])
