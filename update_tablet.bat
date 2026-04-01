@@ -13,5 +13,13 @@ if %errorlevel% equ 0 (
 
 echo.
 echo A frissites (git pull) befejezodott.
+echo.
+echo Az aktualis verzio a Tableten:
+if %errorlevel% equ 0 (
+    ssh -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git log -1 --oneline"
+) else (
+    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git log -1 --oneline"
+)
+echo.
 echo Most mar elindithatod a szervert a start_tablet.bat-tal!
 pause
