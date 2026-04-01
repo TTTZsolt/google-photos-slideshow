@@ -3,122 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fotó Szortírozó - V9.0</title>
+    <title>Fotó Szortírozó - V9.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-purple: #8b5cf6;
+            --accent-red: #ef4444;
+        }
+
         body {
             font-family: 'Outfit', sans-serif;
-            background-color: #0f172a;
+            background-color: var(--bg-color);
             color: white;
             overflow: hidden;
-            touch-action: none; /* Prevent scrolling/zooming during swipes */
+            touch-action: none;
+            height: 100vh;
         }
+
         .card-container {
             position: relative;
-            width: 90vw;
-            height: 65vh;
+            width: 85vw;
+            height: 60vh;
             max-width: 400px;
             perspective: 1000px;
+            margin-top: 10px;
         }
+
         .card {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: #1e293b;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background-color: var(--card-bg);
+            border-radius: 28px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
             overflow: hidden;
-            transition: transform 0.1s ease-out;
-            cursor: grab;
             display: flex;
             flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                        opacity 0.3s ease, 
+                        scale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: grab;
         }
-        .card:active { cursor: grabbing; }
+
+        /* Top card */
+        .card.current {
+            z-index: 20;
+            transform: scale(1) translateY(0);
+            opacity: 1;
+        }
+
+        /* Next card (Ghost preview) */
+        .card.next {
+            z-index: 10;
+            transform: scale(0.92) translateY(25px);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
         .card-image {
             flex: 1;
             background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
+            background-color: #000;
         }
+
         .overlay {
             position: absolute;
-            top: 20px;
-            padding: 8px 16px;
-            border-radius: 8px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 12px 24px;
+            border-radius: 12px;
             font-weight: 900;
-            font-size: 2rem;
+            font-size: 2.5rem;
             text-transform: uppercase;
             opacity: 0;
             pointer-events: none;
             z-index: 100;
+            white-space: nowrap;
         }
-        .overlay-right { right: 20px; color: #22c55e; border: 4px solid #22c55e; transform: rotate(-10deg); }
-        .overlay-left { left: 20px; color: #3b82f6; border: 4px solid #3b82f6; transform: rotate(10deg); }
-        .overlay-down { bottom: 80px; left: 50%; transform: translateX(-50%); color: #eab308; border: 4px solid #eab308; }
-        .overlay-up { top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ef4444; border: 4px solid #ef4444; }
+
+        .overlay-right { color: var(--accent-green); border: 6px solid var(--accent-green); transform: translate(-50%, -50%) rotate(-15deg); }
+        .overlay-left { color: var(--accent-blue); border: 6px solid var(--accent-blue); transform: translate(-50%, -50%) rotate(15deg); }
+        .overlay-down { color: var(--accent-purple); border: 6px solid var(--accent-purple); }
+        .overlay-up { color: var(--accent-red); border: 6px solid var(--accent-red); }
 
         .glass-btn {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.2s;
         }
+        .glass-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.15); }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen">
+<body class="flex flex-col items-center justify-between py-6">
 
     <!-- Header -->
-    <div class="fixed top-0 w-full p-4 flex justify-between items-center z-50">
-        <button onclick="window.location.href='/'" class="glass-btn p-2 rounded-full text-slate-400">
+    <div class="w-full px-6 flex justify-between items-center z-50">
+        <button onclick="window.location.href='/'" class="glass-btn p-3 rounded-2xl text-slate-400">
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-lg font-bold">Szortírozó</h1>
-            <p class="text-[10px] text-slate-500 uppercase tracking-widest" id="remainingCount">Betöltés...</p>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.2</span></h1>
+            <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
-        <button onclick="syncSource()" class="glass-btn p-2 rounded-full text-indigo-400" id="syncBtn">
+        <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
             <i data-lucide="refresh-cw"></i>
         </button>
     </div>
 
-    <!-- Main Container -->
+    <!-- Deck Container -->
     <div id="deck" class="card-container">
-        <!-- New cards will be inserted here -->
-        <div class="flex items-center justify-center h-full text-slate-500 italic" id="emptyMessage">
-            Scanning for photos...
+        <!-- Cards will be injected here -->
+        <div class="flex flex-col items-center justify-center h-full text-slate-500 italic space-y-4" id="emptyMessage">
+            <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+            <p id="statusText">Portyázás a képek után...</p>
         </div>
     </div>
 
-    <!-- Instructions / Footer -->
-    <div class="fixed bottom-0 w-full p-6 space-y-4">
-        <div class="grid grid-cols-4 gap-2">
-            <div class="flex flex-col items-center gap-1">
+    <!-- Quick Controls -->
+    <div class="w-full px-6 space-y-6">
+        <div class="grid grid-cols-4 gap-3">
+            <button onclick="triggerSwipe('left')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
                 <div class="w-10 h-10 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center border border-blue-500/30">
                     <i data-lucide="plane"></i>
                 </div>
-                <span class="text-[9px] font-bold uppercase text-blue-400">Bal: Utazás</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
+                <span class="text-[9px] font-bold uppercase text-blue-400">Utazás</span>
+            </button>
+            <button onclick="triggerSwipe('right')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
                 <div class="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center border border-green-500/30">
                     <i data-lucide="heart"></i>
                 </div>
-                <span class="text-[9px] font-bold uppercase text-green-400">Jobb: Család</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
-                <div class="w-10 h-10 rounded-full bg-yellow-500/20 text-yellow-500 flex items-center justify-center border border-yellow-500/30">
-                    <i data-lucide="leaf"></i>
+                <span class="text-[9px] font-bold uppercase text-green-400">Család</span>
+            </button>
+            <button onclick="triggerSwipe('down')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
+                <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center border border-purple-500/30">
+                    <i data-lucide="dog"></i>
                 </div>
-                <span class="text-[9px] font-bold uppercase text-yellow-400">Le: Állat</span>
-            </div>
-            <div class="flex flex-col items-center gap-1">
+                <span class="text-[9px] font-bold uppercase text-purple-400">Állat</span>
+            </button>
+            <button onclick="triggerSwipe('up')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
                 <div class="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30">
                     <i data-lucide="trash-2"></i>
                 </div>
-                <span class="text-[9px] font-bold uppercase text-red-400">Fel: Törlés</span>
-            </div>
+                <span class="text-[9px] font-bold uppercase text-red-400">Törlés</span>
+            </button>
         </div>
     </div>
 
@@ -128,45 +167,47 @@
         const deck = document.getElementById('deck');
         const emptyMessage = document.getElementById('emptyMessage');
         const remainingCount = document.getElementById('remainingCount');
+        const statusText = document.getElementById('statusText');
         
-        let currentCard = null;
+        let cardQueue = [];
+        let isAnimating = false;
         let startX, startY;
-        let isDragging = false;
 
-        async function loadNextCard() {
+        // PRE-FETCHING LOGIC
+        async function fetchNextData() {
             try {
                 const res = await fetch('/api/classify/next');
-                if (!res.ok) {
-                    const errData = await res.json();
-                    emptyMessage.textContent = "Hiba: " + (errData.detail || "Ismeretlen szerver hiba");
-                    emptyMessage.style.display = "flex";
-                    return;
-                }
+                if (!res.ok) throw new Error("Server Error");
                 const data = await res.json();
-
-                if (data.done) {
-                    emptyMessage.textContent = data.message;
-                    emptyMessage.style.display = "flex";
-                    remainingCount.textContent = "0 kép maradt";
-                    return;
-                }
-
-                remainingCount.textContent = `${data.total_remaining} kép maradt`;
-                createCard(data.url, data.file_name);
+                return data;
             } catch (e) {
-                emptyMessage.textContent = "Hiba történt a betöltéskor.";
+                console.error("Fetch failed", e);
+                return { error: true };
             }
         }
 
-        function createCard(url, fileName) {
-            emptyMessage.style.display = "none";
+        async function replenishQueue() {
+            if (cardQueue.length < 3) {
+                const data = await fetchNextData();
+                if (data && !data.error && !data.done) {
+                    cardQueue.push(data);
+                    // Pre-load image in browser cache
+                    const img = new Image();
+                    img.src = data.url;
+                }
+                return data;
+            }
+        }
+
+        // DECK MANAGEMENT
+        function createCardElement(data, isNext = false) {
             const card = document.createElement('div');
-            card.className = 'card';
-            card.dataset.id = fileName;
+            card.className = `card ${isNext ? 'next' : 'current'}`;
+            card.dataset.filename = data.file_name;
             card.innerHTML = `
-                <div class="card-image" style="background-image: url('${url}')"></div>
-                <div class="p-4 bg-slate-800/80 backdrop-blur-sm border-t border-white/5">
-                    <p class="text-xs truncate font-medium text-slate-400">${fileName}</p>
+                <div class="card-image" style="background-image: url('${data.url}')"></div>
+                <div class="p-4 bg-slate-800/80 backdrop-blur-md border-t border-white/5">
+                    <p class="text-[10px] truncate font-medium text-slate-400">${data.file_name}</p>
                 </div>
                 <div class="overlay overlay-right">CSALÁD</div>
                 <div class="overlay overlay-left">UTAZÁS</div>
@@ -174,145 +215,158 @@
                 <div class="overlay overlay-up">TÖRLÉS</div>
             `;
 
-            deck.appendChild(card);
-            currentCard = card;
-            attachSwipeListeners(card);
+            if (!isNext) attachDragListeners(card);
+            return card;
         }
 
-        function attachSwipeListeners(card) {
-            card.addEventListener('touchstart', handleStart);
-            card.addEventListener('mousedown', handleStart);
+        async function initDeck() {
+            // Fetch first two items
+            const d1 = await fetchNextData();
+            if (d1.done) { showEmpty(d1.message); return; }
             
-            function handleStart(e) {
-                isDragging = true;
-                const touch = e.type === 'touchstart' ? e.touches[0] : e;
-                startX = touch.clientX;
-                startY = touch.clientY;
-                card.style.transition = 'none';
-            }
-        }
-
-        window.addEventListener('mousemove', handleMove);
-        window.addEventListener('touchmove', handleMove);
-
-        function handleMove(e) {
-            if (!isDragging || !currentCard) return;
+            const d2 = await fetchNextData();
             
-            const touch = e.type === 'touchmove' ? e.touches[0] : e;
-            const deltaX = touch.clientX - startX;
-            const deltaY = touch.clientY - startY;
-
-            // Simple movement
-            const rotation = deltaX / 10;
-            currentCard.style.transform = `translate(${deltaX}px, ${deltaY}px) rotate(${rotation}deg)`;
-
-            // Overlays
-            const opacityX = Math.min(Math.abs(deltaX) / 100, 1);
-            const opacityY = Math.min(Math.abs(deltaY) / 100, 1);
-
-            const overlayRight = currentCard.querySelector('.overlay-right');
-            const overlayLeft = currentCard.querySelector('.overlay-left');
-            const overlayDown = currentCard.querySelector('.overlay-down');
-            const overlayUp = currentCard.querySelector('.overlay-up');
-
-            // Reset all
-            overlayRight.style.opacity = 0;
-            overlayLeft.style.opacity = 0;
-            overlayDown.style.opacity = 0;
-            overlayUp.style.opacity = 0;
-
-            if (deltaX > 50 && Math.abs(deltaY) < Math.abs(deltaX)) {
-                overlayRight.style.opacity = opacityX;
-            } else if (deltaX < -50 && Math.abs(deltaY) < Math.abs(deltaX)) {
-                overlayLeft.style.opacity = opacityX;
-            } else if (deltaY > 50 && Math.abs(deltaX) < Math.abs(deltaY)) {
-                overlayDown.style.opacity = opacityY;
-            } else if (deltaY < -50 && Math.abs(deltaX) < Math.abs(deltaY)) {
-                overlayUp.style.opacity = opacityY;
-            }
-        }
-
-        window.addEventListener('mouseup', handleEnd);
-        window.addEventListener('touchend', handleEnd);
-
-        function handleEnd(e) {
-            if (!isDragging || !currentCard) return;
-            isDragging = false;
+            emptyMessage.style.display = 'none';
             
-            const rect = currentCard.getBoundingClientRect();
-            const deltaX = (e.type === 'touchend' ? e.changedTouches[0].clientX : e.clientX) - startX;
-            const deltaY = (e.type === 'touchend' ? e.changedTouches[0].clientY : e.clientY) - startY;
-
-            const threshold = 120;
-            let action = null;
-
-            if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                if (deltaX > threshold) action = "csalad";
-                else if (deltaX < -threshold) action = "utazas";
-            } else {
-                if (deltaY > threshold) action = "allatok";
-                else if (deltaY < -threshold) action = "delete";
+            if (d1 && !d1.done) {
+                const c1 = createCardElement(d1, false);
+                deck.appendChild(c1);
+                remainingCount.textContent = `${d1.total_remaining} KÉP MARADT`;
             }
-
-            if (action) {
-                swipeAway(action, deltaX, deltaY);
-            } else {
-                // Return to center
-                currentCard.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                currentCard.style.transform = 'translate(0, 0) rotate(0deg)';
-                const overlays = currentCard.querySelectorAll('.overlay');
-                overlays.forEach(o => o.style.opacity = 0);
+            if (d2 && !d2.done) {
+                deck.appendChild(createCardElement(d2, true));
             }
+            
+            // Start filling the background queue
+            replenishQueue();
+            replenishQueue();
         }
 
-        async function swipeAway(action, deltaX, deltaY) {
-            const card = currentCard;
-            currentCard = null;
+        function triggerSwipe(direction) {
+            const current = deck.querySelector('.card.current');
+            if (!current || isAnimating) return;
+            
+            const dx = direction === 'left' ? -200 : (direction === 'right' ? 200 : 0);
+            const dy = direction === 'up' ? -200 : (direction === 'down' ? 200 : 0);
+            performSwipe(current, direction, dx, dy);
+        }
 
-            // Animate off screen
-            card.style.transition = 'transform 0.5s ease-in';
-            const multiplier = 2; // Shoot far
-            card.style.transform = `translate(${deltaX * multiplier}px, ${deltaY * multiplier}px) rotate(${deltaX / 5}deg)`;
+        async function performSwipe(card, direction, deltaX, deltaY) {
+            if (isAnimating) return;
+            isAnimating = true;
 
-            // Call API
-            try {
-                const fileName = card.dataset.id;
-                const res = await fetch('/api/classify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file_name: fileName, action: action })
-                });
+            const actionMap = { 'right': 'család', 'left': 'utazás', 'down': 'állatok', 'up': 'delete' };
+            const action = actionMap[direction];
 
-                if (!res.ok) alert("Hiba a mentés közben!");
+            // 1. Animate out
+            card.style.transition = 'transform 0.5s ease-in, opacity 0.3s';
+            card.style.transform = `translate(${deltaX * 5}px, ${deltaY * 5}px) rotate(${deltaX / 5}deg)`;
+            card.style.opacity = '0';
+
+            // 2. Promote the next card immediately
+            const next = deck.querySelector('.card.next');
+            if (next) {
+                next.classList.replace('next', 'current');
+                next.style.pointerEvents = 'auto';
+                attachDragListeners(next);
+            }
+
+            // 3. API Call in background
+            const fileName = card.dataset.filename;
+            fetch('/api/classify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ file_name: fileName, action: action })
+            });
+
+            // 4. Cleanup and Replenish
+            setTimeout(async () => {
+                card.remove();
+                isAnimating = false;
                 
-                setTimeout(() => {
-                    card.remove();
-                    loadNextCard();
-                }, 500);
-            } catch (e) {
-                alert("Hálózati hiba!");
-            }
+                // Add new 'next' card if available in queue or fetch
+                let nextData = cardQueue.shift();
+                if (!nextData) nextData = await fetchNextData();
+                
+                if (nextData && !nextData.done && !nextData.error) {
+                    deck.appendChild(createCardElement(nextData, true));
+                    remainingCount.textContent = `${nextData.total_remaining} KÉP MARADT`;
+                } else if (!deck.querySelector('.card')) {
+                    showEmpty("Kész! Minden képet besoroltál.");
+                }
+                
+                replenishQueue(); // Keep queue full
+            }, 400);
         }
 
-        async function syncSource() {
-            const btn = document.getElementById('syncBtn');
-            btn.classList.add('animate-spin', 'pointer-events-none');
+        // DRAG LOGIC
+        function attachDragListeners(card) {
+            let startDragX, startDragY;
             
-            try {
-                await fetch('/api/classify/sync', { method: 'POST' });
-                alert("Automatikus szinkronizáció elindítva!");
-                setTimeout(() => {
-                  btn.classList.remove('animate-spin', 'pointer-events-none');
-                  loadNextCard();
-                }, 10000); // Give it some time
-            } catch (e) {
-                alert("Sikertelen szinkronizáció.");
-            }
+            const onStart = (e) => {
+                if (isAnimating) return;
+                const t = e.type.includes('touch') ? e.touches[0] : e;
+                startDragX = t.clientX;
+                startDragY = t.clientY;
+                card.style.transition = 'none';
+            };
+
+            const onMove = (e) => {
+                if (startDragX === undefined || isAnimating) return;
+                const t = e.type.includes('touch') ? e.touches[0] : e;
+                const dx = t.clientX - startDragX;
+                const dy = t.clientY - startDragY;
+
+                card.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx / 15}deg)`;
+                
+                // Overlays
+                const ox = Math.min(Math.abs(dx) / 100, 1);
+                const oy = Math.min(Math.abs(dy) / 100, 1);
+                
+                card.querySelectorAll('.overlay').forEach(o => o.style.opacity = 0);
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    if (dx > 40) card.querySelector('.overlay-right').style.opacity = ox;
+                    else if (dx < -40) card.querySelector('.overlay-left').style.opacity = ox;
+                } else {
+                    if (dy > 40) card.querySelector('.overlay-down').style.opacity = oy;
+                    else if (dy < -40) card.querySelector('.overlay-up').style.opacity = oy;
+                }
+            };
+
+            const onEnd = (e) => {
+                if (startDragX === undefined || isAnimating) return;
+                const t = e.type.includes('touch') ? e.changedTouches[0] : e;
+                const dx = t.clientX - startDragX;
+                const dy = t.clientY - startDragY;
+                startDragX = undefined;
+
+                const threshold = 100;
+                if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+                    let dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+                    performSwipe(card, dir, dx, dy);
+                } else {
+                    card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    card.style.transform = '';
+                    card.querySelectorAll('.overlay').forEach(o => o.style.opacity = 0);
+                }
+            };
+
+            card.addEventListener('mousedown', onStart);
+            card.addEventListener('touchstart', onStart);
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('touchmove', onMove);
+            window.addEventListener('mouseup', onEnd);
+            window.addEventListener('touchend', onEnd);
         }
 
-        // Init
-        loadNextCard();
+        function showEmpty(msg) {
+            deck.innerHTML = '';
+            emptyMessage.style.display = 'flex';
+            statusText.textContent = msg || "Vége a listának.";
+            remainingCount.textContent = "0 KÉP MARADT";
+        }
 
+        initDeck();
     </script>
 </body>
 </html>
