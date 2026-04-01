@@ -4,24 +4,45 @@ from b2sdk.v2 import InMemoryAccountInfo, B2Api
 
 logger = logging.getLogger(__name__)
 
+# Global cache for authorized B2Api instances: {key_id: B2Api_instance}
+_b2_api_cache = {}
+
+def get_b2_api(key_id: str, application_key: str):
+    """Returns a cached and authorized B2Api instance, or creates a new one if needed."""
+    key_id = key_id.strip() if key_id else ""
+    application_key = application_key.strip() if application_key else ""
+    
+    global _b2_api_cache
+    if key_id in _b2_api_cache:
+        # Check if the cached API still has valid credentials (rough check)
+        try:
+            # Try a lightweight call to see if auth is still valid
+            _b2_api_cache[key_id].account_info.get_account_id()
+            return _b2_api_cache[key_id]
+        except Exception:
+            logger.info(f"Cached B2 session for {key_id[:4]} expired, re-authorizing...")
+            del _b2_api_cache[key_id]
+
+    logger.info(f"Creating NEW authorized B2 session (KeyID: {key_id[:4]}...)")
+    info = InMemoryAccountInfo()
+    b2_api = B2Api(info)
+    try:
+        b2_api.authorize_account('production', key_id, application_key)
+        _b2_api_cache[key_id] = b2_api
+        return b2_api
+    except Exception as e:
+        logger.error(f"B2 Authorization Failed: {str(e)}")
+        raise
+
+# Cache for download authorizations: {bucket_name: (token, expiry_timestamp)}
+_download_auths_cache = {}
+
 class B2Client:
     def __init__(self, key_id: str, application_key: str):
-        # Strip potential whitespace
-        self.key_id = key_id.strip() if key_id else ""
-        self.application_key = application_key.strip() if application_key else ""
-        
-        logger.info(f"Authorizing B2 client (KeyID: {self.key_id[:4]}...)")
-        
-        self.info = InMemoryAccountInfo()
-        self.b2_api = B2Api(self.info)
-        try:
-            self.b2_api.authorize_account('production', self.key_id, self.application_key)
-        except Exception as e:
-            logger.error(f"B2 Authorization Failed: {str(e)}")
-            raise
-        
-        # Cache for download authorizations: {bucket_name: (token, expiry_timestamp)}
-        self._download_auths = {}
+        self.key_id = key_id
+        self.application_key = application_key
+        # Get authorized API from cache or create new
+        self.b2_api = get_b2_api(key_id, application_key)
 
     def list_files(self, bucket_name: str):
         bucket = self.b2_api.get_bucket_by_name(bucket_name)
@@ -33,8 +54,9 @@ class B2Client:
     def get_download_url(self, bucket_name: str, file_name: str, cloudflare_proxy_url: str = None, valid_duration_seconds: int = 7200, use_proxy: bool = True):
         import urllib.parse
         
+        global _download_auths_cache
         now = time.time()
-        cached_auth = self._download_auths.get(bucket_name)
+        cached_auth = _download_auths_cache.get(bucket_name)
         
         # Use cached token if it's still valid for at least 5 minutes
         if cached_auth and cached_auth[1] > now + 300:
@@ -46,7 +68,7 @@ class B2Client:
                 file_name_prefix="",  # Empty prefix allows access to any file in bucket
                 valid_duration_in_seconds=valid_duration_seconds
             )
-            self._download_auths[bucket_name] = (download_auth_token, now + valid_duration_seconds)
+            _download_auths_cache[bucket_name] = (download_auth_token, now + valid_duration_seconds)
         
         # Construct the download URL
         base_url = self.b2_api.account_info.get_download_url()
