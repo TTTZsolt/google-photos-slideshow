@@ -135,7 +135,7 @@
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.6</span></h1>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.7</span></h1>
             <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
         <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
@@ -194,6 +194,12 @@
         let cardQueue = [];
         let isAnimating = false;
         let startDragX, startDragY;
+        let currentRemaining = 0;
+
+        function updateRemainingUI(val) {
+            currentRemaining = val;
+            remainingCount.textContent = `${currentRemaining} KÉP MARADT`;
+        }
 
         // PRE-FETCHING LOGIC
         async function fetchNextData() {
@@ -271,6 +277,8 @@
             const d1 = await fetchNextData();
             if (!d1 || d1.done) { showEmpty(d1?.message); return; }
             
+            updateRemainingUI(d1.total_remaining);
+
             // Wait for d1 to be fully 'excluded' before fetching d2
             const d2 = await fetchNextData();
             
@@ -278,7 +286,6 @@
             
             if (d1 && !d1.done) {
                 deck.appendChild(createCardElement(d1, false));
-                remainingCount.textContent = `${d1.total_remaining} KÉP MARADT`;
             }
             if (d2 && !d2.done) {
                 deck.appendChild(createCardElement(d2, true));
@@ -303,6 +310,9 @@
             const actionMap = { 'right': 'állatok', 'left': 'utazás', 'down': 'család', 'up': 'delete' };
             const action = actionMap[direction];
             const currentFileName = card.dataset.filename;
+
+            // Immediate UI feedback
+            updateRemainingUI(currentRemaining - 1);
 
             // 1. Animate out the current card
             card.style.transition = 'transform 0.5s ease-in, opacity 0.3s';

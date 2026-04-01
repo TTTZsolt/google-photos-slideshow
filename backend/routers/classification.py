@@ -82,13 +82,23 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
             logger.error(f"B2 URL generation failed for {media_item.file_name}: {b2_err}")
             raise HTTPException(status_code=500, detail=f"B2 hiba: {str(b2_err)}")
 
-        total_count = db.query(MediaItem).filter(MediaItem.bucket_name == b2_account.source_bucket_name).count()
+        # Count ALL remaining items (unclassified) in this bucket
+        total_remaining = db.query(MediaItem).outerjoin(
+            MediaClassification, MediaItem.file_name == MediaClassification.file_name
+        ).filter(
+            MediaItem.bucket_name == b2_account.source_bucket_name
+        ).filter(
+            or_(
+                MediaClassification.file_name == None,
+                and_(MediaClassification.category == None, MediaClassification.is_deleted == False)
+            )
+        ).count()
 
         return {
             "done": False,
             "url": url,
             "file_name": media_item.file_name,
-            "total_remaining": total_count
+            "total_remaining": total_remaining
         }
     except HTTPException:
         raise
