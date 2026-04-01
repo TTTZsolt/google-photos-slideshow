@@ -108,14 +108,17 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
 
 def b2_move_background_task(key_id: str, app_key: str, source_bucket: str, dest_bucket: str, file_name: str):
     try:
+        from ..utils.b2_client import B2Client
         client = B2Client(key_id, app_key)
         client.move_file(source_bucket, dest_bucket, file_name)
         logger.info(f"Background B2 move successful: {file_name} -> {dest_bucket}")
     except Exception as e:
         logger.error(f"Background B2 move failed for {file_name}: {e}")
 
+import threading
+
 @router.post("/api/classify")
-def classify_image(req: ClassificationRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
     b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
     if not b2_account:
         raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
@@ -125,15 +128,14 @@ def classify_image(req: ClassificationRequest, background_tasks: BackgroundTasks
             if not b2_account.trash_bucket_name:
                 raise HTTPException(status_code=400, detail="Lomtár vödör (torles-elott) nincs beállítva.")
             
-            # 1. Queue Background B2 Move
-            background_tasks.add_task(
-                b2_move_background_task, 
+            # 1. Start pure background thread for B2 move
+            threading.Thread(target=b2_move_background_task, args=(
                 b2_account.key_id, 
                 b2_account.application_key, 
                 b2_account.source_bucket_name, 
                 b2_account.trash_bucket_name, 
                 req.file_name
-            )
+            )).start()
             
             # 2. Update DB Immediately
             classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
@@ -152,15 +154,14 @@ def classify_image(req: ClassificationRequest, background_tasks: BackgroundTasks
             if not b2_account.bucket_name:
                 raise HTTPException(status_code=400, detail="Cél vödör (kepek02) nincs beállítva.")
             
-            # 1. Queue Background B2 Move
-            background_tasks.add_task(
-                b2_move_background_task, 
+            # 1. Start pure background thread for B2 move
+            threading.Thread(target=b2_move_background_task, args=(
                 b2_account.key_id, 
                 b2_account.application_key, 
                 b2_account.source_bucket_name, 
                 b2_account.bucket_name, 
                 req.file_name
-            )
+            )).start()
             
             # 2. Update DB Immediately
             classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
@@ -181,6 +182,7 @@ def classify_image(req: ClassificationRequest, background_tasks: BackgroundTasks
         logger.exception(f"Classification error: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/api/classify/sync")
 def trigger_source_sync(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
