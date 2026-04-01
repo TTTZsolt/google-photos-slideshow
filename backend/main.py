@@ -50,6 +50,8 @@ if __name__ == "__main__":
             "uvicorn.error": {"level": "INFO"},
             "uvicorn.access": {"handlers": ["file"], "level": "INFO", "propagate": False},
             "fastapi": {"handlers": ["file"], "level": "INFO"},
+            "pychromecast": {"handlers": ["file"], "level": "CRITICAL"},
+            "zeroconf": {"handlers": ["file"], "level": "CRITICAL"},
         },
     }
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8080, reload=True, log_config=LOGGING_CONFIG)

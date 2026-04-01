@@ -1,0 +1,85 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# A hálózatos ébresztéshez (WOL) szükséges központi modul
+wake_on_lan:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# A configuration.yaml fájl végére illessze be
+rest_command:
+  log_n8n_adat:
+    url: "https://n8n.forestcrm.com/webhook/067acff1-1da7-473f-961e-9514e12d3b54"
+    method: POST
+    payload: "{{ payload | tojson }}"
+    headers:
+      content-type: "application/json"
+
+  start_tv_slideshow:
+    # A device_name-nek a TV teljes hálózati neve kell legyen (pl. Nappali TV)
+    url: "http://192.168.1.157:8080/slideshow/cast?device_name=Nappali TV&interval=60&show_filename=true"
+    method: POST
+
+  stop_tv_slideshow:
+    url: "http://192.168.1.157:8080/slideshow/stop-cast?device_name=Nappali TV"
+    method: POST
+
+mqtt:
+  sensor:
+    - name: "Test MQTT sensor"
+      state_topic: "zsolt/smart/home"
+
+climate:
+  - platform: generic_thermostat
+    name: Dolgozószoba vezérli a kazánt
+    heater: switch.kazan_kazanhaz_smartswitch_3
+    target_sensor: sensor.dolgozoszoba_homerseklet_korrigalt
+    min_temp: 15
+    max_temp: 25
+    ac_mode: false
+    target_temp: 18
+    cold_tolerance: 0.5 # Mennyivel mehet a cél alá (hiszterézis alja)
+    hot_tolerance: 0.2 # Mennyivel mehet a cél fölé (hiszterézis teteje)
+    min_cycle_duration:
+      seconds: 30 # Min. ennyi ideig fusson a kazán (kazánvédelem)
+
+template:
+  - binary_sensor:
+      # Ez a TE jelenlegi, működő logikád (ezt nem bántjuk, csak a hivatkozást)
+      # Ha a rendszer _2-nek hívja, akkor a configuration.yaml-ben
+      # a 'name' valószínűleg maradt az eredeti, a HA csak a háttérben nevezte át.
+      # Ezért ezt a blokkot hagyhatod, ahogy volt, vagy ha ez az új:
+      - name: "Dolgozó aktív jelenlét (Fűtéshez)"
+        unique_id: dolgozo_aktiv_jelenlet_futeshez
+        icon: mdi:radiator
+        delay_off: "00:10:00"
+        state: >
+          {% set fenyero_kuszob = 500 %}
+          {% set mozgas = is_state('binary_sensor.mozgas_erzekelo_dolgozo_1', 'on') %}
+          {% set feny = states('sensor.mozgas_erzekelo_dolgozo_1_illuminance')|float(0) %}
+          {{ mozgas and (feny > fenyero_kuszob) }}
+
+  - sensor:
+      # 1. MOZGÁS (GRAFIKUS)
+      # Trükk: Ha van mozgás, a grafikonon 300-as értéken jelenik meg.
+      - name: "Mozgásérzékelő (Grafikus)"
+        unique_id: mozgas_erzekelo_grafikus_szam
+        unit_of_measurement: "Jel"
+        state: >
+          {{ 300 if is_state('binary_sensor.mozgas_erzekelo_dolgozo_1', 'on') else 0 }}
+
+      # 2. FŰTÉS LOGIKA (GRAFIKUS)
+      # FIGYELEM: Itt hivatkozunk a _2-es verzióra!
+      # Trükk: Ha aktív a fűtés, 600-as értéken jelenik meg (a mozgás felett).
+      - name: "Fűtés Logika (Grafikus)"
+        unique_id: futes_logika_grafikus_szam
+        unit_of_measurement: "Jel"
+        state: >
+          {# Itt a javított hivatkozás a _2-es verzióra #}
+          {{ 600 if is_state('binary_sensor.dolgozo_aktiv_jelenlet_futeshez_2', 'on') else 0 }}

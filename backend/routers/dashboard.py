@@ -256,7 +256,7 @@ def cast_to_device(device_name: str, request: Request):
     
     try:
         # Run catt cast_site in background (non-blocking)
-        subprocess.Popen(["catt", "-d", device_name, "cast_site", receiver_url])
+        subprocess.Popen(["catt", "-d", device_name, "cast_site", receiver_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"message": f"Casting initiated to {device_name}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
@@ -266,7 +266,7 @@ def stop_casting(device_name: str):
     import subprocess
     print(f"DEBUG: Stopping cast on device: {device_name}")
     try:
-        subprocess.run(["catt", "-d", device_name, "stop"])
+        subprocess.run(["catt", "-d", device_name, "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"message": f"Casting stopped on {device_name}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
