@@ -429,10 +429,25 @@
                         <p class="text-[11px] text-slate-500 font-medium">Mozgass vissza képeket a kepek02-ből a forras vödörbe újraválogatás céljából.</p>
                         
                         <div class="space-y-2">
-                            <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Szűrés Mappára</label>
-                            <select id="bulkReverseFolder" class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-rose-500 shadow-sm">
-                                <option value="">Összes mappa (Minden)</option>
-                            </select>
+                            <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center justify-between">
+                                <span>Mappaválasztás (kepek02)</span>
+                                <span id="currentPathLabel" class="text-rose-500 lowercase truncate max-w-[150px]">Root</span>
+                            </label>
+                            
+                            <!-- Breadcrumbs -->
+                            <div id="bulkReverseBreadcrumbs" class="flex items-center gap-1 overflow-x-auto p-2 bg-slate-50 rounded-xl border border-slate-100 no-scrollbar text-[11px] font-bold">
+                                <!-- Populated by JS -->
+                            </div>
+
+                            <!-- Folder List Explorer -->
+                            <div id="bulkReverseExplorer" class="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-inner">
+                                <div id="bulkReverseFolderList" class="max-height-[180px] overflow-y-auto p-2 space-y-1 custom-scrollbar min-h-[100px]">
+                                    <!-- Populated by JS -->
+                                </div>
+                                <div id="bulkReverseLoading" class="hidden py-4 text-center">
+                                    <div class="w-5 h-5 border-2 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="space-y-2">
@@ -533,6 +548,89 @@
             } catch (e) {
                 alert('Trigger failed');
             }
+        }
+
+        let currentBulkReversePath = "";
+
+        async function loadBulkReverseFolders(path = "") {
+            currentBulkReversePath = path;
+            const listContainer = document.getElementById('bulkReverseFolderList');
+            const spinner = document.getElementById('bulkReverseLoading');
+            const label = document.getElementById('currentPathLabel');
+            
+            label.textContent = path ? (path.length > 20 ? "..." + path.slice(-20) : path) : "Root";
+            listContainer.innerHTML = '';
+            spinner.classList.remove('hidden');
+
+            renderBulkReverseBreadcrumbs();
+
+            try {
+                const queryStr = path ? `?parent=${encodeURIComponent(path)}` : '';
+                const response = await fetch(`/api/folders${queryStr}`);
+                const data = await response.json();
+                spinner.classList.add('hidden');
+
+                if (!data.folders || data.folders.length === 0) {
+                    listContainer.innerHTML = `<div class="py-4 text-center text-slate-300 text-[10px] font-bold uppercase tracking-wider">Nincs több almappa</div>`;
+                    return;
+                }
+
+                data.folders.forEach(f => {
+                    const el = document.createElement('div');
+                    el.className = "flex items-center justify-between p-2 rounded-lg hover:bg-rose-50 group cursor-pointer transition-colors border border-transparent hover:border-rose-100";
+                    el.onclick = () => loadBulkReverseFolders(f.path + '/');
+                    el.innerHTML = `
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i data-lucide="folder" class="w-4 h-4 text-rose-300 group-hover:text-rose-500"></i>
+                            <span class="text-xs font-bold text-slate-600 truncate">${f.name}</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300 group-hover:text-rose-400"></i>
+                    `;
+                    listContainer.appendChild(el);
+                });
+                lucide.createIcons();
+            } catch (e) {
+                spinner.classList.add('hidden');
+                listContainer.innerHTML = `<div class="py-4 text-center text-rose-400 text-[10px]">Hiba a betöltéskor</div>`;
+            }
+        }
+
+        function renderBulkReverseBreadcrumbs() {
+            const container = document.getElementById('bulkReverseBreadcrumbs');
+            container.innerHTML = '';
+
+            // Root button
+            const rootBtn = document.createElement('button');
+            rootBtn.className = `p-1 px-2 rounded-md hover:bg-white transition-colors ${!currentBulkReversePath ? 'text-rose-600 bg-white shadow-sm' : 'text-slate-400'}`;
+            rootBtn.innerHTML = '<i data-lucide="home" class="w-3 h-3"></i>';
+            rootBtn.onclick = () => loadBulkReverseFolders("");
+            container.appendChild(rootBtn);
+
+            if (!currentBulkReversePath) {
+                lucide.createIcons();
+                return;
+            }
+
+            const parts = currentBulkReversePath.split('/').filter(p => p !== '');
+            let builtPath = "";
+            parts.forEach((part, index) => {
+                const sep = document.createElement('span');
+                sep.className = "text-slate-300";
+                sep.innerHTML = '<i data-lucide="chevron-right" class="w-3 h-3"></i>';
+                container.appendChild(sep);
+
+                builtPath += part + "/";
+                const isLast = (index === parts.length - 1);
+                
+                const btn = document.createElement('button');
+                btn.className = `whitespace-nowrap px-2 py-1 rounded-md transition-colors ${isLast ? 'text-rose-600 bg-white shadow-sm' : 'text-slate-500 hover:bg-white'}`;
+                btn.textContent = part;
+                const pathAtLevel = builtPath;
+                btn.onclick = () => loadBulkReverseFolders(pathAtLevel);
+                container.appendChild(btn);
+            });
+            lucide.createIcons();
+            container.scrollLeft = container.scrollWidth;
         }
 
         async function updateB2Status() {
@@ -663,7 +761,7 @@
             btn.classList.add('opacity-50', 'cursor-not-allowed');
             
             const payload = {
-                folder_path: document.getElementById('bulkReverseFolder').value.trim() || null,
+                folder_path: currentBulkReversePath || null,
                 category_filter: document.getElementById('bulkReverseCategory').value || null
             };
             
@@ -1044,28 +1142,6 @@
             }
         });
 
-        async function loadBulkReverseFolders() {
-            try {
-                const response = await fetch('/api/folders/all');
-                const data = await response.json();
-                const select = document.getElementById('bulkReverseFolder');
-                if (!select) return;
-                
-                // Keep first (default) option
-                const firstOption = select.options[0];
-                select.innerHTML = '';
-                select.appendChild(firstOption);
-                
-                if (data.folders) {
-                    data.folders.forEach(folder => {
-                        const opt = document.createElement('option');
-                        opt.value = folder;
-                        opt.textContent = folder;
-                        select.appendChild(opt);
-                    });
-                }
-            } catch (e) { console.error("Error loading folders:", e); }
-        }
 
         function formatDateTime(isoString) {
             if (!isoString) return "";
