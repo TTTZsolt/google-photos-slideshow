@@ -135,7 +135,7 @@
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.5</span></h1>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v9.6</span></h1>
             <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
         <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
@@ -190,6 +190,7 @@
         const remainingCount = document.getElementById('remainingCount');
         const statusText = document.getElementById('statusText');
         
+        let activeFileNames = new Set(); // TRACKS FILES IN DOM AND QUEUE
         let cardQueue = [];
         let isAnimating = false;
         let startDragX, startDragY;
@@ -197,25 +198,19 @@
         // PRE-FETCHING LOGIC
         async function fetchNextData() {
             try {
-                // Collect all filenames already in view or in the background queue
-                const excluded = [];
-                // Cards already in the DOM (current and next)
-                deck.querySelectorAll('.card').forEach(c => {
-                    if (c.dataset.filename) excluded.push(c.dataset.filename);
-                });
-                // Items in the background queue
-                cardQueue.forEach(item => {
-                    if (item.file_name) excluded.push(item.file_name);
-                });
-
                 // Construct query parameters
                 const params = new URLSearchParams();
-                excluded.forEach(fn => params.append('exclude', fn));
+                activeFileNames.forEach(fn => params.append('exclude', fn));
                 
                 const url = `/api/classify/next?${params.toString()}`;
                 const res = await fetch(url);
                 if (!res.ok) throw new Error("Server Error");
-                return await res.json();
+                const data = await res.json();
+                
+                if (data && data.file_name && !data.done) {
+                    activeFileNames.add(data.file_name); // Reservation
+                }
+                return data;
             } catch (e) {
                 console.error("Fetch failed", e);
                 return { error: true };
@@ -225,7 +220,7 @@
         async function replenishQueue() {
             if (cardQueue.length < 3) {
                 const data = await fetchNextData();
-                if (data && !data.error && !data.done) {
+                if (data && !data.error && !data.done && data.file_name) {
                     cardQueue.push(data);
                     const img = new Image();
                     img.src = data.url;
@@ -272,9 +267,11 @@
         }
 
         async function initDeck() {
+            activeFileNames.clear();
             const d1 = await fetchNextData();
-            if (d1.done) { showEmpty(d1.message); return; }
+            if (!d1 || d1.done) { showEmpty(d1?.message); return; }
             
+            // Wait for d1 to be fully 'excluded' before fetching d2
             const d2 = await fetchNextData();
             
             emptyMessage.style.display = 'none';
@@ -305,6 +302,7 @@
 
             const actionMap = { 'right': 'állatok', 'left': 'utazás', 'down': 'család', 'up': 'delete' };
             const action = actionMap[direction];
+            const currentFileName = card.dataset.filename;
 
             // 1. Animate out the current card
             card.style.transition = 'transform 0.5s ease-in, opacity 0.3s';
@@ -314,7 +312,6 @@
             // 2. Animate the next (thumbnail) card to become current
             const next = deck.querySelector('.card.next');
             if (next) {
-                // Remove 'next' properties first
                 next.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
                 next.classList.replace('next', 'current');
                 next.style.border = '2px solid rgba(255,255,255,0.05)';
@@ -323,11 +320,13 @@
             }
 
             // 3. API Call
-            const fileName = card.dataset.filename;
             fetch('/api/classify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_name: fileName, action: action })
+                body: JSON.stringify({ file_name: currentFileName, action: action })
+            }).then(() => {
+                // Free up the filename from exclusion after classification attempt
+                activeFileNames.delete(currentFileName);
             });
 
             // 4. Cleanup and refill
