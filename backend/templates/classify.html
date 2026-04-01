@@ -161,23 +161,23 @@
                 </div>
                 <span class="text-[9px] font-bold uppercase text-blue-400">Utazás</span>
             </button>
-            <button onclick="triggerSwipe('right')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
+            <button onclick="triggerSwipe('down')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
                 <div class="w-10 h-10 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center border border-green-500/30">
                     <i data-lucide="heart"></i>
                 </div>
                 <span class="text-[9px] font-bold uppercase text-green-400">Család</span>
-            </button>
-            <button onclick="triggerSwipe('down')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
-                <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center border border-purple-500/30">
-                    <i data-lucide="dog"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-purple-400">Állat</span>
             </button>
             <button onclick="triggerSwipe('up')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
                 <div class="w-10 h-10 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30">
                     <i data-lucide="trash-2"></i>
                 </div>
                 <span class="text-[9px] font-bold uppercase text-red-400">Törlés</span>
+            </button>
+            <button onclick="triggerSwipe('right')" class="flex flex-col items-center gap-2 p-3 glass-btn rounded-2xl">
+                <div class="w-10 h-10 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center border border-purple-500/30">
+                    <i data-lucide="paw-print"></i>
+                </div>
+                <span class="text-[9px] font-bold uppercase text-purple-400">Állatok</span>
             </button>
         </div>
     </div>
@@ -250,9 +250,9 @@
                 <div class="card-info p-3 bg-slate-800/80 backdrop-blur-md border-t border-white/5">
                     <p class="text-[10px] truncate font-medium text-slate-400">${data.file_name}</p>
                 </div>
-                <div class="overlay overlay-right">CSALÁD</div>
+                <div class="overlay overlay-right">ÁLLATOK</div>
                 <div class="overlay overlay-left">UTAZÁS</div>
-                <div class="overlay overlay-down">ÁLLATOK</div>
+                <div class="overlay overlay-down">CSALÁD</div>
                 <div class="overlay overlay-up">TÖRLÉS</div>
             `;
 
@@ -303,7 +303,7 @@
             if (isAnimating) return;
             isAnimating = true;
 
-            const actionMap = { 'right': 'család', 'left': 'utazás', 'down': 'állatok', 'up': 'delete' };
+            const actionMap = { 'right': 'állatok', 'left': 'utazás', 'down': 'család', 'up': 'delete' };
             const action = actionMap[direction];
 
             // 1. Animate out the current card
