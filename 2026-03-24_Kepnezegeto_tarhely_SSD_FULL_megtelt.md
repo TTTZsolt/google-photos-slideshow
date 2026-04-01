@@ -89,4 +89,10 @@ Képnézegető, Termux, Android Tablet, df -h, dumpsys diskstats, No space left 
 # 9. Végleges javítás (2026-04-01): Chromecast kimenetének némítása
 **Megoldás a hurokra:** A `pychromecast` és a `catt` (Cast All The Things) parancssori hibákat okozó végtelen ciklusának kimenetét ("AssertionError: Zeroconf instance loop must be running") programkódon belül `/dev/null`-ba (`subprocess.DEVNULL`) irányítottuk. 
 
-A `backend/routers/dashboard.py` fájlban a Chromecast indításáért felelős `subprocess.Popen("catt"...)` parancsot kiegészítettük az `stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL` attribútumokkal. Emellett a `main.py`-ban lejjebb vettük a `zeroconf` és `pychromecast` loggerek érzékenységét `CRITICAL` szintre. Így a hiba továbbra is megtörténhet (ha megszakad a hálózat), de a rendszer nem árasztja el többé hibaüzenetekkel a Termux `server.log`-ját, megvédve a tablet 110 GB-os háttértárát.
+---
+
+# 10. Automatizált folyamatkezelés (2026-04-01 - V8.3)
+**Fejlesztés:** Mivel a logok némítása csak a tünetet kezelte, bevezettünk egy aktív folyamatfelügyeletet.
+1.  **Öngyógyító mechanizmus:** Minden új Chromecast parancs (scan, cast, stop) kiadása előtt a rendszer most már automatikusan lefuttat egy `pkill -f catt` parancsot. Ez garantálja, hogy ha egy korábbi folyamat "beakadt" és végtelen ciklusban pörögne, az azonnal leállításra kerül, mielőtt az új parancs elindulna.
+2.  **Szigorú Időkorlát (Timeout):** Minden `catt` híváshoz 10-12 másodperces kényszerített leállítást (timeout) rendeltünk. Ha a hálózat lassúsága vagy eszközhia miatt a program ezen belül nem végez, a Python operációs rendszer szinten szakítja meg a futását.
+3.  **Verziókövetés:** A rendszer verziószámát **V8.3 (Process Killer)** jelzésre frissítettük a Dashboardon, hogy könnyen ellenőrizhető legyen a javítás megléte.

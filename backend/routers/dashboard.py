@@ -213,8 +213,10 @@ def scan_devices():
     import subprocess
     import re
     try:
-        # Run catt scan and capture output
-        result = subprocess.run(["catt", "scan"], capture_output=True, text=True, timeout=10)
+        # Kill any zombie catt processes before scanning
+        subprocess.run(["pkill", "-f", "catt"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Run catt scan and capture output with strict timeout
+        result = subprocess.run(["catt", "scan"], capture_output=True, text=True, timeout=12)
         output = result.stdout
         
         # Parse output: "192.168.1.181 - Nappali - Google TV"
@@ -255,6 +257,8 @@ def cast_to_device(device_name: str, request: Request):
     print(f"DEBUG: Casting {receiver_url} to device: {device_name}")
     
     try:
+        # Stop any existing cast/catt process before starting new one
+        subprocess.run(["pkill", "-f", "catt"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Run catt cast_site in background (non-blocking)
         subprocess.Popen(["catt", "-d", device_name, "cast_site", receiver_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return {"message": f"Casting initiated to {device_name}"}
@@ -266,7 +270,10 @@ def stop_casting(device_name: str):
     import subprocess
     print(f"DEBUG: Stopping cast on device: {device_name}")
     try:
-        subprocess.run(["catt", "-d", device_name, "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # First kill the local catt process if it's hanging
+        subprocess.run(["pkill", "-f", "catt"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Then tell the TV to stop with a timeout
+        subprocess.run(["catt", "-d", device_name, "stop"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
         return {"message": f"Casting stopped on {device_name}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"CATT error: {str(e)}")
