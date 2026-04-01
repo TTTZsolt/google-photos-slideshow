@@ -13,9 +13,9 @@ class B2ConnectRequest(BaseModel):
     key_id: str
     application_key: str
     bucket_name: str
-    archive_bucket_name: Optional[str] = None
-    source_bucket_name: Optional[str] = None
-    trash_bucket_name: Optional[str] = None
+    archive_bucket_name: str
+    source_bucket_name: str
+    trash_bucket_name: str
     cloudflare_proxy_url: Optional[str] = None
 
 def get_db():
