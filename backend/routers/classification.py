@@ -40,8 +40,8 @@ def classify_page(request: Request):
     return templates.TemplateResponse("classify.html", {"request": request})
 
 @router.get("/api/classify/next")
-def get_next_for_classification(db: Session = Depends(get_db)):
-    """ Returns the next unclassified image from the source bucket. """
+def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):
+    """ Returns the next unclassified image from the source bucket, excluding specified files. """
     try:
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
         if not b2_account:
@@ -51,7 +51,7 @@ def get_next_for_classification(db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="A 'forras' vödör neve nincs megadva a beállításoknál.")
 
         # Query for the next item
-        media_item = db.query(MediaItem).outerjoin(
+        query = db.query(MediaItem).outerjoin(
             MediaClassification, MediaItem.file_name == MediaClassification.file_name
         ).filter(
             MediaItem.bucket_name == b2_account.source_bucket_name
@@ -60,7 +60,12 @@ def get_next_for_classification(db: Session = Depends(get_db)):
                 MediaClassification.file_name == None,
                 and_(MediaClassification.category == None, MediaClassification.is_deleted == False)
             )
-        ).first()
+        )
+
+        if exclude:
+            query = query.filter(~MediaItem.file_name.in_(exclude))
+
+        media_item = query.first()
 
         if not media_item:
             return {"done": True, "message": "Nincs több kép a várólistán (forras vödör üres vagy minden kész)."}

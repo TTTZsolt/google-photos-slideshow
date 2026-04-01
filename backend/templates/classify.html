@@ -194,9 +194,26 @@
         let isAnimating = false;
         let startDragX, startDragY;
 
+        // PRE-FETCHING LOGIC
         async function fetchNextData() {
             try {
-                const res = await fetch('/api/classify/next');
+                // Collect all filenames already in view or in the background queue
+                const excluded = [];
+                // Cards already in the DOM (current and next)
+                deck.querySelectorAll('.card').forEach(c => {
+                    if (c.dataset.filename) excluded.push(c.dataset.filename);
+                });
+                // Items in the background queue
+                cardQueue.forEach(item => {
+                    if (item.file_name) excluded.push(item.file_name);
+                });
+
+                // Construct query parameters
+                const params = new URLSearchParams();
+                excluded.forEach(fn => params.append('exclude', fn));
+                
+                const url = `/api/classify/next?${params.toString()}`;
+                const res = await fetch(url);
                 if (!res.ok) throw new Error("Server Error");
                 return await res.json();
             } catch (e) {
