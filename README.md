@@ -1,6 +1,6 @@
-# Web-Based Random Slideshow (V8.3)
+# Web-Based Random Slideshow (V10.0)
 
-**Cél**: Kiegészítés Spotify-val
+**Cél**: Fényképek szortírozása nyomógombokkal
 
 
 This project is a high-performance, web-based random photo slideshow that pulls images from Backblaze B2. It is designed to be flicker-free and works on any device with a modern web browser.
