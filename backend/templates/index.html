@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slideshow Control Center - V8.3</title>
+    <title>Slideshow Control Center - V9.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -97,10 +97,10 @@
                     class="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                     Control Center
                 </h1>
-                <p class="text-slate-500 font-medium">Global Random Slideshow - V8.3</p>
+                <p class="text-slate-500 font-medium">Global Random Slideshow - V9.0</p>
             </div>
             <div class="flex items-center gap-3">
-                <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v8.3 (Process Killer)</span>
+                <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v9.0 (Képválogató)</span>
             </div>
         </header>
 
@@ -109,6 +109,46 @@
 
             <!-- Left/Center: Slideshow Management (Span 2) -->
             <div class="lg:col-span-2 space-y-8">
+
+                <!-- Photo Classifier Card (V9.0) -->
+                <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden bg-gradient-to-br from-indigo-50/50 to-purple-50/50 mb-8">
+                    <div class="absolute top-0 right-0 p-8 opacity-10">
+                        <i data-lucide="sparkles" class="w-32 h-32 text-indigo-500 animate-pulse"></i>
+                    </div>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-8">
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                <i data-lucide="layout-template" class="w-6 h-6 text-indigo-500"></i>
+                                Fotó Szortírozó
+                            </h2>
+                            <span class="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded-full font-black uppercase tracking-widest">ÚJ</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <p class="text-sm text-slate-600 leading-relaxed">
+                                    Válogasd szét a Google Photos-ból érkező képeidet egy kényelmes, Tinder-stílusú felületen.
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="text-[10px] font-bold bg-white/80 border border-slate-200 px-2 py-1 rounded text-slate-500">Család</span>
+                                    <span class="text-[10px] font-bold bg-white/80 border border-slate-200 px-2 py-1 rounded text-slate-500">Utazás</span>
+                                    <span class="text-[10px] font-bold bg-white/80 border border-slate-200 px-2 py-1 rounded text-slate-500">Állatok</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-col gap-3">
+                                <a href="/classify" target="_blank"
+                                    class="w-full bg-indigo-600 text-white p-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:bg-indigo-700 shadow-lg active:scale-95">
+                                    <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+                                    <span class="font-bold">Indítás Mobilon</span>
+                                </a>
+                                <p class="text-[10px] text-slate-400 text-center italic">
+                                    A képek a 'forras' vödörből a 'kepek02'-be kerülnek.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Main Controls Card -->
                 <div class="glass-panel rounded-3xl p-8 shadow-2xl relative overflow-hidden">
@@ -261,7 +301,11 @@
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2BucketName" placeholder="Bucket Name" required
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        <input type="text" id="b2ArchiveBucketName" placeholder="Archive Bucket Name (Opcionális)"
+                        <input type="text" id="b2ArchiveBucketName" placeholder="Edit Archive (kepek01)"
+                            class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                        <input type="text" id="b2SourceBucketName" placeholder="Sorting Source (forras)"
+                            class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                        <input type="text" id="b2TrashBucketName" placeholder="Sorting Trash (torles-elott)"
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
                         <input type="text" id="b2CloudflareUrl" placeholder="Cloudflare Worker URL (Opcionális)"
                             class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
@@ -290,8 +334,13 @@
                                         b2_account.bucket_name }}</p>
                                     {% if b2_account.archive_bucket_name %}
                                     <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300 shrink-0"></i>
-                                    <p class="font-bold text-slate-500 truncate text-xs" title="Archive Bucket">{{
+                                    <p class="font-bold text-slate-500 truncate text-xs" title="Edit Archive">{{
                                         b2_account.archive_bucket_name }}</p>
+                                    {% endif %}
+                                    {% if b2_account.source_bucket_name %}
+                                    <i data-lucide="layers" class="w-3 h-3 text-indigo-300 shrink-0 ml-1"></i>
+                                    <p class="font-bold text-indigo-400 truncate text-xs" title="Staging Source">{{
+                                        b2_account.source_bucket_name }}</p>
                                     {% endif %}
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
@@ -366,6 +415,50 @@
                             class="w-full bg-red-600 text-white font-bold p-3 rounded-xl hover:bg-red-700 transition shadow-lg flex items-center justify-center gap-2">
                             <i data-lucide="save" class="w-5 h-5"></i> Save Settings
                         </button>
+                    </div>
+                </div>
+                </div>
+
+                <!-- Admin / Bulk Reverse -->
+                <div class="glass-panel rounded-3xl p-6 shadow-lg border-2 border-rose-100/50">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2 text-rose-500">
+                        <i data-lucide="archive-restore" class="w-5 h-5"></i>
+                        Visszamozgató
+                    </h2>
+                    <div class="space-y-4">
+                        <p class="text-[11px] text-slate-500 font-medium">Mozgass vissza képeket a kepek02-ből a forras vödörbe újraválogatás céljából.</p>
+                        
+                        <div class="space-y-2">
+                            <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Szűrés Mappára</label>
+                            <input type="text" id="bulkReverseFolder" placeholder="Pl: 2024/Kutya/ (opcionális)" class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-rose-500 shadow-sm">
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Szűrés Kategóriára</label>
+                            <select id="bulkReverseCategory" class="w-full bg-white p-3 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-rose-500 shadow-sm">
+                                <option value="">Csak a kategorizálatlanok</option>
+                                <option value="csalad">Család</option>
+                                <option value="utazas">Utazás</option>
+                                <option value="allatok">Állatok / Növények</option>
+                            </select>
+                        </div>
+
+                        <button onclick="startBulkReverse()" id="bulkReverseBtn"
+                            class="w-full bg-rose-600 text-white font-bold p-3 rounded-xl hover:bg-rose-700 transition shadow-lg flex items-center justify-center gap-2 group">
+                            <i data-lucide="list-restart" class="w-5 h-5 group-hover:-translate-x-1 transition-transform"></i> Indítás
+                        </button>
+                        
+                        <!-- Progress Area -->
+                        <div id="bulkReverseProgressArea" class="hidden mt-4 p-3 bg-white/60 rounded-xl space-y-2 border border-slate-100">
+                            <div class="flex justify-between items-center text-xs font-bold text-slate-600">
+                                <span>Folyamat...</span>
+                                <span id="bulkReversePercent">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden shadow-inner">
+                                <div id="bulkReverseProgressBar" class="bg-gradient-to-r from-rose-400 to-orange-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                            <p id="bulkReverseMessage" class="text-[10px] text-slate-500 text-center"></p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -488,6 +581,8 @@
                 application_key: document.getElementById('b2AppKey').value,
                 bucket_name: document.getElementById('b2BucketName').value,
                 archive_bucket_name: archiveBucketValue === "" ? null : archiveBucketValue,
+                source_bucket_name: document.getElementById('b2SourceBucketName').value.trim() || null,
+                trash_bucket_name: document.getElementById('b2TrashBucketName').value.trim() || null,
                 cloudflare_proxy_url: cfUrlValue === "" ? null : cfUrlValue
             };
 
@@ -551,7 +646,78 @@
             }
         }
 
-        // ========== SYSTEM CONTROLS ==========
+        // ========== SYSTEM CONTROLS & ADMIN ==========
+        async function startBulkReverse() {
+            if (!confirm("Biztosan visszamozgatod a kiválasztott képeket a forrás vödörbe? Ez a folyamat nem vonható vissza, beletelhet egy kis időbe.")) return;
+            
+            const btn = document.getElementById('bulkReverseBtn');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            const payload = {
+                folder_path: document.getElementById('bulkReverseFolder').value.trim() || null,
+                category_filter: document.getElementById('bulkReverseCategory').value || null
+            };
+            
+            try {
+                const res = await fetch('/api/classification/bulk-reverse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!res.ok) {
+                    const errStr = await res.text();
+                    alert("Hiba az indításkor: " + errStr);
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
+                
+                document.getElementById('bulkReverseProgressArea').classList.remove('hidden');
+            } catch (e) {
+                alert("Hálózati hiba!");
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+        
+        async function fetchBulkReverseStatus() {
+            try {
+                const response = await fetch('/api/classification/bulk-reverse/status');
+                const data = await response.json();
+                
+                const area = document.getElementById('bulkReverseProgressArea');
+                const btn = document.getElementById('bulkReverseBtn');
+                
+                if (data.is_running || data.total > 0) {
+                    area.classList.remove('hidden');
+                    
+                    document.getElementById('bulkReverseMessage').textContent = data.message;
+                    
+                    if (data.total > 0) {
+                        const percent = Math.min(100, Math.round((data.current / data.total) * 100));
+                        document.getElementById('bulkReversePercent').textContent = percent + '%';
+                        document.getElementById('bulkReverseProgressBar').style.width = percent + '%';
+                    }
+                    
+                    if (data.is_running) {
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        btn.disabled = false;
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                } else if (data.message && !data.is_running && data.total === 0) {
+                     // Error message or empty
+                     area.classList.remove('hidden');
+                     document.getElementById('bulkReverseMessage').textContent = data.message;
+                     btn.disabled = false;
+                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            } catch (e) { }
+        }
+
         async function fetchSystemStatus() {
             try {
                 const response = await fetch('/api/system/status');
@@ -605,6 +771,9 @@
                                     <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
                                         <i data-lucide="folder-open" class="w-3.5 h-3.5 text-indigo-400"></i>
                                         <span class="truncate font-medium">${info.folder}</span>
+                                        <span class="text-slate-300">|</span>
+                                        <i data-lucide="tag" class="w-3.5 h-3.5 text-purple-400"></i>
+                                        <span class="truncate font-medium">${info.category || "Mind"}</span>
                                         <span class="hidden sm:inline-block text-[10px] ml-2 text-slate-400">(${secondsAgo} mp. pring)</span>
                                     </div>
                                 </div>
@@ -875,6 +1044,9 @@
 
         setInterval(fetchSystemStatus, 3000);
         fetchSystemStatus();
+
+        setInterval(fetchBulkReverseStatus, 2000);
+        fetchBulkReverseStatus();
 
         setInterval(updateB2Status, 3000);
         updateB2Status();

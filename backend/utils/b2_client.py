@@ -86,7 +86,7 @@ class B2Client:
         file_version = source_bucket.get_file_info_by_name(file_name)
         
         # 2. Másold át a cél vödörbe (ugyanazzal a névvel)
-        dest_bucket.copy(
+        new_version = dest_bucket.copy(
             file_id=file_version.id_,
             new_file_name=file_name
         )
@@ -94,4 +94,4 @@ class B2Client:
         # 3. Töröld az eredetit a forrás vödörből
         source_bucket.delete_file_version(file_version.id_, file_name)
         logger.info(f"Successfully moved and cleaned up {file_name}")
-        return True
+        return new_version

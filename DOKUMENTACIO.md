@@ -57,7 +57,7 @@ Ez SSH protokollon keresztül csatlakozik a Tabletre, elindítja a szervert a h�
 
 ### 2. Kezdeti Szinkronizáció
 Miután megnyílt a Vezérlőpult a PC-den (`192.168.1.157:8080`):
-- A "B2 Account" kártyán ellenőrizd a Backend kapcsolatot (Key ID, App Key, Bucket, és az Archive Bucket meglétét).
+- A "B2 Account" kártyán ellenőrizd a Backend kapcsolatot (Key ID, App Key, vödrök meglétét stb).
 - Ha új fotókat töltöttél fel a Backblaze szervereire, kattints az account melletti kék **[Resync]** gombra. Ekkor a háttérben futó worker megkezdi a felhő feltérképezését és eltárolja a fájlok útvonalait helyben, hogy gyorsabb legyen a lejátszás. Ezt meg kell várni (a folyamat kiírja, hány sort indexelt már).
 
 ### 3. A Vetítés Indítása és a TV (Chromecast) Használata
@@ -78,5 +78,25 @@ Bármikor a jövőben, amikor időd engedi, ülj le a Vezérlőpult (PC) elé.
 - A kívánt hibás fotó mellett kattints a **Photopea (kék)** ikonra. Ekkor felpattan a böngésződben az integrált Photopea (webes Photoshop), betöltve azonnal az adott képet teljes felbontásban.
 - Fordítsd el, állítsd a fehéregyensúlyt vagy vágd meg a képet (Image -> Transform stb.).
 - Mikor kész vagy, válaszd a **File -> Save** opciót (bal felső sarokban).
-- A Photopea közli a sikeres mentést. A háttérben a program ekkor fogja a most manipulált adataidat feltölti a B2 rendszerre `-szerkesztett` névvel a végén, miközben biztonsági okokból a régi eredeti fotót átmenti az Archive/Trash Backblaze vödörbe!
+- A Photopea közli a sikeres mentést. A háttérben a program ekkor fogja a most manipulált adataidat feltölti a B2 rendszerre `-szerkesztett` névvel a végén, miközben biztonsági okokból a régi eredeti fotót átmenti az Edit Archive (kepek01) Backblaze vödörbe!
 - Zárhatod a Photopea-t, a kép lekerül a Labor listájáról. Kész vagy.
+
+### 6. Képek hozzáadása, majd kategorizálása
+Amikor új képeket szeretnél a rendszerhez adni (pld. a Google Photos-ból), először a `forras` vödörbe kell őket feltöltened. Ezt követően a rendszer észleli őket, amint rányomsz a **[Resync]** gombra a B2 Account kártyán.
+A képek kategorizálásához végezd el az alábbi lépéseket:
+1. Nyisd meg a Vezérlőpult (Dashboard) oldalát, és kattints a "Fotó Szortírozó" kártyán lévő **Indítás Mobilon** gombra. Ezt érdemes a telefonodról vagy egy kényelmes érintőképernyős eszközről megtenni.
+2. A megnyíló felületen (Tinder-stílusban) húzz egyet az ujjaddal a képernyőn a megjelenő képen:
+   - **Jobbra húzás**: Család kategória
+   - **Balra húzás**: Utazás kategória
+   - **Lefelé húzás**: Állatok / Növények kategória
+   - **Felfelé húzás**: Törlés (a kép a B2-tárolón is átkerül a biztonsági `torles-elott` vödörbe)
+3. A besorolt képek az adatbázisban végleges rögzítésre kerülnek és valós időben átkerülnek a fizikai B2 tárolón is az aktív vetítésért felelős `kepek02` vödörbe.
+
+### 7. Képek újra kategorizálása (Visszamozgató)
+Ha egy korábbi mappát vagy kategória nélküli (régi) képeket szeretnél újra átszortírozni (akár azért, mert hibáztál, akár a régi gyűjteménnyel kezdesz neki a rendszer használatának):
+1. Irány a Vezérlőpult jobb oldali panelje, a **Visszamozgató** szekció.
+2. Dönthetsz úgy, hogy egy adott mappára szűrsz (pl. `2024/Januar/`), vagy hagyhatod üresen a teljes könyvtárra.
+3. Kategória szerint kiválaszthatod, hogy csak a "kategorizálatlan" képeket (alapértelmezett) mozgassa vissza, vagy adott kategóriát. (Kategorizálatlannak számít minden "régi" fotó, amit még a V9.0 előtt egyből a `kepek02`-be töltöttél).
+4. Kattints az **Indítás** gombra.
+5. A folyamat a háttérben zajlik, haladását láthatod a megjelenő folyamatjelző csíkon (Progress bar).
+6. A művelet fizikailag átmozgatja a `kepek02`-ből a fájlokat vissza a `forras` vödörbe, és lenullázza az eddigi kategóriájukat az adatbázisban, hogy ismét felbukkanjanak a "Fotó Szortírozó" felületén, ahonnan újra besorolhatod őket.

@@ -1,22 +1,23 @@
 import time
 import logging
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from .database import SessionLocal
-from .models import MediaItem, B2Account
+from .models import MediaItem, B2Account, MediaClassification
 from .utils.b2_client import B2Client
 import random
+import logging
 
 logger = logging.getLogger(__name__)
 
 class SlideshowController:
     def __init__(self):
         self._b2_clients = {}  # Cache: {account_id: B2Client}
-        self._decks = {}  # Cache: {(session_id, folder): [shuffled_ids]}
+        self._decks = {}  # Cache: {(session_id, folder, category): [shuffled_ids]}
         
         # v7.3/v7.4 System Control State
         self.master_switch = True
-        self.active_sessions = {} # {session_id: {"last_seen": float, "ip": str, "user_agent": str, "device_name": str, "folder": str}}
+        self.active_sessions = {} # {session_id: {"last_seen": float, "ip": str, "user_agent": str, "device_name": str, "folder": str, "category": str}}
         self.killed_sessions = set() # {session_id}
 
     def _get_b2_client(self, db: Session, account_id: int):
@@ -30,8 +31,13 @@ class SlideshowController:
         return self._b2_clients[account_id], b2_acc
 
     def get_folders(self, db: Session, parent_path: str = None):
-        """Returns direct subdirectories under the given parent_path."""
-        query = db.query(MediaItem.file_name)
+        """Returns direct subdirectories under the given parent_path. Only looks in the active bucket (kepek02)."""
+        # Get active account
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+        if not b2_acc:
+            return []
+
+        query = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == b2_acc.bucket_name)
         
         if parent_path:
             # Add trailing slash if not present to ensure we only match inside the folder
@@ -43,45 +49,60 @@ class SlideshowController:
         for row in query.all():
             file_path = row[0]
             
-            # If parent_path is '2023/', and file_path is '2023/Nyaralas/kep.jpg'
-            # We want to extract 'Nyaralas'
             if parent_path:
                 relative_path = file_path[len(parent_path):]
             else:
                 relative_path = file_path
                 
             parts = relative_path.split('/')
-            # If there's more than one part, the first part is a directory
             if len(parts) > 1:
                 folder_name = parts[0]
                 seen_folders.add(folder_name)
                 
-        # Return sorted list of dictionaries
         folders = [{"name": folder, "path": f"{parent_path}{folder}" if parent_path else folder} for folder in sorted(list(seen_folders))]
         return folders
 
-    def get_random_image(self, db: Session, folder: str = None, session_id: str = "default"):
-        """Fetches a random image, filtered by folder. Uses a 'deck' system per session to avoid repetition."""
-        query = db.query(MediaItem)
+    def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default"):
+        """Fetches a random image, filtered by folder and category. Uses a 'deck' system per session to avoid repetition."""
         
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+        if not b2_acc:
+            return None
+
         folder_prefix = folder
         if folder_prefix and not folder_prefix.endswith('/'):
             folder_prefix += '/'
 
-        deck_key = (session_id, folder_prefix)
+        deck_key = (session_id, folder_prefix, category)
 
         # Initialize or refill deck if empty
         if deck_key not in self._decks or not self._decks[deck_key]:
+            # Construct Query: Join MediaItem with MediaClassification
+            query = db.query(MediaItem.id).outerjoin(
+                MediaClassification, MediaItem.file_name == MediaClassification.file_name
+            ).filter(
+                MediaItem.bucket_name == b2_acc.bucket_name
+            )
+
+            # Exclude deleted items
+            query = query.filter(or_(MediaClassification.is_deleted == False, MediaClassification.is_deleted == None))
+
+            # Filter by folder
             if folder_prefix:
                 query = query.filter(MediaItem.file_name.like(f"{folder_prefix}%"))
-            all_ids = [row[0] for row in query.with_entities(MediaItem.id).all()]
+            
+            # Filter by category
+            if category:
+                query = query.filter(MediaClassification.category == category)
+            
+            all_ids = [row[0] for row in query.all()]
             
             if not all_ids:
                 return None
             
             random.shuffle(all_ids)
             self._decks[deck_key] = all_ids
-            logger.info(f"Refilled deck for session '{session_id}' (folder '{folder_prefix}') with {len(all_ids)} items.")
+            logger.info(f"Refilled deck for session '{session_id}' (cat: {category}, folder: {folder_prefix}) with {len(all_ids)} items.")
 
         # Pop from deck
         next_id = self._decks[deck_key].pop(0)
@@ -96,7 +117,7 @@ class SlideshowController:
             return None
             
         display_url = client.get_download_url(
-            b2_acc.bucket_name, 
+            media_item.bucket_name, 
             media_item.file_name, 
             b2_acc.cloudflare_proxy_url
         )
@@ -132,7 +153,6 @@ class SlideshowController:
     def get_system_status(self) -> dict:
         """Counts active clients (heartbeat within 10 seconds) and returns their metadata."""
         now = time.time()
-        # Clean up old sessions
         self.active_sessions = {sid: info for sid, info in self.active_sessions.items() if now - info.get("last_seen", 0) < 10.0}
         
         return {
@@ -150,6 +170,9 @@ class SlideshowController:
         for session_id in self.active_sessions.keys():
             self.killed_sessions.add(session_id)
         self.active_sessions.clear()
+        
+# Global singleton instance
+controller = SlideshowController()
         
 # Global singleton instance
 controller = SlideshowController()

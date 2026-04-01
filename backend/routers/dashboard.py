@@ -13,6 +13,8 @@ class B2ConnectRequest(BaseModel):
     application_key: str
     bucket_name: str
     archive_bucket_name: str = None
+    source_bucket_name: str = None
+    trash_bucket_name: str = None
     cloudflare_proxy_url: str = None
 
 def get_db():
@@ -53,6 +55,8 @@ def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Ses
             application_key=req.application_key,
             bucket_name=req.bucket_name,
             archive_bucket_name=req.archive_bucket_name,
+            source_bucket_name=req.source_bucket_name,
+            trash_bucket_name=req.trash_bucket_name,
             cloudflare_proxy_url=req.cloudflare_proxy_url
         )
         db.add(account)
@@ -60,6 +64,8 @@ def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Ses
         account.application_key = req.application_key
         account.bucket_name = req.bucket_name
         account.archive_bucket_name = req.archive_bucket_name
+        account.source_bucket_name = req.source_bucket_name
+        account.trash_bucket_name = req.trash_bucket_name
         account.cloudflare_proxy_url = req.cloudflare_proxy_url
     
     db.commit()
@@ -141,7 +147,7 @@ def resolve_flagged_image(flag_id: int, db: Session = Depends(get_db)):
     return {"message": "Törölve a listáról."}
 
 @router.post("/api/heartbeat/{session_id}")
-def heartbeat(request: Request, session_id: str, device_name: str = None, folder: str = None):
+def heartbeat(request: Request, session_id: str, device_name: str = None, folder: str = None, category: str = None):
     # Extract client metadata
     client_ip = request.client.host if request.client else "Unknown"
     user_agent = request.headers.get("user-agent", "Unknown")
@@ -159,7 +165,8 @@ def heartbeat(request: Request, session_id: str, device_name: str = None, folder
         "ip": client_ip,
         "user_agent": ua_str,
         "device_name": device_name or ua_str,
-        "folder": folder or "Összes (Root)"
+        "folder": folder or "Összes (Root)",
+        "category": category or "Nincs szűrés"
     }
     
     is_alive = controller.heartbeat(session_id, client_info)
@@ -177,10 +184,10 @@ def get_folders(parent: str = None, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/media/random")
-def get_random_media(folder: str = None, session_id: str = "default", db: Session = Depends(get_db)):
-    """Returns a random media item, optionally filtered by folder and session."""
+def get_random_media(folder: str = None, category: str = None, session_id: str = "default", db: Session = Depends(get_db)):
+    """Returns a random media item, optionally filtered by folder, category and session."""
     try:
-        media_item = controller.get_random_image(db, folder=folder, session_id=session_id)
+        media_item = controller.get_random_image(db, folder=folder, category=category, session_id=session_id)
         if not media_item:
             raise HTTPException(status_code=404, detail="No media items found for the given folder.")
         return media_item

@@ -8,8 +8,10 @@ class B2Account(Base):
     id = Column(Integer, primary_key=True, index=True)
     key_id = Column(String, unique=True, index=True)
     application_key = Column(String)
-    bucket_name = Column(String)
-    archive_bucket_name = Column(String, nullable=True)
+    bucket_name = Column(String) # kepek02 (Active)
+    archive_bucket_name = Column(String, nullable=True) # kepek01 (Edit Originals)
+    source_bucket_name = Column(String, nullable=True) # forras (Staging)
+    trash_bucket_name = Column(String, nullable=True) # torles-elott (Trash)
     cloudflare_proxy_url = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
     last_synced_at = Column(DateTime(timezone=True), nullable=True)
@@ -22,11 +24,20 @@ class MediaItem(Base):
 
     id = Column(String, primary_key=True, index=True) # B2 File ID
     b2_account_id = Column(Integer, index=True) # ForeignKey relation to B2Account.id
-    file_name = Column(Text) # B2 File Name
+    bucket_name = Column(String, index=True) # Which bucket this file is currently in
+    file_name = Column(Text) # B2 File Name (Path)
     mime_type = Column(String)
     size = Column(Integer, nullable=True)
     creation_time = Column(DateTime(timezone=True), nullable=True)
     indexed_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class MediaClassification(Base):
+    __tablename__ = "media_classifications"
+    
+    file_name = Column(Text, primary_key=True, index=True) # B2 File Path (Key)
+    category = Column(String, nullable=True) # család, utazás, állatok, stb.
+    is_deleted = Column(Boolean, default=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class MusicConfig(Base):
     __tablename__ = "music_config"

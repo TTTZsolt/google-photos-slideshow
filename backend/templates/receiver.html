@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>B2 Slideshow Receiver - V8.3</title>
+    <title>B2 Slideshow Receiver - V9.0</title>
 
     <!-- Design & Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -311,7 +311,7 @@
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                             <i data-lucide="folders" class="text-indigo-500 w-6 h-6"></i>
-                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V8.3</span>
+                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V9.0</span>
                         </h2>
                         <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Select a folder to
                             begin</p>
@@ -384,6 +384,22 @@
                         </div>
                     </div>
 
+                    <!-- Category Selector -->
+                    <div class="flex items-center gap-3 min-w-[140px]">
+                        <div class="bg-purple-50 w-10 h-10 flex items-center justify-center rounded-xl shadow-inner border border-purple-100 text-purple-500">
+                            <i data-lucide="filter" class="w-5 h-5"></i>
+                        </div>
+                        <div class="flex flex-col justify-center flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategória</label>
+                            <select id="setupCategory" class="bg-transparent border-0 p-0 text-sm font-bold focus:ring-0 text-slate-700 cursor-pointer">
+                                <option value="">Mindegyik</option>
+                                <option value="csalad">Család</option>
+                                <option value="utazas">Utazás</option>
+                                <option value="allatok">Állatok</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Start Global (All Folders) -->
                     <button onclick="startSlideshow(null)"
                         class="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg shrink-0 group">
@@ -413,6 +429,7 @@
 
         let config = {
             folder: null,
+            category: null,
             intervalMs: 240000,
             showFilename: false,
             isRunning: false,
@@ -473,6 +490,7 @@
             // Auto-start check
             if (urlParams.has('folder') || urlParams.has('start_global')) {
                 config.folder = urlParams.get('folder') || null;
+                config.category = urlParams.get('category') || null;
                 config.intervalMs = parseInt(urlParams.get('interval') || 240) * 1000;
                 config.showFilename = urlParams.get('show_filename') === 'true';
                 startEngine();
@@ -578,6 +596,7 @@
 
         function startSlideshow(folderPath) {
             config.folder = folderPath;
+            config.category = document.getElementById('setupCategory').value || null;
             config.intervalMs = parseInt(document.getElementById('setupInterval').value || 240) * 1000;
             config.showFilename = document.getElementById('setupShowFilename').checked;
 
@@ -603,6 +622,7 @@
             const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname
                 + '?start_global=true'
                 + (config.folder ? '&folder=' + encodeURIComponent(config.folder) : '')
+                + (config.category ? '&category=' + encodeURIComponent(config.category) : '')
                 + `&interval=${config.intervalMs / 1000}`
                 + `&show_filename=${config.showFilename}`;
             window.history.pushState({ path: newurl }, '', newurl);
@@ -690,6 +710,7 @@
             try {
                 const params = new URLSearchParams();
                 if (config.folder) params.append("folder", config.folder);
+                if (config.category) params.append("category", config.category);
                 if (config.deviceName) params.append("device_name", config.deviceName);
 
                 const res = await fetch(`/api/heartbeat/${sessionId}?${params.toString()}`, { method: 'POST' });
@@ -742,6 +763,7 @@
             // Collect current params to forward to backend
             const params = new URLSearchParams();
             if (config.folder) params.append("folder", config.folder);
+            if (config.category) params.append("category", config.category);
             if (config.intervalMs) params.append("interval", config.intervalMs / 1000);
             if (config.showFilename !== undefined) params.append("show_filename", config.showFilename);
             if (config.deviceName) params.append("device_name", config.deviceName);
@@ -784,6 +806,9 @@
                 const queryParams = new URLSearchParams({ session_id: sessionId });
                 if (config.folder) {
                     queryParams.append('folder', config.folder);
+                }
+                if (config.category) {
+                    queryParams.append('category', config.category);
                 }
 
                 const response = await fetch(`/api/media/random?${queryParams.toString()}`);

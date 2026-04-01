@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Backblaze B2 Sync Worker
 
-def sync_b2_worker(b2_account_id: int):
+def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
     db = SessionLocal()
     try:
         from .utils.b2_client import B2Client
@@ -20,53 +20,73 @@ def sync_b2_worker(b2_account_id: int):
             logger.error(f"B2 Account {b2_account_id} not found")
             return
 
-        logger.info(f"Starting B2 sync for bucket: {b2_account.bucket_name}")
+        # If target_bucket is not specified, sync both main and source
+        buckets_to_sync = []
+        if target_bucket:
+            buckets_to_sync = [target_bucket]
+        else:
+            if b2_account.bucket_name:
+                buckets_to_sync.append(b2_account.bucket_name)
+            if b2_account.source_bucket_name:
+                buckets_to_sync.append(b2_account.source_bucket_name)
+
+        logger.info(f"Starting B2 sync for account {b2_account_id}, buckets: {buckets_to_sync}")
         b2_account.sync_status = "Syncing"
         b2_account.sync_count = 0
         db.commit()
 
         client = B2Client(b2_account.key_id, b2_account.application_key)
         
-        # Simple implementation: Full re-sync (delete existing for this bucket)
-        db.execute(delete(MediaItem).where(MediaItem.b2_account_id == b2_account_id))
-        db.commit()
-
-        count = 0
-        for file_version in client.list_files(b2_account.bucket_name):
-            # Filter for images
-            mime = file_version.content_type
-            file_name = file_version.file_name
+        total_count = 0
+        for bucket_name in buckets_to_sync:
+            logger.info(f"Syncing bucket: {bucket_name}")
             
-            # Check extension if mime type is generic or missing
-            ext = file_name.lower().split('.')[-1]
-            if mime and not mime.startswith('image/'):
-                if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+            # Clear existing items for THIS bucket only
+            db.execute(delete(MediaItem).where(MediaItem.b2_account_id == b2_account_id, MediaItem.bucket_name == bucket_name))
+            db.commit()
+
+            count = 0
+            for file_version in client.list_files(bucket_name):
+                # Filter for images
+                mime = file_version.content_type
+                file_name = file_version.file_name
+                
+                # Check extension if mime type is generic or missing
+                ext = file_name.lower().split('.')[-1]
+                if mime and not mime.startswith('image/'):
+                    if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                        continue
+                
+                # Ensure it's not in the trash (just in case)
+                if b2_account.trash_bucket_name == bucket_name:
                     continue
 
-            media_item = MediaItem(
-                id=file_version.id_,
-                b2_account_id=b2_account_id,
-                file_name=file_name,
-                mime_type=mime if (mime and mime.startswith('image/')) else f"image/{ext}",
-                size=file_version.size,
-                creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000)
-            )
-            db.merge(media_item)
-            count += 1
-            if count % 100 == 0:
-                db.commit()
-                # Update account progress
-                b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
-                b2_account.sync_count = count
-                db.commit()
-                logger.info(f"Indexed {count} files from {b2_account.bucket_name}...")
-        
+                media_item = MediaItem(
+                    id=file_version.id_,
+                    b2_account_id=b2_account_id,
+                    bucket_name=bucket_name,
+                    file_name=file_name,
+                    mime_type=mime if (mime and mime.startswith('image/')) else f"image/{ext}",
+                    size=file_version.size,
+                    creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000)
+                )
+                db.merge(media_item)
+                count += 1
+                total_count += 1
+                if total_count % 100 == 0:
+                    db.commit()
+                    # Update account progress
+                    b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
+                    b2_account.sync_count = total_count
+                    db.commit()
+                    logger.info(f"Indexed {total_count} files so far...")
+            
         b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
         b2_account.last_synced_at = func.now()
         b2_account.sync_status = "Finished"
-        b2_account.sync_count = count
+        b2_account.sync_count = total_count
         db.commit()
-        logger.info(f"Finished sync for {b2_account.bucket_name}. Total items: {count}")
+        logger.info(f"Finished sync for account {b2_account_id}. Total items: {total_count}")
 
     except Exception as e:
         logger.exception(f"Error syncing B2 account {b2_account_id}: {e}")
