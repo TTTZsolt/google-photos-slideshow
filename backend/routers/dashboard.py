@@ -188,7 +188,12 @@ def get_folders(parent: str = None, db: Session = Depends(get_db)):
 def get_all_folders(db: Session = Depends(get_db)):
     """Returns a flat list of all unique folder paths in the active bucket (kepek02)."""
     try:
-        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+        # Prefer an account that is already 'Finished' sync
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
+        if not b2_acc:
+            # Fallback to any active account
+            b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+            
         if not b2_acc:
             return {"folders": []}
         

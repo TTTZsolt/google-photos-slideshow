@@ -32,8 +32,12 @@ class SlideshowController:
 
     def get_folders(self, db: Session, parent_path: str = None):
         """Returns direct subdirectories under the given parent_path. Only looks in the active bucket (kepek02)."""
-        # Get active account
-        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+        # Get active account - Prefer one that is already 'Finished' sync
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
+        if not b2_acc:
+            # Fallback to any active account if none are finished yet
+            b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+            
         if not b2_acc:
             return []
 
@@ -81,7 +85,12 @@ class SlideshowController:
     def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default"):
         """Fetches a random image, filtered by folder and category. Uses a 'deck' system per session to avoid repetition."""
         
-        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+        # Get active account - Prefer one that is already 'Finished' sync
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
+        if not b2_acc:
+            # Fallback to any active account if none are finished yet
+            b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+
         if not b2_acc:
             return None
 
