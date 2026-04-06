@@ -7,7 +7,7 @@ from .database import engine, Base
 import sqlite3
 import os
 
-app = FastAPI(title="B2 Random Slideshow - V9.0")
+app = FastAPI(title="B2 Random Slideshow - V10.0")
 
 # CORS
 app.add_middleware(
