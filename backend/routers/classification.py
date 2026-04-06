@@ -146,8 +146,11 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             classification.is_deleted = True
             classification.category = None
             
-            # Delete from MediaItem list so it never shows up again
-            db.execute(delete(MediaItem).where(MediaItem.file_name == req.file_name, MediaItem.bucket_name == b2_account.source_bucket_name))
+            # 3. Update MediaItem list instantly (move to trash in DB)
+            db.query(MediaItem).filter(
+                MediaItem.file_name == req.file_name, 
+                MediaItem.bucket_name == b2_account.source_bucket_name
+            ).update({"bucket_name": b2_account.trash_bucket_name})
             
         else:
             # Classification (család, utazás, etc)
@@ -172,8 +175,12 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             classification.category = req.action
             classification.is_deleted = False
             
-            # 3. Update MediaItem list instantly
-            db.execute(delete(MediaItem).where(MediaItem.file_name == req.file_name, MediaItem.bucket_name == b2_account.source_bucket_name))
+            # 3. Update MediaItem list instantly (move to main bucket in DB)
+            db.query(MediaItem).filter(
+                MediaItem.file_name == req.file_name, 
+                MediaItem.bucket_name == b2_account.source_bucket_name
+            ).update({"bucket_name": b2_account.bucket_name})
+            
 
         db.commit()
         return {"status": "ok"}
