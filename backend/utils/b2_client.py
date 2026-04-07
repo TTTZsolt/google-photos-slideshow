@@ -69,8 +69,12 @@ class B2Client:
         if cloudflare_proxy_url and use_proxy:
             proxy_clean = cloudflare_proxy_url.strip().rstrip('/')
             if proxy_clean:
+                # Ensure proxy has protocol
+                if not proxy_clean.startswith('http'):
+                    proxy_clean = 'https://' + proxy_clean
                 # Replace the B2 base URL with our Proxy URL
                 authorized_url = authorized_url.replace(base_url, proxy_clean, 1)
+                logger.info(f"Proxy applied: {proxy_clean}")
                 
         # Debug logging with obscured token
         debug_token = download_auth_token[:6] + "..." + download_auth_token[-4:] if len(download_auth_token) > 10 else "***"

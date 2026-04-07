@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>B2 Slideshow Receiver - V11.0</title>
+    <title>B2 Slideshow Receiver - V12.0</title>
 
     <!-- Design & Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -162,7 +162,7 @@
         .cast-btn {
             position: absolute;
             bottom: 20px;
-            right: 20px;
+            left: 76px; /* Moved near Exit button */
             padding: 10px;
             background: rgba(0, 0, 0, 0.3);
             backdrop-filter: blur(4px);
@@ -221,6 +221,38 @@
             color: #facc15;
         }
 
+        .next-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px; /* Original Cast position */
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            z-index: 1000;
+            cursor: pointer;
+            opacity: 0.2;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+        }
+
+        .next-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border-color: rgba(99, 102, 241, 0.5);
+            color: #6366f1;
+        }
+
+        .next-btn.hidden {
+            display: none !important;
+        }
+
         /* Success Notification */
         .notification-toast {
             position: absolute;
@@ -271,6 +303,10 @@
 
     <button id="castBtn" class="cast-btn hidden" onclick="openCastModal()" title="Cast to TV">
         <i data-lucide="cast" class="w-5 h-5"></i>
+    </button>
+
+    <button id="nextBtn" class="next-btn hidden" onclick="nextImage()" title="Next Image (Immediate)">
+        <i data-lucide="skip-forward" class="w-5 h-5"></i>
     </button>
 
     <!-- Cast Modal Overlay -->
@@ -657,10 +693,12 @@
             const backBtn = document.getElementById('backBtn');
             const castBtn = document.getElementById('castBtn');
             const flagBtn = document.getElementById('flagBtn');
+            const nextBtn = document.getElementById('nextBtn');
 
             if (backBtn) backBtn.classList.remove('hidden');
             if (castBtn) castBtn.classList.remove('hidden');
             if (flagBtn) flagBtn.classList.remove('hidden');
+            if (nextBtn) nextBtn.classList.remove('hidden');
 
             // Keyboard shortcut listener (R key)
             document.addEventListener('keydown', handleKeyboardShortcuts);
@@ -681,10 +719,12 @@
             const backBtn = document.getElementById('backBtn');
             const castBtn = document.getElementById('castBtn');
             const flagBtn = document.getElementById('flagBtn');
+            const nextBtn = document.getElementById('nextBtn');
 
             if (backBtn) backBtn.classList.add('hidden');
             if (castBtn) castBtn.classList.add('hidden');
             if (flagBtn) flagBtn.classList.add('hidden');
+            if (nextBtn) nextBtn.classList.add('hidden');
 
             document.removeEventListener('keydown', handleKeyboardShortcuts);
 
@@ -869,6 +909,15 @@
             } catch (e) {
                 console.error("Slideshow fetch error:", e);
             }
+        }
+
+        function nextImage() {
+            if (!config.isRunning) return;
+            // Fetch immediately
+            fetchNextImage();
+            // Reset Interval to prevent double skip
+            if (slideshowTimer) clearInterval(slideshowTimer);
+            slideshowTimer = setInterval(fetchNextImage, config.intervalMs);
         }
 
         function toggleFullscreen() {

@@ -1,14 +1,14 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
 from .routers import dashboard, music, classification, trash
 from .database import engine, Base
 from . import models  # Ensure all models are loaded for create_all
 import sqlite3
 import os
 
-app = FastAPI(title="B2 Random Slideshow - V11.0")
+app = FastAPI(title="B2 Random Slideshow - V12.0")
 
 # CORS
 app.add_middleware(
@@ -56,7 +56,7 @@ def auto_migrate():
                 );
             """)
 
-            # Ensure category_definitions exists (for older sqlite versions)
+            # Ensure category_definitions exists
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS category_definitions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,6 +99,10 @@ app.include_router(trash.router, tags=["trash"])
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 templates = Jinja2Templates(directory="backend/templates")
+
+@app.get("/")
+def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request, "version": "12.0"})
 
 if __name__ == "__main__":
     import uvicorn
