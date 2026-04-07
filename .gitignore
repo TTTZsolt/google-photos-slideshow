@@ -8,6 +8,8 @@ ENV/
 
 # Databases
 *.db
+*.db-wal
+*.db-shm
 *.sqlite3
 
 # Sensitive Google Cloud Files
