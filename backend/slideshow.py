@@ -31,37 +31,40 @@ class SlideshowController:
         return self._b2_clients[account_id], b2_acc
 
     def get_folders(self, db: Session, parent_path: str = None):
-        """Returns direct subdirectories under the given parent_path. Only looks in the active bucket (kepek02)."""
-        # Get active account - Prefer one that is already 'Finished' sync
+        """Returns direct subdirectories under the given parent_path. Looks in both synced items and recent classifications."""
+        # Get active account
         b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
         if not b2_acc:
-            # Fallback to any active account if none are finished yet
             b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
             
         if not b2_acc:
             return []
 
-        query = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == b2_acc.bucket_name)
+        # 1. Folders from synced MediaItems
+        query_mi = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == b2_acc.bucket_name)
         
+        # 2. Folders from categorized MediaClassifications (Level 2 Instant Visibility)
+        query_mc = db.query(MediaClassification.file_name).filter(MediaClassification.is_deleted == False)
+
         if parent_path:
-            # Add trailing slash if not present to ensure we only match inside the folder
             if not parent_path.endswith('/'):
                 parent_path += '/'
-            query = query.filter(MediaItem.file_name.like(f"{parent_path}%"))
+            query_mi = query_mi.filter(MediaItem.file_name.like(f"{parent_path}%"))
+            query_mc = query_mc.filter(MediaClassification.file_name.like(f"{parent_path}%"))
             
         seen_folders = set()
-        for row in query.all():
-            file_path = row[0]
-            
-            if parent_path:
-                relative_path = file_path[len(parent_path):]
-            else:
-                relative_path = file_path
-                
-            parts = relative_path.split('/')
-            if len(parts) > 1:
-                folder_name = parts[0]
-                seen_folders.add(folder_name)
+        
+        # Helper to extract next-level folder name
+        def add_from_results(results, prefix):
+            for row in results:
+                file_path = row[0]
+                relative_path = file_path[len(prefix):] if prefix else file_path
+                parts = relative_path.split('/')
+                if len(parts) > 1:
+                    seen_folders.add(parts[0])
+
+        add_from_results(query_mi.all(), parent_path)
+        add_from_results(query_mc.all(), parent_path)
                 
         folders = [{"name": folder, "path": f"{parent_path}{folder}" if parent_path else folder} for folder in sorted(list(seen_folders))]
         return folders
@@ -102,49 +105,81 @@ class SlideshowController:
 
         # Initialize or refill deck if empty
         if deck_key not in self._decks or not self._decks[deck_key]:
-            # Construct Query: Join MediaItem with MediaClassification
-            query = db.query(MediaItem.id).outerjoin(
-                MediaClassification, MediaItem.file_name == MediaClassification.file_name
-            ).filter(
-                MediaItem.bucket_name == b2_acc.bucket_name
-            )
-
-            # Exclude deleted items
-            query = query.filter(or_(MediaClassification.is_deleted == False, MediaClassification.is_deleted == None))
-
-            # Filter by folder
-            if folder_prefix:
-                query = query.filter(MediaItem.file_name.like(f"{folder_prefix}%"))
-            
-            # Filter by category
+            logger.info(f"Session '{session_id}': Deck empty for key {deck_key}. Refilling...")
             if category:
-                query = query.filter(MediaClassification.category == category)
+                # LEVEL 2 INSTANT VISIBILITY: Build deck from classifications table
+                query = db.query(MediaClassification.file_name).filter(
+                    MediaClassification.category == category,
+                    MediaClassification.is_deleted == False
+                )
+                if folder_prefix:
+                    query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
+                
+                all_items = [row[0] for row in query.all()]
+                logger.info(f"Building category deck for '{category}'. Found {len(all_items)} items in DB.")
+            else:
+                # Standard shuffle
+                query = db.query(MediaItem.id).outerjoin(
+                    MediaClassification, MediaItem.file_name == MediaClassification.file_name
+                ).filter(
+                    MediaItem.bucket_name == b2_acc.bucket_name,
+                    or_(MediaClassification.is_deleted == False, MediaClassification.is_deleted == None)
+                )
+                if folder_prefix:
+                    query = query.filter(MediaItem.file_name.like(f"{folder_prefix}%"))
+                
+                all_items = [row[0] for row in query.all()]
+                logger.info(f"Building folder deck for '{folder_prefix or 'Root'}'. Found {len(all_items)} items in DB.")
             
-            all_ids = [row[0] for row in query.all()]
-            
-            if not all_ids:
+            if not all_items:
+                logger.warning(f"No results found for session '{session_id}' with key {deck_key}")
                 return None
             
-            random.shuffle(all_ids)
-            self._decks[deck_key] = all_ids
-            logger.info(f"Refilled deck for session '{session_id}' (cat: {category}, folder: {folder_prefix}) with {len(all_ids)} items.")
+            random.shuffle(all_items)
+            self._decks[deck_key] = all_items
+            logger.info(f"Deck refilled for session '{session_id}' with {len(all_items)} items. (Shuffled)")
 
         # Pop from deck
-        next_id = self._decks[deck_key].pop(0)
+        next_val = self._decks[deck_key].pop(0)
 
-        media_item = db.query(MediaItem).filter(MediaItem.id == next_id).first()
+        # Retrieve media_item or create virtual one
+        is_virtual = False
+        if category:
+            file_name = next_val
+            media_item = db.query(MediaItem).filter(MediaItem.file_name == file_name).first()
+            if not media_item:
+                is_virtual = True
+                from .models import MediaItem as MediaItemModel
+                media_item = MediaItemModel(
+                    id=f"virtual-{file_name}",
+                    file_name=file_name,
+                    bucket_name=b2_acc.bucket_name,
+                    b2_account_id=b2_acc.id
+                )
+            else:
+                # LEVEL 2 VISIBILITY: If categorized, it's already at the target bucket (or being moved there)
+                # Override stale bucket info from DB to avoid 404s if the sync hasn't run yet
+                if media_item.bucket_name != b2_acc.bucket_name:
+                    logger.info(f"Overriding stale bucket for {media_item.file_name}: {media_item.bucket_name} -> {b2_acc.bucket_name}")
+                    media_item.bucket_name = b2_acc.bucket_name
+        else:
+            media_item = db.query(MediaItem).filter(MediaItem.id == next_val).first()
         
         if not media_item or not media_item.b2_account_id:
+            logger.error(f"Failed to retrieve media item for key {next_val}. (virtual={is_virtual})")
             return None
             
-        client, b2_acc = self._get_b2_client(db, media_item.b2_account_id)
-        if not client or not b2_acc:
+        client, b2_acc_item = self._get_b2_client(db, media_item.b2_account_id)
+        if not client or not b2_acc_item:
+            logger.error(f"Failed to get B2 client for account {media_item.b2_account_id}")
             return None
             
+        logger.info(f"Serving {'VIRTUAL ' if is_virtual else ''}image: {media_item.file_name} from bucket {media_item.bucket_name}")
+        
         display_url = client.get_download_url(
             media_item.bucket_name, 
             media_item.file_name, 
-            b2_acc.cloudflare_proxy_url
+            b2_acc_item.cloudflare_proxy_url
         )
         
         caption = self._format_caption(media_item.file_name)

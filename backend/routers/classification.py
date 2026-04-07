@@ -209,31 +209,35 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
             bulk_reverse_status = {"is_running": False, "total": 0, "current": 0, "message": "Hiányzó B2 konfiguráció"}
             return
         
-        # Query media items in kepek02
-        query = db.query(MediaItem).outerjoin(
-            MediaClassification, MediaItem.file_name == MediaClassification.file_name
-        ).filter(MediaItem.bucket_name == b2_account.bucket_name)
+        # LEVEL 2 ROBUSTNESS: Gather filenames from BOTH tables to handle un-synced items
+        filenames = set()
 
+        # 1. Filenames from MediaClassification (Level 2 Instant Visibility)
+        q_mc = db.query(MediaClassification.file_name).filter(MediaClassification.is_deleted == False)
         if folder_path:
-            if not folder_path.endswith('/'):
-                folder_path += '/'
-            query = query.filter(MediaItem.file_name.startswith(folder_path))
+            q_mc = q_mc.filter(MediaClassification.file_name.startswith(folder_path))
         
         if category_filter == "all":
-            # No filtering by category, move everything in the folder
-            pass
+            pass # No category filter
         elif category_filter:
-            query = query.filter(MediaClassification.category == category_filter)
+            q_mc = q_mc.filter(MediaClassification.category == category_filter)
         else:
-            # uncategorized: either no record or null category
-            from sqlalchemy import or_
-            query = query.filter(or_(
-                MediaClassification.file_name == None,
-                MediaClassification.category == None
-            ))
-            
-        items = query.all()
-        total = len(items)
+            q_mc = q_mc.filter(MediaClassification.category == None)
+        
+        filenames.update([row[0] for row in q_mc.all()])
+
+        # 2. Filenames from MediaItem (Target Bucket)
+        # Only if category filter is 'all' or empty, or if we want to catch items already synced
+        # Actually, if we want to be safe, we always check the main bucket for these filenames.
+        if not category_filter or category_filter == "all":
+            q_mi = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == b2_account.bucket_name)
+            if folder_path:
+                q_mi = q_mi.filter(MediaItem.file_name.startswith(folder_path))
+            filenames.update([row[0] for row in q_mi.all()])
+
+        items_to_move = sorted(list(filenames))
+        total = len(items_to_move)
+
         bulk_reverse_status = {"is_running": True, "total": total, "current": 0, "message": f"{total} kép mozgatása folyamatban..."}
         
         if total == 0:
@@ -243,27 +247,31 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
 
         client = B2Client(b2_account.key_id, b2_account.application_key)
         
-        for i, item in enumerate(items):
+        for i, file_name in enumerate(items_to_move):
             bulk_reverse_status["current"] = i + 1
-            file_name = item.file_name
             try:
-                # 1. Move file in B2: from kepek02 to forras
-                new_version = client.move_file(b2_account.bucket_name, b2_account.source_bucket_name, file_name)
+                # Attempt to find MediaItem to get details, but fallback if missing
+                item = db.query(MediaItem).filter(MediaItem.file_name == file_name).first()
+                mime = item.mime_type if item else "image/jpeg"
+                current_bucket = item.bucket_name if item else b2_account.bucket_name
+
+                # 1. Move file in B2: from target bucket back to source
+                new_version = client.move_file(current_bucket, b2_account.source_bucket_name, file_name)
                 
-                # 2. Delete MediaItem from kepek02
-                db.execute(delete(MediaItem).where(MediaItem.file_name == file_name, MediaItem.bucket_name == b2_account.bucket_name))
+                # 2. Delete old MediaItem records for this file (across all buckets to be safe)
+                db.execute(delete(MediaItem).where(MediaItem.file_name == file_name))
                 
-                # Add to forras
+                # 3. Add to source bucket index
                 new_item = MediaItem(
                     id=new_version.id_,
                     b2_account_id=b2_account.id,
                     bucket_name=b2_account.source_bucket_name,
                     file_name=file_name,
-                    mime_type=item.mime_type,
+                    mime_type=mime,
                 )
                 db.merge(new_item)
                 
-                # 3. Delete classification
+                # 4. Delete classification record
                 db.execute(delete(MediaClassification).where(MediaClassification.file_name == file_name))
                 db.commit()
             except Exception as e:
