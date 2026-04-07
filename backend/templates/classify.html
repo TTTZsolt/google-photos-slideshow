@@ -61,18 +61,52 @@
         /* THUMBNAIL (NEXT) CARD */
         .card.next {
             z-index: 100; /* Above the current card but small in corner */
-            width: 100px;
-            height: 140px;
-            right: 10px;
-            bottom: 10px;
+            width: 110px;
+            height: 150px;
+            right: 0px;
+            bottom: 30px;
             transform: scale(1);
-            opacity: 0.9;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            opacity: 1;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
             border: 3px solid var(--accent-blue);
             pointer-events: none; /* User interacts with current card */
         }
         
         .card.next .card-info { display: none; } /* Hide text for thumbnail */
+        
+        .delete-zone {
+            position: absolute;
+            left: 0px;
+            bottom: 52px;
+            width: 85px;
+            height: 85px;
+            z-index: 200; /* Ensure it's above cards */
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(239, 68, 68, 0.15);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .delete-zone:active {
+            background: rgba(239, 68, 68, 0.4);
+            transform: scale(0.95);
+            border-color: #ef4444;
+        }
+        
+        .delete-zone span {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
 
         .card-image {
             flex: 1;
@@ -150,16 +184,19 @@
             <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
             <p id="statusText">Portyázás a képek után...</p>
         </div>
+        
+        <!-- Symmetrical Trash Zone (opposite of "next" card) -->
+        <button id="deleteBtnZone" onclick="classify('delete')" class="delete-zone hidden">
+            <i data-lucide="trash-2" class="w-8 h-8"></i>
+            <span>Törlés</span>
+        </button>
     </div>
 
     <!-- Controls (Dynamic Grid) -->
-    <div id="controlsContainer" class="w-full px-4 pb-6 overflow-y-auto hidden" style="max-height: 35vh;">
-        <div id="categoryGrid" class="grid grid-cols-2 gap-3 mb-4">
+    <div id="controlsContainer" class="w-full px-4 pb-6 overflow-y-auto hidden" style="max-height: 40vh;">
+        <div id="categoryGrid" class="grid grid-cols-2 gap-3">
              <!-- Dynamic category buttons go here -->
         </div>
-        <button onclick="classify('delete')" class="w-full bg-red-500/20 text-red-500 border border-red-500/30 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
-            <i data-lucide="trash-2"></i> Törlés (Lomtár)
-        </button>
     </div>
 
     <script>
@@ -198,20 +235,21 @@
             categories.forEach(cat => {
                 const btn = document.createElement('button');
                 btn.onclick = () => classify(cat.name);
-                btn.className = "flex flex-col items-center gap-1 p-3 glass-btn rounded-2xl active:scale-95 transition-all text-white border border-white/5";
-                btn.style.backgroundColor = `${cat.color}15`; // 15% opacity background
-                btn.style.borderColor = `${cat.color}40`; // 40% opacity border
+                btn.className = "flex flex-col items-center gap-1 p-2 glass-btn rounded-xl active:scale-95 transition-all text-white border border-white/5";
+                btn.style.backgroundColor = `${cat.color}15`;
+                btn.style.borderColor = `${cat.color}40`;
                 
                 btn.innerHTML = `
-                    <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-lg" style="background-color: ${cat.color}30; color: ${cat.color}; border: 1px solid ${cat.color}50">
-                        <i data-lucide="${cat.icon || 'tag'}"></i>
+                    <div class="w-7 h-7 rounded-full flex items-center justify-center shadow-lg" style="background-color: ${cat.color}30; color: ${cat.color}; border: 1px solid ${cat.color}50">
+                        <i data-lucide="${cat.icon || 'tag'}" class="w-3.5 h-3.5"></i>
                     </div>
-                    <span class="text-[10px] font-bold uppercase tracking-wide" style="color: ${cat.color}">${cat.display_name}</span>
+                    <span class="text-[9px] font-bold uppercase tracking-tight truncate w-full" style="color: ${cat.color}">${cat.display_name}</span>
                 `;
                 categoryGrid.appendChild(btn);
             });
             lucide.createIcons();
             controlsContainer.classList.remove('hidden');
+            document.getElementById('deleteBtnZone').classList.remove('hidden');
         }
 
         // PRE-FETCHING LOGIC
@@ -372,6 +410,7 @@
             statusText.textContent = msg || "Vége a listának.";
             remainingCount.textContent = "0 KÉP MARADT";
             controlsContainer.classList.add('hidden');
+            document.getElementById('deleteBtnZone').classList.add('hidden');
         }
 
         fetchCategories();
