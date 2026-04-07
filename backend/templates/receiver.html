@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>B2 Slideshow Receiver - V10.0</title>
+    <title>B2 Slideshow Receiver - V11.0</title>
 
     <!-- Design & Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -311,7 +311,7 @@
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                             <i data-lucide="folders" class="text-indigo-500 w-6 h-6"></i>
-                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V10.0</span>
+                            Slideshow Setup <span class="text-xs text-indigo-400 font-black ml-2 mt-1">V11.0</span>
                         </h2>
                         <p class="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Select a folder to
                             begin</p>
@@ -381,11 +381,8 @@
                         </div>
                         <div class="flex flex-col justify-center flex-1">
                             <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Kategória</label>
-                            <select id="setupCategory" class="bg-transparent border-0 p-0 text-xs font-bold focus:ring-0 text-slate-700 cursor-pointer">
-                                <option value="">Mindegyik</option>
-                                <option value="család">Család</option>
-                                <option value="utazás">Utazás</option>
-                                <option value="állatok">Állatok</option>
+                            <select id="setupCategory" class="bg-transparent border-0 p-0 text-xs font-bold focus:ring-0 text-slate-700 cursor-pointer min-w-[80px]">
+                                <option value="">Betöltés...</option>
                             </select>
                         </div>
                     </div>
@@ -499,8 +496,26 @@
                 // Show setup modal
                 modal.classList.remove('hidden');
                 loadFolders("");
+                fetchCategories();
             }
         });
+
+        async function fetchCategories() {
+            try {
+                const res = await fetch('/api/categories');
+                const categories = await res.json();
+                const sel = document.getElementById('setupCategory');
+                sel.innerHTML = '<option value="">Összes kép</option>';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.innerText = cat.display_name;
+                    sel.appendChild(opt);
+                });
+            } catch (e) {
+                console.error("Failed to load categories", e);
+            }
+        }
 
         // Setup Modal Logic
         async function loadFolders(path) {

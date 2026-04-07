@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks,
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
-from ..models import B2Account, MediaItem, MediaClassification
+from ..models import B2Account, MediaItem, MediaClassification, CategoryDefinition
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 import logging
@@ -22,7 +22,25 @@ def get_db():
 
 class ClassificationRequest(BaseModel):
     file_name: str
-    action: str # család, utazás, állatok, delete
+    action: str # actual category name or "delete"
+
+class CategoryCreate(BaseModel):
+    name: str # internal name, lowercase
+    display_name: str
+    icon: str = "tag"
+    color: str = "#6366f1"
+    order: int = 0
+
+class CategoryResponse(BaseModel):
+    id: int
+    name: str
+    display_name: str
+    icon: str
+    color: str
+    order: int
+
+    class Config:
+        from_attributes = True
 
 class BulkReverseRequest(BaseModel):
     folder_path: Optional[str] = None
@@ -337,3 +355,38 @@ def get_bulk_reverse_count(folder_path: Optional[str] = Query(None), category_fi
 def get_bulk_reverse_status():
     global bulk_reverse_status
     return bulk_reverse_status
+
+# --- Category Management ---
+
+@router.get("/api/categories", response_model=List[CategoryResponse])
+def get_categories(db: Session = Depends(get_db)):
+    return db.query(CategoryDefinition).order_by(CategoryDefinition.order.asc()).all()
+
+@router.post("/api/categories", response_model=CategoryResponse)
+def create_category(cat: CategoryCreate, db: Session = Depends(get_db)):
+    # Check if already exists
+    existing = db.query(CategoryDefinition).filter(CategoryDefinition.name == cat.name.lower()).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Ez a kategória már létezik.")
+    
+    new_cat = CategoryDefinition(
+        name=cat.name.lower(),
+        display_name=cat.display_name,
+        icon=cat.icon,
+        color=cat.color,
+        order=cat.order
+    )
+    db.add(new_cat)
+    db.commit()
+    db.refresh(new_cat)
+    return new_cat
+
+@router.delete("/api/categories/{cat_id}")
+def delete_category(cat_id: int, db: Session = Depends(get_db)):
+    cat = db.query(CategoryDefinition).filter(CategoryDefinition.id == cat_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="Kategória nem található.")
+    
+    db.delete(cat)
+    db.commit()
+    return {"status": "ok"}

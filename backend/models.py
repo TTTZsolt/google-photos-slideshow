@@ -54,3 +54,14 @@ class FlaggedImage(Base):
     id = Column(Integer, primary_key=True, index=True)
     file_name = Column(Text, unique=True, index=True) # B2 File Path
     flagged_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class CategoryDefinition(Base):
+    __tablename__ = "category_definitions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True) # internal name, lowercase, e.g. "család"
+    display_name = Column(String) # shown to user, e.g. "Család"
+    icon = Column(String, default="tag") # Lucide icon name
+    color = Column(String, default="#6366f1") # CSS color
+    order = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

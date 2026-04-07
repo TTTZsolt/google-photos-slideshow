@@ -102,12 +102,20 @@ Ha egy korábbi mappát vagy kategória nélküli (régi) képeket szeretnél ú
 6. A művelet fizikailag átmozgatja a `kepek02`-ből a fájlokat vissza a `forras` vödörbe, és lenullázza az eddigi kategóriájukat az adatbázisban, hogy ismét felbukkanjanak a "Fotó Szortírozó" felületén, ahonnan újra besorolhatod őket.
 
 ### 8. Lomtár Átnézése (V10.0)
-A Szortírozóban felfelé húzott (Törlésre jelölt) képek nem törlődnek azonnal véglegesen. Ehelyett a `torles-elott` vödörbe kerülnek, és a **Lomtárban** várnak a végső döntésre.
+A Szortírozóban törlésre jelölt képek nem törlődnek azonnal véglegesen. Ehelyett a `torles-elott` vödörbe kerülnek, és a **Lomtárban** várnak a végső döntésre.
 1. A Vezérlőpulton a "Fotó Szortírozó" kártyán egy élő piros jelvény (badge) mutatja, hány elem van jelenleg a lomtárban.
 2. Kattints a **Lomtár Átnézése** gombra a dedikált felület megnyitásához.
 3. Itt láthatod a törlésre váró képek előnézetét és eredeti elérési útját.
 4. **Visszaállítás (Vissza gomb)**: Ha meggondoltad magad, a kép visszakerül a `forras` vödörbe, és újra megjelenik a Szortírozóban.
-5. **Lomtár Ürítése**: Ez a művelet **véglegesen és visszaállíthatatlanul** törli a kijelölt fájlokat a Backblaze B2 felhőtárhelyről. A folyamat a háttérben fut, így közben továbbra is használhatod a rendszert.
+5. **Lomtár Ürítése**: Ez a művelet **véglegesen és visszaállíthatatlanul** törli a kijelölt fájlokat a Backblaze B2 felhőtárhelyről. A folyamat a háttérben fut.
+
+### 9. Dinamikus Kategória Kezelő (V11.0)
+A rendszer legújabb verziója (V11.0) lehetővé teszi, hogy saját szempontjaid szerint hozhass létre és menedzselhess kategóriákat a fotók válogatásához.
+1. **Kategóriák létrehozása**: A Vezérlőpult (Dashboard) jobb oldali sávjában található a **Kategóriák** kártya. A **(+)** gombbal vehetsz fel újakat (név, ikon, szín megadásával).
+2. **Szortírozás (Mobil)**: A `/classify` felületen a rendszer automatikusan betölti a létrehozott kategóriákat, és mindegyikhez egy dedikált nyomógombot rendel. A gombok színe és ikonja megegyezik a Dashboardon beállítottal.
+3. **Műveletek**: Az egyes gombokra kattintva a kép azonnal a megfelelő kategóriába (és a `kepek02` vödörbe) kerül. A navigáció gördülékeny, a gombok a stabilabb irányítást szolgálják.
+4. **Visszamozgatás**: A "Visszamozgató" admin eszköz is felismeri az egyedi kategóriákat, így célzottan törölheted vagy mozgathatod vissza a már besorolt képeket.
+5. **Slideshow szűrés**: A Receiver felületén is kiválaszthatod bármelyik egyedi kategóriát a vetítés szűréséhez.
 
 ---
 

@@ -135,7 +135,7 @@
             <i data-lucide="arrow-left"></i>
         </button>
         <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v10.0</span></h1>
+            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v11.0</span></h1>
             <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
         <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
@@ -152,45 +152,14 @@
         </div>
     </div>
 
-    <!-- Controls (D-Pad) -->
-    <div class="w-full flex justify-center pb-4">
-        <div class="relative w-64 h-64 rounded-full glass-panel shadow-[0_0_40px_rgba(0,0,0,0.6)] border-4 border-white/5 flex items-center justify-center bg-[#111116]/90 backdrop-blur-xl">
-            
-            <!-- Törlés (Up) -->
-            <button onclick="triggerSwipe('up')" class="absolute top-1 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
-                <div class="w-11 h-11 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                    <i data-lucide="trash-2"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-red-400">Törlés</span>
-            </button>
-
-            <!-- Család (Down) -->
-            <button onclick="triggerSwipe('down')" class="absolute bottom-1 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
-                <div class="w-11 h-11 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
-                    <i data-lucide="heart"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-green-400">Család</span>
-            </button>
-
-            <!-- Utazás (Left) -->
-            <button onclick="triggerSwipe('left')" class="absolute left-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
-                <div class="w-11 h-11 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-                    <i data-lucide="plane"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-blue-400">Utazás</span>
-            </button>
-
-            <!-- Állatok (Right) -->
-            <button onclick="triggerSwipe('right')" class="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1 p-2 glass-btn rounded-2xl active:scale-95 transition-transform w-[4.8rem]">
-                <div class="w-11 h-11 rounded-full bg-purple-500/20 text-purple-500 flex items-center justify-center border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                    <i data-lucide="paw-print"></i>
-                </div>
-                <span class="text-[9px] font-bold uppercase text-purple-400">Állatok</span>
-            </button>
-            
-            <!-- Középső díszítő elem -->
-            <div class="w-8 h-8 rounded-full bg-white/5 border border-white/10 shadow-inner"></div>
+    <!-- Controls (Dynamic Grid) -->
+    <div id="controlsContainer" class="w-full px-4 pb-6 overflow-y-auto hidden" style="max-height: 35vh;">
+        <div id="categoryGrid" class="grid grid-cols-2 gap-3 mb-4">
+             <!-- Dynamic category buttons go here -->
         </div>
+        <button onclick="classify('delete')" class="w-full bg-red-500/20 text-red-500 border border-red-500/30 p-4 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-all">
+            <i data-lucide="trash-2"></i> Törlés (Lomtár)
+        </button>
     </div>
 
     <script>
@@ -200,21 +169,49 @@
         const emptyMessage = document.getElementById('emptyMessage');
         const remainingCount = document.getElementById('remainingCount');
         const statusText = document.getElementById('statusText');
-        const controlsGrid = document.getElementById('controlsGrid');
+        const categoryGrid = document.getElementById('categoryGrid');
+        const controlsContainer = document.getElementById('controlsContainer');
         
         let activeFileNames = new Set();
         let cardQueue = [];
         let isAnimating = false;
-        let startDragX, startDragY;
         let currentRemaining = 0;
+        let categories = [];
 
         function updateRemainingUI(val) {
             currentRemaining = Math.max(0, val);
             remainingCount.textContent = `${currentRemaining} KÉP MARADT`;
-            
-            if (currentRemaining <= 0 && activeFileNames.size > 0) {
-                // If count is 0, we should transition to done as soon as cards are gone
+        }
+
+        async function fetchCategories() {
+            try {
+                const res = await fetch('/api/categories');
+                categories = await res.json();
+                renderCategoryButtons();
+            } catch (e) {
+                console.error("Failed to load categories", e);
             }
+        }
+
+        function renderCategoryButtons() {
+            categoryGrid.innerHTML = '';
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.onclick = () => classify(cat.name);
+                btn.className = "flex flex-col items-center gap-1 p-3 glass-btn rounded-2xl active:scale-95 transition-all text-white border border-white/5";
+                btn.style.backgroundColor = `${cat.color}15`; // 15% opacity background
+                btn.style.borderColor = `${cat.color}40`; // 40% opacity border
+                
+                btn.innerHTML = `
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-lg" style="background-color: ${cat.color}30; color: ${cat.color}; border: 1px solid ${cat.color}50">
+                        <i data-lucide="${cat.icon || 'tag'}"></i>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-wide" style="color: ${cat.color}">${cat.display_name}</span>
+                `;
+                categoryGrid.appendChild(btn);
+            });
+            lucide.createIcons();
+            controlsContainer.classList.remove('hidden');
         }
 
         // PRE-FETCHING LOGIC
@@ -245,8 +242,8 @@
                     cardQueue.push(data);
                     const img = new Image();
                     img.src = data.url;
+                    return data;
                 }
-                return data;
             }
         }
 
@@ -275,7 +272,6 @@
             };
             imgChecker.src = data.url;
 
-            if (!isNext) attachDragListeners(card);
             lucide.createIcons();
             return card;
         }
@@ -296,17 +292,11 @@
             replenishQueue();
         }
 
-        function triggerSwipe(direction) {
+        async function classify(action) {
             if (isAnimating) return;
             const current = deck.querySelector('.card.current');
             if (!current) return;
-            const dx = direction === 'left' ? -250 : (direction === 'right' ? 250 : 0);
-            const dy = direction === 'up' ? -250 : (direction === 'down' ? 250 : 0);
-            performSwipe(current, direction, dx, dy);
-        }
-
-        async function performSwipe(card, direction, deltaX, deltaY) {
-            if (isAnimating || !card) return;
+            
             isAnimating = true;
 
             // Haptic feedback
@@ -314,22 +304,15 @@
                 window.navigator.vibrate(40);
             }
 
-            const actionMap = { 'right': 'állatok', 'left': 'utazás', 'down': 'család', 'up': 'delete' };
-            const action = actionMap[direction];
-            const currentFileName = card.dataset.filename;
+            const currentFileName = current.dataset.filename;
 
             // 1. Immediate UI update
             updateRemainingUI(currentRemaining - 1);
 
-            // Calculate throw trajectory to ensure it leaves the screen
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY) || 1;
-            const throwX = (deltaX / distance) * 1500;
-            const throwY = (deltaY / distance) * 1500;
-
-            // 2. Animate current card out
-            card.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s';
-            card.style.transform = `translate(${throwX}px, ${throwY}px) rotate(${deltaX / 5}deg)`;
-            card.style.opacity = '0';
+            // 2. Animate current card out (simple fade/scale for buttons)
+            current.style.transition = 'transform 0.4s ease-in, opacity 0.3s';
+            current.style.transform = `scale(0.8) translateY(-100px)`;
+            current.style.opacity = '0';
 
             // 3. Promote next card
             const next = deck.querySelector('.card.next');
@@ -355,15 +338,13 @@
             // 5. Cleanup
             setTimeout(async () => {
                 try {
-                    card.remove();
+                    current.remove();
                     
-                    // If no more cards in DB AND no more cards in UI/Queue
                     if (currentRemaining <= 0 && !deck.querySelector('.card.current') && cardQueue.length === 0) {
                         showEmpty("Minden kép besorolva! 🎉");
                         return;
                     }
 
-                    // Try to get next from queue
                     let nextData = cardQueue.shift();
                     if (!nextData && currentRemaining > 0) {
                         nextData = await fetchNextData();
@@ -371,10 +352,8 @@
                     
                     if (nextData && !nextData.done && !nextData.error) {
                         if (!deck.querySelector('.card.current')) {
-                            // If for some reason the next card didn't promote, create it
                              deck.appendChild(createCardElement(nextData, false));
                         } else {
-                            // Create next thumbnail
                             deck.appendChild(createCardElement(nextData, true));
                         }
                     } else if (!deck.querySelector('.card')) {
@@ -387,18 +366,18 @@
             }, 350);
         }
 
-        function attachDragListeners(card) {
-            // No-op for swipe: gombokkal irányítunk
-        }
-
         function showEmpty(msg) {
             deck.innerHTML = '';
             emptyMessage.style.display = 'flex';
             statusText.textContent = msg || "Vége a listának.";
             remainingCount.textContent = "0 KÉP MARADT";
+            controlsContainer.classList.add('hidden');
         }
 
+        fetchCategories();
         initDeck();
     </script>
+</body>
+</html>
 </body>
 </html>

@@ -4,10 +4,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import dashboard, music, classification, trash
 from .database import engine, Base
+from . import models  # Ensure all models are loaded for create_all
 import sqlite3
 import os
 
-app = FastAPI(title="B2 Random Slideshow - V10.0")
+app = FastAPI(title="B2 Random Slideshow - V11.0")
 
 # CORS
 app.add_middleware(
@@ -54,6 +55,32 @@ def auto_migrate():
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+
+            # Ensure category_definitions exists (for older sqlite versions)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS category_definitions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT UNIQUE,
+                    display_name TEXT,
+                    icon TEXT DEFAULT 'tag',
+                    color TEXT DEFAULT '#6366f1',
+                    "order" INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
+            # Seed default categories if empty
+            cursor.execute("SELECT COUNT(*) FROM category_definitions;")
+            if cursor.fetchone()[0] == 0:
+                defaults = [
+                    ("család", "Család", "users", "#4f46e5", 0),
+                    ("utazás", "Utazás", "plane", "#a855f7", 1),
+                    ("állatok", "Állatok", "cat", "#f59e0b", 2)
+                ]
+                cursor.executemany("""
+                    INSERT INTO category_definitions (name, display_name, icon, color, "order")
+                    VALUES (?, ?, ?, ?, ?);
+                """, defaults)
             
             conn.commit()
             conn.close()

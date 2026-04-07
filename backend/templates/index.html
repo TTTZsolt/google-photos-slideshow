@@ -74,11 +74,13 @@
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
+            appearance: none;
             margin: 0;
         }
 
         input[type=number] {
             -moz-appearance: textfield;
+            appearance: textfield;
         }
         #customModal.show { display: flex; }
         #customModal.show #modalContent { transform: scale(1); opacity: 1; }
@@ -126,10 +128,10 @@
                     class="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
                     Control Center
                 </h1>
-                <p class="text-slate-500 font-medium">Global Random Slideshow - V10.0</p>
+                <p class="text-slate-500 font-medium">Global Random Slideshow - V11.0</p>
             </div>
             <div class="flex items-center gap-3">
-                <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v10.0 (Képválogató)</span>
+                <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v11.0 (Dinamikus)</span>
             </div>
         </header>
 
@@ -157,12 +159,11 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="space-y-4">
                                 <p class="text-sm text-slate-600 leading-relaxed">
-                                    Válogasd szét a Google Photos-ból érkező képeidet egy kényelmes, Tinder-stílusú felületen.
+                                    Válogasd szét a Google Photos-ból érkező képeidet egy kényelmes, nyomógombos felületen.
                                 </p>
-                                <div class="flex flex-wrap gap-2">
-                                    <span class="text-[10px] font-bold bg-white/80 border border-slate-200 px-2 py-1 rounded text-slate-500">Család</span>
-                                    <span class="text-[10px] font-bold bg-white/80 border border-slate-200 px-2 py-1 rounded text-slate-500">Utazás</span>
-                                    <span class="text-[10px] font-bold bg-white/80 border border-slate-200 px-2 py-1 rounded text-slate-500">Állatok</span>
+                                <div id="activeCategoryBadges" class="flex flex-wrap gap-2">
+                                    <!-- Dynamic category badges -->
+                                    <span class="text-[10px] font-bold bg-white/40 border border-slate-200 px-2 py-1 rounded text-slate-300 animate-pulse">Betöltés...</span>
                                 </div>
                             </div>
                             <div class="flex flex-col gap-3">
@@ -359,7 +360,7 @@
                         <i data-lucide="cloud" class="w-5 h-5 text-blue-500"></i>
                         B2 Nodes
                     </h2>
-                    <div id="b2AccountList" class="space-y-4">
+                    <div id="b2AccountList" class="space-y-4 mb-8">
                         {% for b2_account in b2_accounts %}
                         <div id="acc-{{ b2_account.id }}"
                             class="p-4 bg-white/40 border border-slate-100 rounded-2xl flex items-center justify-between group transition-all hover:bg-white/80">
@@ -379,24 +380,21 @@
                                     {% endif %}
                                 </div>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <span
-                                        class="w-1.5 h-1.5 rounded-full {{ 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' if b2_account.is_active else 'bg-slate-300' }}"></span>
-                                    <span class="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">
-                                        <span class="status-text">{{ b2_account.sync_status }}</span>
-                                        {% if b2_account.sync_status == 'Syncing' or b2_account.sync_status ==
-                                        'Finished' %}
-                                        <span class="count-text ml-1 opacity-80">({{ b2_account.sync_count }}
-                                            items)</span>
-                                        {% endif %}
+                                    <span class="status-text text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                        {{ b2_account.sync_status }}
+                                    </span>
+                                    <span class="text-slate-300">•</span>
+                                    <span class="count-text text-[10px] font-bold text-slate-500">
+                                        {{ b2_account.sync_count }} tétel
                                     </span>
                                 </div>
                             </div>
-                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button id="sync-btn-{{ b2_account.id }}" onclick="syncB2Account({{ b2_account.id }})"
-                                    class="p-2 text-blue-500 hover:bg-blue-50 rounded-lg sync-btn" title="Sync">
+                            <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="resyncLocal('{{ b2_account.id }}')" id="sync-btn-{{ b2_account.id }}"
+                                    class="p-2 text-indigo-500 hover:bg-indigo-50 rounded-lg sync-btn" title="Resync">
                                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                                 </button>
-                                <button onclick="deleteB2Account({{ b2_account.id }})"
+                                <button onclick="deleteAccountLocal('{{ b2_account.id }}')"
                                     class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg" title="Delete">
                                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                                 </button>
@@ -410,6 +408,48 @@
                         {% endfor %}
                     </div>
                 </div>
+
+                <!-- NEW: Category Management Card -->
+                <div class="glass-panel rounded-3xl p-6 shadow-lg">
+                    <h2 class="text-lg font-bold mb-4 flex items-center justify-between">
+                         <div class="flex items-center gap-2">
+                            <i data-lucide="tags" class="w-5 h-5 text-indigo-500"></i>
+                            Kategóriák
+                         </div>
+                         <button onclick="document.getElementById('addCategoryForm').classList.toggle('hidden')" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                         </button>
+                    </h2>
+
+                    <!-- Add Category Form -->
+                    <div id="addCategoryForm" class="hidden bg-indigo-50/50 border border-indigo-100 p-4 rounded-2xl mb-4 space-y-3">
+                        <input type="text" id="newCatDisplayName" placeholder="Kategória neve (pl. Barátok)" class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500">
+                        <div class="flex gap-2">
+                             <select id="newCatIcon" class="flex-1 bg-white p-3 rounded-xl text-xs border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500">
+                                <option value="tag">Ikon: Alapértelmezett</option>
+                                <option value="users">Ikon: Emberek</option>
+                                <option value="heart">Ikon: Szív</option>
+                                <option value="plane">Ikon: Utazás</option>
+                                <option value="cat">Ikon: Állat</option>
+                                <option value="camera">Ikon: Fotó</option>
+                                <option value="star">Ikon: Kedvenc</option>
+                                <option value="car">Ikon: Autó</option>
+                                <option value="home">Ikon: Otthon</option>
+                                <option value="tree-pine">Ikon: Természet</option>
+                                <option value="music">Ikon: Zene</option>
+                             </select>
+                             <input type="color" id="newCatColor" value="#6366f1" class="w-12 h-10 p-0 border-none bg-transparent cursor-pointer">
+                        </div>
+                        <button onclick="addCategory()" class="w-full bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition shadow-md active:scale-95 text-xs">
+                            Hozzáadás
+                        </button>
+                    </div>
+
+                    <div id="categoryList" class="space-y-2">
+                        <!-- Populated by JS dashboard -->
+                    </div>
+                </div>
+
 
                 <!-- Music Settings (YouTube) -->
                 <div class="glass-panel rounded-3xl p-6 shadow-lg">
@@ -1293,6 +1333,111 @@
         refreshDevices();
         loadMusicSettings();
         loadBulkReverseFolders();
+        fetchCategoriesDashboard();
+
+        // --- NEW CATEGORY MANAGEMENT JS ---
+        async function fetchCategoriesDashboard() {
+            try {
+                const res = await fetch('/api/categories');
+                const categories = await res.json();
+                
+                // 1. Update List
+                const list = document.getElementById('categoryList');
+                list.innerHTML = '';
+                categories.forEach(cat => {
+                    const el = document.createElement('div');
+                    el.className = "p-3 bg-white/60 border border-slate-100 rounded-2xl flex items-center justify-between group transition-all hover:bg-white/80";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm" style="background-color: ${cat.color}20; color: ${cat.color}; border: 1px solid ${cat.color}40">
+                                <i data-lucide="${cat.icon || 'tag'}" class="w-4 h-4"></i>
+                            </div>
+                            <span class="font-bold text-slate-700 text-xs truncate">${cat.display_name}</span>
+                        </div>
+                        <button onclick="deleteCategory(${cat.id})" class="opacity-0 group-hover:opacity-100 bg-rose-50 text-rose-500 p-1.5 rounded-lg hover:bg-rose-500 hover:text-white transition duration-200">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    `;
+                    list.appendChild(el);
+                });
+                
+                // 2. Update Badges in Classifier Card
+                const badgeContainer = document.getElementById('activeCategoryBadges');
+                badgeContainer.innerHTML = '';
+                categories.forEach(cat => {
+                    const badge = document.createElement('span');
+                    badge.className = "text-[9px] font-black border px-2 py-1 rounded-full uppercase tracking-tighter shadow-sm";
+                    badge.style.backgroundColor = `${cat.color}10`;
+                    badge.style.color = cat.color;
+                    badge.style.borderColor = `${cat.color}30`;
+                    badge.innerText = cat.display_name;
+                    badgeContainer.appendChild(badge);
+                });
+
+                // 3. Update Bulk Reverse Dropdown
+                const reverseSelect = document.getElementById('bulkReverseCategory');
+                const currentValue = reverseSelect.value;
+                reverseSelect.innerHTML = '<option value="">Csak kategorizálatlanok</option><option value="all">Mindent visszamozgat (All)</option>';
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.name;
+                    opt.innerText = cat.display_name;
+                    reverseSelect.appendChild(opt);
+                });
+                reverseSelect.value = currentValue;
+
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Failed to load categories dashboard", e);
+            }
+        }
+
+        async function addCategory() {
+            const displayName = document.getElementById('newCatDisplayName').value;
+            const icon = document.getElementById('newCatIcon').value;
+            const color = document.getElementById('newCatColor').value;
+            
+            if (!displayName) return;
+            
+            // Generate internal name
+            const name = displayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+            
+            try {
+                const res = await fetch('/api/categories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        display_name: displayName,
+                        icon: icon,
+                        color: color,
+                        order: 10
+                    })
+                });
+                
+                if (res.ok) {
+                    document.getElementById('newCatDisplayName').value = '';
+                    document.getElementById('addCategoryForm').classList.add('hidden');
+                    fetchCategoriesDashboard();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || "Hiba a mentésnél");
+                }
+            } catch (e) {
+                alert("Hálózati hiba");
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm("Biztosan törlöd ezt a kategóriát? A már besorolt képek megmaradnak, de a kategória neve csak szövegként él tovább nekik.")) return;
+            
+            try {
+                await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+                fetchCategoriesDashboard();
+            } catch (e) {
+                alert("Hiba törléskor");
+            }
+        }
     </script>
 </body>
 
