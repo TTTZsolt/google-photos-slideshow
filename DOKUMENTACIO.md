@@ -1,4 +1,4 @@
-# Google Photos Slideshow - Rendszer Dokumentáció (V10.0)
+# Google Photos Slideshow - Rendszer Dokumentáció (V13.0)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -116,6 +116,36 @@ A rendszer legújabb verziója (V11.0) lehetővé teszi, hogy saját szempontjai
 3. **Műveletek**: Az egyes gombokra kattintva a kép azonnal a megfelelő kategóriába (és a `kepek02` vödörbe) kerül. A navigáció gördülékeny, a gombok a stabilabb irányítást szolgálják.
 4. **Visszamozgatás**: A "Visszamozgató" admin eszköz is felismeri az egyedi kategóriákat, így célzottan törölheted vagy mozgathatod vissza a már besorolt képeket.
 5. **Slideshow szűrés**: A Receiver felületén is kiválaszthatod bármelyik egyedi kategóriát a vetítés szűréséhez.
+
+### 10. Interaktív Vetítő Vezérlés (V12.0)
+A V12.0-ás verzióban a Slideshow Receiver felülete interaktívabbá vált, hogy kényelmesebb legyen a családi vetítés:
+1. **Azonnali Képváltás (Next Button)**: A képernyő jobb alsó sarkában található "Következő" gombbal bármikor azonnal továbbléphetsz a következő fotóra. A gomb megnyomása automatikusan újraindítja a várakozási időzítőt is, elkerülve a dupla váltást.
+2. **Optimalizált Elrendezés**: A vezérlőikonok (Kilépés, Cast, Zászló, Következő) logikus csoportokba kerültek.
+3. **Cloudflare Proxy V2**: A rendszer újrakonfigurált Cloudflare Worker támogatást kapott, amely stabilabban kezeli a B2 letöltési tokeneket és biztosítja a gyors, adatforgalmi díjmentes képbetöltést minden eszközön.
+
+### 11. V13.0 Moduláris Architektúra (SPA)
+ 
+A V13.0-as verzióval a rendszer egy modern **Single Page Application (SPA)** modellre váltott. Ez azt jelenti, hogy a Vezérlőpult funkciói nem külön oldalakon nyílnak meg, hanem egyetlen keretrendszeren belül cserélődnek, villámgyors navigációt biztosítva.
+ 
+### 11.1 Központi Vezérlő rács (Main Menu)
+A Főoldal egy ergonomikus, 8-as rácsból álló indítópult, ahonnan minden fontos funkció elérhető:
+*   **Slideshow (Vetítés)**: Azonnali ugrás a vetítési beállításokhoz (`receiver.html`).
+*   **Kép Szortírozás**: Közvetlen link a Tinder-stílusú válogatóhoz (`classify.html`).
+*   **Activity (Eszközök)**: Valós idejű statisztika a hálózati kijelzőkről és a TV vezérlés (Stop Cast).
+*   **Labor (Digitális Labor)**: A javításra váró képek listája.
+*   **Mover (Visszamozgató)**: Könyvtár- és kategóriaalapú szortírozás törlése és a **Lomtár** kezelése.
+*   **Connection (B2 Kapcsolat)**: Aszinkron B2 csatlakozás és állapotkezelés.
+*   **Categories (Kategóriák)**: Dinamikus kategória-menedzsment.
+*   **Music (Zene)**: YouTube-alapú háttérzene beállítása.
+ 
+### 11.2 Integrált Mover & Trash Workflow
+A **Visszamozgató** modul egy komplex karbantartó központtá vált:
+*   **Mappa- Böngésző (kepek02)**: Valós idejű könyvtárstruktúra listázás aszinkron frissítő gombbal.
+*   **Lomtár integráció**: A "Lomtár Átnézése" funkció ide költözött át. A gomb közvetlenül a folyamatjelző (hőmérő) alatt található, lehetővé téve a selejtezett képek gyors felülvizsgálatát.
+*   **Aszinkron adathozzáférés**: A modulok megnyitásakor (Activity, Mover, Categories) a rendszer automatikusan és észrevétlenül frissíti az adatokat a háttérben.
+ 
+### 11.3 Egységes Navigáció
+Minden modul és külső oldal (Slideshow Setup, Szortírozó) tartalmazza a **Házikó ikon + "Főoldal"** feliratú gombot, amely minden esetben a központi vezérlő rácshoz viszi vissza a felhasználót.
 
 ---
 

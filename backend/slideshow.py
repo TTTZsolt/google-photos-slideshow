@@ -32,12 +32,10 @@ class SlideshowController:
 
     def get_folders(self, db: Session, parent_path: str = None):
         """Returns direct subdirectories under the given parent_path. Looks in both synced items and recent classifications."""
-        # Get active account
-        b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
+        # Get active account - Be less restrictive, pick any active account that has items
+        b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
         if not b2_acc:
-            b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
-            
-        if not b2_acc:
+            logger.warning("get_folders: No active B2 account found.")
             return []
 
         # 1. Folders from synced MediaItems
@@ -58,15 +56,21 @@ class SlideshowController:
         def add_from_results(results, prefix):
             for row in results:
                 file_path = row[0]
-                relative_path = file_path[len(prefix):] if prefix else file_path
+                relative_path = file_path[len(prefix):] if (prefix and len(prefix) > 0) else file_path
                 parts = relative_path.split('/')
                 if len(parts) > 1:
                     seen_folders.add(parts[0])
 
-        add_from_results(query_mi.all(), parent_path)
-        add_from_results(query_mc.all(), parent_path)
+        items_mi = query_mi.all()
+        items_mc = query_mc.all()
+        
+        logger.info(f"get_folders: Found {len(items_mi)} items in MediaItem and {len(items_mc)} in Classification for path '{parent_path}'")
+
+        add_from_results(items_mi, parent_path)
+        add_from_results(items_mc, parent_path)
                 
         folders = [{"name": folder, "path": f"{parent_path}{folder}" if parent_path else folder} for folder in sorted(list(seen_folders))]
+        logger.info(f"get_folders: identified {len(folders)} unique subfolders.")
         return folders
 
     def get_all_folders(self, db: Session, bucket_name: str) -> list:
