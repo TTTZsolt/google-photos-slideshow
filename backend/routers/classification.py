@@ -201,6 +201,47 @@ def trigger_source_sync(background_tasks: BackgroundTasks, db: Session = Depends
     background_tasks.add_task(sync_b2_worker, b2_account.id, target_bucket=b2_account.source_bucket_name)
     return {"message": "Forrás szinkronizáció elindítva."}
 
+def get_bulk_reverse_filenames(folder_path: Optional[str], category_filter: Optional[str], db: Session, source_bucket: str, target_bucket: str) -> set:
+    """Helper to collect filenames to move back based on filters."""
+    filenames = set()
+
+    # 1. Filenames from MediaClassification (Level 2 Instant Visibility)
+    q_mc = db.query(MediaClassification.file_name).filter(MediaClassification.is_deleted == False)
+    if folder_path:
+        q_mc = q_mc.filter(MediaClassification.file_name.startswith(folder_path))
+    
+    if category_filter == "all":
+        pass # No category filter
+    elif category_filter:
+        q_mc = q_mc.filter(MediaClassification.category == category_filter)
+    else:
+        q_mc = q_mc.filter(MediaClassification.category == None)
+    
+    filenames.update([row[0] for row in q_mc.all()])
+
+    # 2. Filenames from MediaItem (Target Bucket)
+    # Ensure we only include items that actually match the category filter
+    q_mi = db.query(MediaItem.file_name).outerjoin(
+        MediaClassification, MediaItem.file_name == MediaClassification.file_name
+    ).filter(MediaItem.bucket_name == target_bucket)
+
+    if folder_path:
+        q_mi = q_mi.filter(MediaItem.file_name.startswith(folder_path))
+
+    if category_filter == "all":
+        pass # Include everything in target bucket
+    elif category_filter:
+        q_mi = q_mi.filter(MediaClassification.category == category_filter)
+    else:
+        # Only include items in target bucket that have NO category (Uncategorized)
+        q_mi = q_mi.filter(or_(
+            MediaClassification.file_name == None, 
+            MediaClassification.category == None
+        ))
+    
+    filenames.update([row[0] for row in q_mi.all()])
+    return filenames
+
 def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[str], db: Session):
     global bulk_reverse_status
     try:
@@ -209,31 +250,11 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
             bulk_reverse_status = {"is_running": False, "total": 0, "current": 0, "message": "Hiányzó B2 konfiguráció"}
             return
         
-        # LEVEL 2 ROBUSTNESS: Gather filenames from BOTH tables to handle un-synced items
-        filenames = set()
-
-        # 1. Filenames from MediaClassification (Level 2 Instant Visibility)
-        q_mc = db.query(MediaClassification.file_name).filter(MediaClassification.is_deleted == False)
-        if folder_path:
-            q_mc = q_mc.filter(MediaClassification.file_name.startswith(folder_path))
-        
-        if category_filter == "all":
-            pass # No category filter
-        elif category_filter:
-            q_mc = q_mc.filter(MediaClassification.category == category_filter)
-        else:
-            q_mc = q_mc.filter(MediaClassification.category == None)
-        
-        filenames.update([row[0] for row in q_mc.all()])
-
-        # 2. Filenames from MediaItem (Target Bucket)
-        # Only if category filter is 'all' or empty, or if we want to catch items already synced
-        # Actually, if we want to be safe, we always check the main bucket for these filenames.
-        if not category_filter or category_filter == "all":
-            q_mi = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == b2_account.bucket_name)
-            if folder_path:
-                q_mi = q_mi.filter(MediaItem.file_name.startswith(folder_path))
-            filenames.update([row[0] for row in q_mi.all()])
+        # Use helper
+        filenames = get_bulk_reverse_filenames(
+            folder_path, category_filter, db, 
+            b2_account.source_bucket_name, b2_account.bucket_name
+        )
 
         items_to_move = sorted(list(filenames))
         total = len(items_to_move)
@@ -298,6 +319,19 @@ def start_bulk_reverse(req: BulkReverseRequest, background_tasks: BackgroundTask
     db = SessionLocal()
     background_tasks.add_task(perform_bulk_reverse, req.folder_path, req.category_filter, db)
     return {"status": "started"}
+
+@router.get("/api/classification/bulk-reverse/count")
+def get_bulk_reverse_count(folder_path: Optional[str] = Query(None), category_filter: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    """Returns the number of items that would be moved back."""
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account or not b2_account.bucket_name or not b2_account.source_bucket_name:
+         return {"count": 0}
+    
+    filenames = get_bulk_reverse_filenames(
+        folder_path, category_filter, db, 
+        b2_account.source_bucket_name, b2_account.bucket_name
+    )
+    return {"count": len(filenames)}
 
 @router.get("/api/classification/bulk-reverse/status")
 def get_bulk_reverse_status():

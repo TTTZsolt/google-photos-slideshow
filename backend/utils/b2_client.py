@@ -112,3 +112,10 @@ class B2Client:
         source_bucket.delete_file_version(file_version.id_, file_name)
         logger.info(f"Successfully moved and cleaned up {file_name}")
         return new_version
+
+    def delete_file_version(self, bucket_name: str, file_name: str, file_id: str):
+        """Physically deletes a file version from B2."""
+        logger.info(f"Physically deleting {file_name} (ID: {file_id[:8]}...) from {bucket_name}")
+        bucket = self.b2_api.get_bucket_by_name(bucket_name)
+        bucket.delete_file_version(file_id, file_name)
+        return True

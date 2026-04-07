@@ -23,3 +23,9 @@ debug_auth_fixed.py
 # OS files
 .DS_Store
 Thumbs.db
+
+# Logs and Temp
+log.txt
+tmp_*.py
+test_*.py
+*.log

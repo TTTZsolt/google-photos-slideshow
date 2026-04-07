@@ -46,6 +46,10 @@ def get_receiver(request: Request):
     print(f"[{now}] DEBUG: Connection attempt to /receiver from IP: {client_ip}")
     return templates.TemplateResponse("receiver.html", {"request": request})
 
+@router.get("/trash")
+def get_trash_page(request: Request):
+    return templates.TemplateResponse("trash.html", {"request": request})
+
 @router.post("/b2/connect")
 def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Simple check if already exists

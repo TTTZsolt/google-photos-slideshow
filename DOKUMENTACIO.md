@@ -1,4 +1,4 @@
-# Google Photos Slideshow - Rendszer Dokumentáció (V9.0)
+# Google Photos Slideshow - Rendszer Dokumentáció (V10.0)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -100,3 +100,20 @@ Ha egy korábbi mappát vagy kategória nélküli (régi) képeket szeretnél ú
 4. Kattints az **Indítás** gombra.
 5. A folyamat a háttérben zajlik, haladását láthatod a megjelenő folyamatjelző csíkon (Progress bar).
 6. A művelet fizikailag átmozgatja a `kepek02`-ből a fájlokat vissza a `forras` vödörbe, és lenullázza az eddigi kategóriájukat az adatbázisban, hogy ismét felbukkanjanak a "Fotó Szortírozó" felületén, ahonnan újra besorolhatod őket.
+
+### 8. Lomtár Átnézése (V10.0)
+A Szortírozóban felfelé húzott (Törlésre jelölt) képek nem törlődnek azonnal véglegesen. Ehelyett a `torles-elott` vödörbe kerülnek, és a **Lomtárban** várnak a végső döntésre.
+1. A Vezérlőpulton a "Fotó Szortírozó" kártyán egy élő piros jelvény (badge) mutatja, hány elem van jelenleg a lomtárban.
+2. Kattints a **Lomtár Átnézése** gombra a dedikált felület megnyitásához.
+3. Itt láthatod a törlésre váró képek előnézetét és eredeti elérési útját.
+4. **Visszaállítás (Vissza gomb)**: Ha meggondoltad magad, a kép visszakerül a `forras` vödörbe, és újra megjelenik a Szortírozóban.
+5. **Lomtár Ürítése**: Ez a művelet **véglegesen és visszaállíthatatlanul** törli a kijelölt fájlokat a Backblaze B2 felhőtárhelyről. A folyamat a háttérben fut, így közben továbbra is használhatod a rendszert.
+
+---
+
+## 5. Hibaelhárítás és Karbantartás
+
+*   **Lassú képbetöltés**: Ellenőrizd a Cloudflare Proxy URL-t a Dashboardon. Ha nincs beállítva, a B2 közvetlen lekérdezése lassabb lehet és hamarabb elérheti a napi limitet.
+*   **Nem frissül a mappalista**: Nyomj a **[Resync]** gombra az adott B2 fióknál.
+*   **Hiányzó előnézet a Lomtárban**: Előfordulhat, hogy a szinkronizáció még nem fejeződött be, vagy a fájl metaadatai sérültek. A törlés/visszaállítás ilyenkor is működik a fájlnév alapján.
+

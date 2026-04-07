@@ -80,6 +80,35 @@
         input[type=number] {
             -moz-appearance: textfield;
         }
+        #customModal.show { display: flex; }
+        #customModal.show #modalContent { transform: scale(1); opacity: 1; }
+        
+        .modal-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-btn:active { transform: scale(0.95); }
+        
+        .modal-btn-primary {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+        }
+        .modal-btn-primary:hover { background-color: #4338ca; }
+        
+        .modal-btn-secondary {
+            background-color: #f1f5f9;
+            color: #475569;
+        }
+        .modal-btn-secondary:hover { background-color: #e2e8f0; }
+
     </style>
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -141,6 +170,12 @@
                                     class="w-full bg-indigo-600 text-white p-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:bg-indigo-700 shadow-lg active:scale-95">
                                     <i data-lucide="play" class="w-5 h-5 fill-current"></i>
                                     <span class="font-bold">Indítás Mobilon</span>
+                                </a>
+                                <a href="/trash" target="_blank"
+                                    class="w-full bg-white border-2 border-rose-100 text-rose-500 p-4 rounded-2xl flex items-center justify-center gap-3 transition-all hover:bg-rose-50 shadow-sm active:scale-95 group relative mt-2">
+                                    <i data-lucide="trash-2" class="w-5 h-5 group-hover:rotate-12 transition-transform"></i>
+                                    <span class="font-bold">Lomtár Átnézése</span>
+                                    <span id="trashCountBadge" class="hidden absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-black px-2 py-1 rounded-full shadow-lg border-2 border-white animate-bounce">0</span>
                                 </a>
                                 <p class="text-[10px] text-slate-400 text-center italic">
                                     A képek a 'forras' vödörből a 'kepek02'-be kerülnek.
@@ -504,6 +539,23 @@
     </div>
     </div>
 
+    <!-- Custom Modal for Alerts/Confirmations -->
+    <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100000] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="modalContent">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-4 text-indigo-600">
+                    <div class="bg-indigo-50 p-2 rounded-xl">
+                        <i id="modalIcon" data-lucide="info" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-bold text-lg" id="modalTitle">Közlendő</h3>
+                </div>
+                <p class="text-slate-600 text-sm leading-relaxed mb-6" id="modalMessage"></p>
+                <div class="flex gap-3" id="modalButtons">
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Init Lucide
         lucide.createIcons();
@@ -754,38 +806,106 @@
         }
 
         // ========== SYSTEM CONTROLS & ADMIN ==========
-        async function startBulkReverse() {
-            if (!confirm("Biztosan visszamozgatod a kiválasztott képeket a forrás vödörbe? Ez a folyamat nem vonható vissza, beletelhet egy kis időbe.")) return;
+        function showCustomModal({ title = "Közlendő", message = "", icon = "info", confirmText = "OK", cancelText = null, onConfirm = null }) {
+            const modal = document.getElementById('customModal');
+            const mTitle = document.getElementById('modalTitle');
+            const mMessage = document.getElementById('modalMessage');
+            const mButtons = document.getElementById('modalButtons');
+            const mIcon = document.getElementById('modalIcon');
             
-            const btn = document.getElementById('bulkReverseBtn');
-            btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            mTitle.innerText = title;
+            mMessage.innerText = message;
+            mIcon.setAttribute('data-lucide', icon);
+            lucide.createIcons();
             
-            const payload = {
-                folder_path: currentBulkReversePath || null,
-                category_filter: document.getElementById('bulkReverseCategory').value || null
+            mButtons.innerHTML = '';
+            
+            if (cancelText) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = "modal-btn modal-btn-secondary";
+                cancelBtn.innerText = cancelText;
+                cancelBtn.onclick = () => {
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                };
+                mButtons.appendChild(cancelBtn);
+            }
+            
+            const okBtn = document.createElement('button');
+            okBtn.className = "modal-btn modal-btn-primary";
+            okBtn.innerText = confirmText;
+            okBtn.onclick = () => {
+                modal.classList.remove('show');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+                if (onConfirm) onConfirm();
             };
+            mButtons.appendChild(okBtn);
             
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        async function startBulkReverse() {
+            const folder_path = currentBulkReversePath || "";
+            const category_filter = document.getElementById('bulkReverseCategory').value || "";
+
             try {
-                const res = await fetch('/api/classification/bulk-reverse', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!res.ok) {
-                    const errStr = await res.text();
-                    alert("Hiba az indításkor: " + errStr);
-                    btn.disabled = false;
-                    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                // First, fetch the count
+                const countRes = await fetch(`/api/classification/bulk-reverse/count?folder_path=${encodeURIComponent(folder_path)}&category_filter=${encodeURIComponent(category_filter)}`);
+                const countData = await countRes.json();
+                const count = countData.count;
+
+                if (count === 0) {
+                    showCustomModal({
+                        title: "A visszamozgató közlendője",
+                        message: "Nem található olyan kép a megadott szűrés alapján, amit vissza kellene mozgatni.",
+                        icon: "search-x"
+                    });
                     return;
                 }
-                
-                document.getElementById('bulkReverseProgressArea').classList.remove('hidden');
+
+                showCustomModal({
+                    title: "A visszamozgató közlendője",
+                    message: `Ez a művelet ${count} képet fog visszamozgatni a forrás vödörbe, hogy újra szortírozhatóak legyenek. Biztosan elindítod?`,
+                    icon: "help-circle",
+                    confirmText: "Igen, indítsd el",
+                    cancelText: "Mégsem",
+                    onConfirm: async () => {
+                        const btn = document.getElementById('bulkReverseBtn');
+                        btn.disabled = true;
+                        btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        
+                        const payload = {
+                            folder_path: folder_path || null,
+                            category_filter: category_filter || null
+                        };
+                        
+                        try {
+                            const res = await fetch('/api/classification/bulk-reverse', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            if (!res.ok) {
+                                const errStr = await res.text();
+                                showCustomModal({ title: "Hiba", message: "Hiba az indításkor: " + errStr, icon: "alert-circle" });
+                                btn.disabled = false;
+                                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                                return;
+                            }
+                            
+                            document.getElementById('bulkReverseProgressArea').classList.remove('hidden');
+                        } catch (e) {
+                            showCustomModal({ title: "Hiba", message: "Hálózati hiba!", icon: "wifi-off" });
+                            btn.disabled = false;
+                            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        }
+                    }
+                });
             } catch (e) {
-                alert("Hálózati hiba!");
-                btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                console.error("Count fetch failed", e);
+                showCustomModal({ title: "Hiba", message: "Nem sikerült lekérni a képek számát.", icon: "alert-circle" });
             }
         }
         
@@ -902,8 +1022,20 @@
                 // --- Render Retouch Queue (Digitális Labor) ---
                 const flagsContainer = document.getElementById('flaggedImagesList');
                 const badge = document.getElementById('flagBadge');
+                const trashBadge = document.getElementById('trashCountBadge');
 
                 try {
+                    // Update Trash Count Badge
+                    const trashRes = await fetch('/api/trash/count');
+                    const trashData = await trashRes.json();
+                    if (trashData.count > 0) {
+                        trashBadge.textContent = trashData.count;
+                        trashBadge.classList.remove('hidden');
+                    } else {
+                        trashBadge.classList.add('hidden');
+                    }
+
+                    // Update Flagged Images
                     const flagsRes = await fetch('/api/flags');
                     const flagsData = await flagsRes.json();
 

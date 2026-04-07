@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import dashboard, music, classification
+from .routers import dashboard, music, classification, trash
 from .database import engine, Base
 import sqlite3
 import os
@@ -66,6 +66,7 @@ auto_migrate()
 app.include_router(dashboard.router, tags=["dashboard"])
 app.include_router(music.router, tags=["music"])
 app.include_router(classification.router, tags=["classification"])
+app.include_router(trash.router, tags=["trash"])
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")
@@ -94,8 +95,9 @@ if __name__ == "__main__":
             "uvicorn.error": {"level": "INFO"},
             "uvicorn.access": {"handlers": ["file"], "level": "INFO", "propagate": False},
             "fastapi": {"handlers": ["file"], "level": "INFO"},
+            "backend": {"handlers": ["file"], "level": "INFO"},
             "pychromecast": {"handlers": ["file"], "level": "CRITICAL"},
             "zeroconf": {"handlers": ["file"], "level": "CRITICAL"},
         },
     }
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8080, reload=True, log_config=LOGGING_CONFIG)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=False, log_config=LOGGING_CONFIG)

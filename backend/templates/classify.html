@@ -309,6 +309,11 @@
             if (isAnimating || !card) return;
             isAnimating = true;
 
+            // Haptic feedback
+            if (window.navigator && window.navigator.vibrate) {
+                window.navigator.vibrate(40);
+            }
+
             const actionMap = { 'right': 'állatok', 'left': 'utazás', 'down': 'család', 'up': 'delete' };
             const action = actionMap[direction];
             const currentFileName = card.dataset.filename;
@@ -349,27 +354,37 @@
 
             // 5. Cleanup
             setTimeout(async () => {
-                card.remove();
-                
-                if (currentRemaining <= 0) {
-                    showEmpty("Minden kép besorolva! 🎉");
-                    isAnimating = false;
-                    return;
-                }
+                try {
+                    card.remove();
+                    
+                    // If no more cards in DB AND no more cards in UI/Queue
+                    if (currentRemaining <= 0 && !deck.querySelector('.card.current') && cardQueue.length === 0) {
+                        showEmpty("Minden kép besorolva! 🎉");
+                        return;
+                    }
 
-                let nextData = cardQueue.shift();
-                if (!nextData) nextData = await fetchNextData();
-                
-                if (nextData && !nextData.done && !nextData.error) {
-                    const nextCard = createCardElement(nextData, true);
-                    deck.appendChild(nextCard);
-                } else if (!deck.querySelector('.card')) {
-                    showEmpty("Kész! Minden képet besoroltál.");
+                    // Try to get next from queue
+                    let nextData = cardQueue.shift();
+                    if (!nextData && currentRemaining > 0) {
+                        nextData = await fetchNextData();
+                    }
+                    
+                    if (nextData && !nextData.done && !nextData.error) {
+                        if (!deck.querySelector('.card.current')) {
+                            // If for some reason the next card didn't promote, create it
+                             deck.appendChild(createCardElement(nextData, false));
+                        } else {
+                            // Create next thumbnail
+                            deck.appendChild(createCardElement(nextData, true));
+                        }
+                    } else if (!deck.querySelector('.card')) {
+                        showEmpty("Kész! Minden képet besoroltál.");
+                    }
+                } finally {
+                    isAnimating = false;
+                    replenishQueue();
                 }
-                
-                isAnimating = false;
-                replenishQueue();
-            }, 400);
+            }, 350);
         }
 
         function attachDragListeners(card) {
