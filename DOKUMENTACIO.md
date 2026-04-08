@@ -152,7 +152,7 @@ Minden modul és külső oldal (Slideshow Setup, Szortírozó) tartalmazza a **H
 ## 5. Hibaelhárítás és Karbantartás
 
 *   **Lassú képbetöltés**: Ellenőrizd a Cloudflare Proxy URL-t a Dashboardon. Ha nincs beállítva, a B2 közvetlen lekérdezése lassabb lehet és hamarabb elérheti a napi limitet.
-*   **A Photopea nem tölti be a képet**: Ha a Digitális Laborban a Photopea felülete elindul, de a kép nem jelenik meg (üres vászon), az általában a Cloudflare Proxy beállítása miatt van. A tapasztalatok alapján bizonyos proxy-konfigurációk "levágják" a Backblaze B2 letöltéséhez szükséges `Authorization` fejlécet. Ilyenkor a megoldás a közvetlen B2 URL használata (`use_proxy=False`), ami HTTPS-en keresztül biztonságosan átadja a hitelesítési tokeneket a Photopea-nak.
+*   **A Photopea nem tölti be a képet**: Ha a Digitális Laborban a Photopea felülete elindul, de a kép nem jelenik meg (üres vászon), az általában a **Cloudflare Proxy hiánya vagy hibás beállítása** miatt van. A közvetlen B2 letöltésnél a böngészők biztonsági szabályai (CORS) megakadályozhatják a kép betöltését. A megoldás a **Cloudflare Proxy beállítása és használata**, mivel ez biztosítja a szükséges engedélyeket a Photopea számára, miközben az adatforgalmi költségeket is minimalizálja.
 *   **Nem frissül a mappalista**: Nyomj a **[Resync]** gombra az adott B2 fióknál.
 *   **Hiányzó előnézet a Lomtárban**: Előfordulhat, hogy a szinkronizáció még nem fejeződött be, vagy a fájl metaadatai sérültek. A törlés/visszaállítás ilyenkor is működik a fájlnév alapján.
 
