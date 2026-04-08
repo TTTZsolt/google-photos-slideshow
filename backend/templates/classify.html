@@ -180,12 +180,29 @@
         </button>
     </div>
 
-    <!-- Deck Container -->
-    <div id="deck" class="deck-container">
+    <div class="deck-container" id="deck">
         <!-- Cards injected by JS -->
-        <div class="flex flex-col items-center justify-center h-full text-slate-500 italic space-y-4" id="emptyMessage">
-            <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-            <p id="statusText">Portyázás a képek után...</p>
+        <div class="flex flex-col items-center justify-start pt-20 h-full text-center p-6" id="emptyMessage">
+            <!-- Loading State -->
+            <div id="loadingState" class="flex flex-col items-center space-y-4">
+                <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+                <p class="text-slate-500 italic font-medium">Portyázás a képek után...</p>
+            </div>
+            
+            <!-- Done State (Hidden by default) -->
+            <div id="doneState" class="hidden flex flex-col items-center space-y-6">
+                <div class="w-20 h-20 bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 rounded-full flex items-center justify-center border border-indigo-500/30 shadow-2xl shadow-indigo-500/10 mb-2">
+                    <i data-lucide="sparkles" class="w-10 h-10 text-indigo-400"></i>
+                </div>
+                <div>
+                    <h2 id="statusTitle" class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 mb-1">Minden kész!</h2>
+                    <p id="statusText" class="text-slate-400 text-xs font-semibold uppercase tracking-wider max-w-[200px] mx-auto">Nincs több besorolandó kép.</p>
+                </div>
+                <a href="/" class="mt-2 px-6 py-2.5 bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-lg hover:shadow-indigo-500/25 active:scale-95 flex items-center gap-2">
+                    <i data-lucide="home" class="w-3.5 h-3.5"></i>
+                    Vissza a főoldalra
+                </a>
+            </div>
         </div>
         
         <!-- Symmetrical Trash Zone (opposite of "next" card) -->
@@ -410,10 +427,31 @@
         function showEmpty(msg) {
             deck.innerHTML = '';
             emptyMessage.style.display = 'flex';
-            statusText.textContent = msg || "Vége a listának.";
+            deck.appendChild(emptyMessage); // Re-attach it
+            
+            const loadingState = document.getElementById('loadingState');
+            const doneState = document.getElementById('doneState');
+            const statusText = document.getElementById('statusText');
+            const statusTitle = document.getElementById('statusTitle');
+
+            loadingState.classList.add('hidden');
+            doneState.classList.remove('hidden');
+            
+            if (msg) {
+                if (msg.includes("Minden") || msg.includes("Kész")) {
+                    statusTitle.textContent = "Nagyszerű!";
+                } else {
+                    statusTitle.textContent = "Vége szakadt...";
+                }
+                statusText.textContent = msg;
+            }
+
             remainingCount.textContent = "0 KÉP MARADT";
             controlsContainer.classList.add('hidden');
-            document.getElementById('deleteBtnZone').classList.add('hidden');
+            const deleteBtn = document.getElementById('deleteBtnZone');
+            if (deleteBtn) deleteBtn.classList.add('hidden');
+            
+            lucide.createIcons();
         }
 
         fetchCategories();
