@@ -279,6 +279,36 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* Custom Modal for Alerts */
+        #customModal.show { display: flex; }
+        #customModal.show #modalContent { transform: scale(1); opacity: 1; }
+        
+        .modal-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-btn:active { transform: scale(0.95); }
+        
+        .modal-btn-primary {
+            background-color: #4f46e5;
+            color: white;
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+        }
+        .modal-btn-primary:hover { background-color: #4338ca; }
+        
+        .modal-btn-secondary {
+            background-color: #f1f5f9;
+            color: #475569;
+        }
+        .modal-btn-secondary:hover { background-color: #e2e8f0; }
     </style>
 </head>
 
@@ -332,6 +362,23 @@
     <div id="notificationToast" class="notification-toast">
         <i data-lucide="check-circle-2" class="w-5 h-5"></i>
         <span id="notificationText">Saved</span>
+    </div>
+
+    <!-- Custom Modal for Alerts/Confirmations -->
+    <div id="customModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100000] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden transform transition-all scale-95 opacity-0 duration-300" id="modalContent">
+            <div class="p-6 text-slate-800">
+                <div class="flex items-center gap-3 mb-4 text-indigo-600">
+                    <div class="bg-indigo-50 p-2 rounded-xl">
+                        <i id="modalIcon" data-lucide="info" class="w-6 h-6"></i>
+                    </div>
+                    <h3 class="font-bold text-lg" id="modalTitle">Közlendő</h3>
+                </div>
+                <p class="text-slate-600 text-sm leading-relaxed mb-6" id="modalMessage"></p>
+                <div class="flex gap-3" id="modalButtons">
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Setup Modal Overlay -->
@@ -873,6 +920,27 @@
                 }
 
                 const response = await fetch(`/api/media/random?${queryParams.toString()}`);
+                
+                if (response.status === 404) {
+                    // No images found flow - Stop first
+                    if (config.isRunning) {
+                        stopAndChangeFolder();
+                    }
+                    
+                    showCustomModal({
+                        title: "Nincsenek képek",
+                        message: "A kiválasztott mappában és kategóriában nem található egyetlen kép sem. Kérlek változtass a beállításokon!",
+                        icon: "search-x",
+                        confirmText: "Értem",
+                        onConfirm: () => {
+                            // Ensure setup modal is visible and fresh
+                            modal.classList.remove('hidden');
+                            modal.style.opacity = '1';
+                        }
+                    });
+                    return;
+                }
+
                 if (!response.ok) return;
                 const data = await response.json();
 
@@ -977,6 +1045,52 @@
             setTimeout(() => {
                 toast.classList.remove('notification-visible');
             }, 3000);
+        }
+
+        // --- Custom Modal logic ---
+        function showCustomModal({ title = "Közlendő", message = "", icon = "info", confirmText = "OK", cancelText = null, onConfirm = null }) {
+            const modal = document.getElementById('customModal');
+            const mTitle = document.getElementById('modalTitle');
+            const mMessage = document.getElementById('modalMessage');
+            const mButtons = document.getElementById('modalButtons');
+            const mIcon = document.getElementById('modalIcon');
+            const mContent = document.getElementById('modalContent');
+            
+            mTitle.innerText = title;
+            mMessage.innerText = message;
+            mIcon.setAttribute('data-lucide', icon);
+            lucide.createIcons();
+            
+            mButtons.innerHTML = '';
+            
+            if (cancelText) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = "modal-btn modal-btn-secondary";
+                cancelBtn.innerText = cancelText;
+                cancelBtn.onclick = () => {
+                    mContent.style.opacity = '0';
+                    mContent.style.transform = 'scale(0.95)';
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                };
+                mButtons.appendChild(cancelBtn);
+            }
+            
+            const okBtn = document.createElement('button');
+            okBtn.className = "modal-btn modal-btn-primary";
+            okBtn.innerText = confirmText;
+            okBtn.onclick = () => {
+                mContent.style.opacity = '0';
+                mContent.style.transform = 'scale(0.95)';
+                setTimeout(() => modal.classList.add('hidden'), 300);
+                if (onConfirm) onConfirm();
+            };
+            mButtons.appendChild(okBtn);
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                mContent.style.opacity = '1';
+                mContent.style.transform = 'scale(1)';
+            }, 10);
         }
 
         document.addEventListener('fullscreenchange', () => {
