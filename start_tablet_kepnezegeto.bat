@@ -18,8 +18,8 @@ echo Varok 3 masodpercet, hogy biztosan elinduljon...
 timeout /t 3 /nobreak >nul
 
 echo.
-echo Control Center megnyitasa a Chrome-ban...
-start chrome http://192.168.1.157:8080
+echo Lumina megnyitasa a Chrome-ban...
+start chrome http://192.168.1.157:8000/
 
 echo.
 echo Kesz! A szerver fut a hatterben.

@@ -1,14 +1,14 @@
 @echo off
 echo --- Frissites: Slideshow Szerver a Tableten ---
-echo Pulling latest changes from GitHub (v10.0 branch)...
+echo Pulling latest changes from GitHub (main branch)...
 
 :: Megprobaljuk a rendszer SSH-t
 where ssh >nul 2>nul
 if %errorlevel% equ 0 (
-    ssh -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git fetch origin && git checkout v10.0 && git pull origin v10.0"
+    ssh -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git fetch origin && git checkout main && git pull origin main"
 ) else (
     echo A rendszer SSH nem talalhato, probalom a Git mappabol...
-    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git fetch origin && git checkout v10.0 && git pull origin v10.0"
+    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && git fetch origin && git checkout main && git pull origin main"
 )
 
 echo.

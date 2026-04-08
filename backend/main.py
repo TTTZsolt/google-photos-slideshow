@@ -102,7 +102,7 @@ templates = Jinja2Templates(directory="backend/templates")
 
 @app.get("/")
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "version": "13.0"})
+    return templates.TemplateResponse("index.html", {"request": request, "version": "13.4"})
 
 if __name__ == "__main__":
     import uvicorn
