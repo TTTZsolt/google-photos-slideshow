@@ -156,109 +156,92 @@
 <body class="bg-slate-50 min-h-screen text-slate-900 selection:bg-indigo-100">
     <div class="container mx-auto px-4 py-8 max-w-5xl">
         <!-- Header -->
-        <header id="dashboardHeader" class="flex items-center justify-between mb-10">
-            <div>
-                <h1
-                    class="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-                    Control Center
-                </h1>
-                <p class="text-slate-500 font-medium tracking-tight">V13.0 Modular Dashboard</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v13.0</span>
+        <header id="dashboardHeader" class="mb-10 w-full">
+            <div class="max-w-[500px] md:max-w-[650px] mx-auto flex items-center justify-between px-2">
+                <div>
+                    <h1
+                        class="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                        Lumina
+                    </h1>
+                    <p class="text-slate-500 font-medium tracking-tight">Képtár+</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v13.1</span>
+                </div>
             </div>
         </header>
 
         <!-- V13.0 Main Grid Menu -->
-        <div id="mainMenu" class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-20">
-            <!-- 1. Picture Slideshow -->
-            <a href="/receiver" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group no-underline">
-                <div class="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="monitor" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Slideshow</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Vetítés Setup</p>
-                </div>
-            </a>
+        <!-- V13.1 Perfect Lean Pyramid Layout -->
+        <div id="mainMenu" class="flex flex-col gap-2 md:gap-3 mb-10 mx-auto px-4 items-center">
+            
+            <!-- Row 1: The Peak (1 item) -->
+            <div class="w-full max-w-[180px] md:max-w-[220px]">
+                <a href="/receiver" class="menu-card glass-panel rounded-2xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group no-underline border-2 border-indigo-100/50 hover:border-indigo-400">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-sm">
+                        <i data-lucide="monitor" class="w-5 h-5 md:w-6 md:h-6"></i>
+                    </div>
+                    <h3 class="text-sm md:text-base font-bold text-slate-800">Slideshow</h3>
+                </a>
+            </div>
 
-            <!-- 2. Kép szortírozás (NEW) -->
-            <a href="/classify" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group no-underline">
-                <div class="w-16 h-16 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="layout-template" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Szortírozás</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Tinder stílus</p>
-                </div>
-            </a>
+            <!-- Row 2: Management (3 items) -->
+            <div class="grid grid-cols-3 gap-2 md:gap-3 w-full max-w-[400px] md:max-w-[500px]">
+                <a href="/classify" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group no-underline">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <i data-lucide="layout-template" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    </div>
+                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Szortírozó</h3>
+                </a>
 
-            <!-- 3. Digitális Labor -->
-            <button onclick="showModule('laborModule')" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group">
-                <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-500 relative">
-                    <i data-lucide="beaker" class="w-8 h-8"></i>
-                    <span id="laborCountMenu" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full hidden">0</span>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Labor</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Retouch Queue</p>
-                </div>
-            </button>
+                <button onclick="showModule('laborModule')" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors relative">
+                        <i data-lucide="beaker" class="w-4 h-4 md:w-5 md:h-5"></i>
+                        <span id="laborCountMenu" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full hidden">0</span>
+                    </div>
+                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Labor</h3>
+                </button>
 
-            <!-- 4. System Activity -->
-            <button onclick="showModule('activityModule')" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group">
-                <div class="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="activity" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Activity</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Status & Devices</p>
-                </div>
-            </button>
+                <button onclick="showModule('moverModule')" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <i data-lucide="undo" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    </div>
+                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Mover</h3>
+                </button>
+            </div>
 
-            <!-- 5. Add Connection -->
-            <button onclick="showModule('connectionModule')" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group">
-                <div class="w-16 h-16 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:bg-slate-800 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="plus-circle" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Connection</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">B2 Nodes</p>
-                </div>
-            </button>
+            <!-- Row 3: Utilities (4 items) -->
+            <div class="grid grid-cols-4 gap-2 md:gap-3 w-full max-w-[500px] md:max-w-[650px]">
+                <button onclick="showModule('activityModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Activity</h3>
+                </button>
 
-            <!-- 6. Kategóriák -->
-            <button onclick="showModule('categoriesModule')" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group">
-                <div class="w-16 h-16 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="tag" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Kategóriák</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Management</p>
-                </div>
-            </button>
+                <button onclick="showModule('connectionModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition-colors border border-cyan-200/50">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Connect</h3>
+                </button>
 
-            <!-- 7. Music Settings -->
-            <button onclick="showModule('musicModule')" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group">
-                <div class="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="music" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Music</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">YouTube</p>
-                </div>
-            </button>
+                <button onclick="showModule('categoriesModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <i data-lucide="tag" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Tags</h3>
+                </button>
 
-            <!-- 8. Visszamozgató -->
-            <button onclick="showModule('moverModule')" class="menu-card glass-panel rounded-3xl p-6 flex flex-col items-center justify-center gap-4 text-center group col-span-2 md:col-span-1">
-                <div class="w-16 h-16 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-500">
-                    <i data-lucide="undo" class="w-8 h-8"></i>
-                </div>
-                <div>
-                    <h3 class="font-bold text-slate-800">Visszamozgató</h3>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Reset & Trash</p>
-                </div>
-            </button>
+                <button onclick="showModule('musicModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                        <i data-lucide="music" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Music</h3>
+                </button>
+            </div>
+        </div>
+        </div>
         </div>
 
         <div id="hiddenOriginal" class="hidden">
@@ -1080,7 +1063,7 @@
                 if (count === 0) {
                     showCustomModal({
                         title: "A visszamozgató közlendője",
-                        message: "Nem található olyan kép a megadott szűrés alapján, amit vissza kellene mozgatni.",
+                        message: "Nem található olyan kép a megadott szűrés alapján, amit vissza kellene mozgatni. Kérlek ellenőrizd, hogy a megfelelő kategóriát választottad-e ki a legördülő menüben!",
                         icon: "search-x"
                     });
                     return;
@@ -1131,6 +1114,7 @@
             }
         }
         
+        let wasBulkReverseRunning = false;
         async function fetchBulkReverseStatus() {
             try {
                 const response = await fetch('/api/classification/bulk-reverse/status');
@@ -1153,9 +1137,32 @@
                     if (data.is_running) {
                         btn.disabled = true;
                         btn.classList.add('opacity-50', 'cursor-not-allowed');
+                        wasBulkReverseRunning = true;
                     } else {
                         btn.disabled = false;
                         btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        
+                        // Check for completion
+                        if (wasBulkReverseRunning && data.total > 0 && data.current >= data.total) {
+                            wasBulkReverseRunning = false; // Reset
+                            
+                            // Success Notification
+                            showCustomModal({
+                                title: "Visszamozgatás kész!",
+                                message: "A képek sikeresen visszakerültek a forrás mappába és alaphelyzetbe álltak. Szeretnél most átmenni a szortírozó oldalra?",
+                                icon: "party-popper",
+                                confirmText: "Irány a Szortírozó!",
+                                cancelText: "Később",
+                                onConfirm: () => {
+                                    window.location.href = '/classify';
+                                }
+                            });
+                            
+                            // Hide progress area after a delay
+                            setTimeout(() => {
+                                area.classList.add('hidden');
+                            }, 5000);
+                        }
                     }
                 } else if (data.message && !data.is_running && data.total === 0) {
                      // Error message or empty
@@ -1163,6 +1170,7 @@
                      document.getElementById('bulkReverseMessage').textContent = data.message;
                      btn.disabled = false;
                      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                     wasBulkReverseRunning = false;
                 }
             } catch (e) { }
         }
@@ -1243,7 +1251,7 @@
 
                 // --- Render Retouch Queue (Digitális Labor) ---
                 const flagsContainer = document.getElementById('flaggedImagesList');
-                const badge = document.getElementById('flagBadge');
+                const badge = document.getElementById('laborCountMenu');
                 const trashBadge = document.getElementById('trashCountBadge');
 
                 try {
