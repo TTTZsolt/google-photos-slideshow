@@ -1,4 +1,4 @@
-# Google Photos Slideshow - Rendszer Dokumentáció (V13.0)
+# Google Photos Slideshow - Rendszer Dokumentáció (V13.4)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -123,9 +123,9 @@ A V12.0-ás verzióban a Slideshow Receiver felülete interaktívabbá vált, ho
 2. **Optimalizált Elrendezés**: A vezérlőikonok (Kilépés, Cast, Zászló, Következő) logikus csoportokba kerültek.
 3. **Cloudflare Proxy V2**: A rendszer újrakonfigurált Cloudflare Worker támogatást kapott, amely stabilabban kezeli a B2 letöltési tokeneket és biztosítja a gyors, adatforgalmi díjmentes képbetöltést minden eszközön.
 
-### 11. V13.0 Moduláris Architektúra (SPA)
+### 11. V13.4 Moduláris Architektúra (SPA)
  
-A V13.0-as verzióval a rendszer egy modern **Single Page Application (SPA)** modellre váltott. Ez azt jelenti, hogy a Vezérlőpult funkciói nem külön oldalakon nyílnak meg, hanem egyetlen keretrendszeren belül cserélődnek, villámgyors navigációt biztosítva.
+A V13.4-es verzióval a rendszer egy modern **Single Page Application (SPA)** modellre váltott. Ez azt jelenti, hogy a Vezérlőpult funkciói nem külön oldalakon nyílnak meg, hanem egyetlen keretrendszeren belül cserélődnek, villámgyors navigációt biztosítva.
  
 ### 11.1 Központi Vezérlő rács (Main Menu)
 A Főoldal egy ergonomikus, 8-as rácsból álló indítópult, ahonnan minden fontos funkció elérhető:

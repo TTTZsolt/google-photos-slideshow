@@ -1,4 +1,4 @@
-# Web-Based Random Slideshow (V10.0)
+# Web-Based Random Slideshow (V13.4)
 
 **Cél**: Fényképek szortírozása nyomógombokkal
 
@@ -50,6 +50,8 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
+- **V13.4**: Modular SPA Dashboard, egységesített verziókezelés.
+- **V13.0**: Modular SPA Dashboard alapverzió.
 - **V10.0**: Fotó Szortírozó (Classifier) & Lomtár (Trash) véglegesítés, élő számláló a Dashboard-on.
 - **V8.3**: Spotify integration initial branch.
 - **V8.2**: Screen Wake Lock implementation (prevent screen dimming on Android).

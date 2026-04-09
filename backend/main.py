@@ -8,7 +8,7 @@ from . import models  # Ensure all models are loaded for create_all
 import sqlite3
 import os
 
-app = FastAPI(title="B2 Random Slideshow - V13.0")
+app = FastAPI(title="B2 Random Slideshow - V13.4")
 
 # CORS
 app.add_middleware(
