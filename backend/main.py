@@ -8,7 +8,7 @@ from . import models  # Ensure all models are loaded for create_all
 import sqlite3
 import os
 
-app = FastAPI(title="B2 Random Slideshow - V13.4")
+app = FastAPI(title="B2 Random Slideshow - V13.5")
 
 # CORS
 app.add_middleware(
@@ -102,7 +102,7 @@ templates = Jinja2Templates(directory="backend/templates")
 
 @app.get("/")
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "version": "13.4"})
+    return templates.TemplateResponse("index.html", {"request": request, "version": "13.5"})
 
 if __name__ == "__main__":
     import uvicorn
