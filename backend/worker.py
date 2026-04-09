@@ -2,7 +2,7 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import delete, func
 from .database import SessionLocal
-from .models import MediaItem, B2Account
+from .models import MediaItem, B2Account, MediaClassification
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
@@ -71,6 +71,18 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                     creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000)
                 )
                 db.merge(media_item)
+
+                # Process file_info metadata for category
+                category = file_version.file_info.get('category') if file_version.file_info else None
+                if category:
+                    class_item = db.query(MediaClassification).filter(MediaClassification.file_name == file_name).first()
+                    if not class_item:
+                        class_item = MediaClassification(file_name=file_name, category=category, is_deleted=False)
+                        db.add(class_item)
+                    elif class_item.category != category:
+                        class_item.category = category
+                        class_item.is_deleted = False
+
                 count += 1
                 total_count += 1
                 if total_count % 100 == 0:

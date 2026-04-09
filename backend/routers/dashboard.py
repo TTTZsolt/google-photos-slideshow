@@ -324,7 +324,7 @@ def get_photopea_auth_url(file_path: str, db: Session = Depends(get_db)):
     try:
         # Force use_proxy=False because Cloudflare Workers strip or don't forward
         # the B2 ?Authorization= query parameter required to download from private buckets
-        # UPDATE: V13.4 - We use use_proxy=True because user prefers Cloudflare for costs
+        # UPDATE: V13.7 - We use use_proxy=True because user prefers Cloudflare for costs
         # and Photopea needs the Proxy to handle CORS properly.
         url = b2_client.get_download_url(
             b2_account.bucket_name,

@@ -124,12 +124,12 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         logger.exception("Unexpected error in get_next_for_classification")
         raise HTTPException(status_code=500, detail=f"Váratlan hiba: {str(e)}")
 
-def b2_move_background_task(key_id: str, app_key: str, source_bucket: str, dest_bucket: str, file_name: str):
+def b2_move_background_task(key_id: str, app_key: str, source_bucket: str, dest_bucket: str, file_name: str, file_info: dict = None):
     try:
         from ..utils.b2_client import B2Client
         client = B2Client(key_id, app_key)
-        client.move_file(source_bucket, dest_bucket, file_name)
-        logger.info(f"Background B2 move successful: {file_name} -> {dest_bucket}")
+        client.move_file(source_bucket, dest_bucket, file_name, file_info=file_info)
+        logger.info(f"Background B2 move successful: {file_name} -> {dest_bucket} (meta: {file_info})")
     except Exception as e:
         logger.error(f"Background B2 move failed for {file_name}: {e}")
 
@@ -175,13 +175,15 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             if not b2_account.bucket_name:
                 raise HTTPException(status_code=400, detail="Cél vödör (kepek02) nincs beállítva.")
             
-            # 1. Start pure background thread for B2 move
+            # 1. Start pure background thread for B2 move (with category metadata)
+            file_info = {"category": req.action}
             threading.Thread(target=b2_move_background_task, args=(
                 b2_account.key_id, 
                 b2_account.application_key, 
                 b2_account.source_bucket_name, 
                 b2_account.bucket_name, 
-                req.file_name
+                req.file_name,
+                file_info
             )).start()
             
             # 2. Update DB Immediately
@@ -295,7 +297,8 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
                 current_bucket = item.bucket_name if item else b2_account.bucket_name
 
                 # 1. Move file in B2: from target bucket back to source
-                new_version = client.move_file(current_bucket, b2_account.source_bucket_name, file_name)
+                # Passing empty dict to strip existing category metadata
+                new_version = client.move_file(current_bucket, b2_account.source_bucket_name, file_name, file_info={})
                 
                 # 2. Delete old MediaItem records for this file (across all buckets to be safe)
                 db.execute(delete(MediaItem).where(MediaItem.file_name == file_name))

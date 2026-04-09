@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 from .database import SessionLocal
-from .models import MediaItem, B2Account, MediaClassification
+from .models import MediaItem, B2Account, MediaClassification, CategoryDefinition
 from .utils.b2_client import B2Client
 import random
 import logging
@@ -188,11 +188,27 @@ class SlideshowController:
         
         caption = self._format_caption(media_item.file_name)
         
+        class_item = db.query(MediaClassification).filter(MediaClassification.file_name == media_item.file_name).first()
+        file_category = class_item.category if class_item and not class_item.is_deleted else None
+        category_info = None
+        if file_category:
+            cat_def = db.query(CategoryDefinition).filter(CategoryDefinition.name == file_category).first()
+            if cat_def:
+                category_info = {
+                    "name": cat_def.name,
+                    "display_name": cat_def.display_name,
+                    "icon": cat_def.icon,
+                    "color": cat_def.color
+                }
+            else:
+                category_info = {"name": file_category, "display_name": file_category.capitalize(), "icon": "tag", "color": "#6366f1"}
+
         return {
             "url": display_url,
             "filename": caption,
             "file_path": media_item.file_name,
-            "id": media_item.id
+            "id": media_item.id,
+            "category_info": category_info
         }
 
     def _format_caption(self, file_path):

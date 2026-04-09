@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fotó Szortírozó - V10.0</title>
+    <title>Lumina - Szortírozó V13.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -19,8 +19,8 @@
 
         body {
             font-family: 'Outfit', sans-serif;
-            background-color: var(--bg-color);
-            color: white;
+            background-color: #f5f8ff;
+            color: #0f172a;
             overflow: hidden;
             touch-action: none;
             height: 100vh;
@@ -161,23 +161,33 @@
         .glass-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.15); }
     </style>
 </head>
-<body class="flex flex-col items-center justify-between py-6">
+<body class="flex flex-col items-center justify-start py-4 sm:py-6">
 
-    <!-- Header -->
-    <div class="w-full px-6 flex justify-between items-start z-50">
-        <a href="/" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
-            <div class="w-12 h-12 rounded-2xl bg-white/10 text-slate-300 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-lg border border-white/10 backdrop-blur-md">
-                <i data-lucide="home" class="w-6 h-6"></i>
-            </div>
-            <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Főoldal</span>
-        </a>
-        <div class="flex flex-col items-center">
-            <h1 class="text-xl font-bold tracking-tight">Szortírozó <span class="text-xs opacity-40 ml-1">v12.0</span></h1>
-            <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
+    <!-- Header Wrapper for Proportional Főoldal spacing -->
+    <div class="w-full max-w-2xl px-6 flex flex-col items-start min-h-[25vh] sm:min-h-[30vh]">
+        
+        <!-- Főoldal Button Area (Proportional) -->
+        <div class="flex-grow flex flex-col items-start justify-center w-full">
+            <a href="/" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
+                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50 backdrop-blur-md">
+                    <i data-lucide="home" class="w-6 h-6 sm:w-7 sm:h-7"></i>
+                </div>
+                <span class="text-[10px] sm:text-[11px] font-black text-indigo-400 group-hover:text-indigo-600 uppercase tracking-widest transition-colors">Főoldal</span>
+            </a>
         </div>
-        <button onclick="location.reload()" class="glass-btn p-3 rounded-2xl text-indigo-400">
-            <i data-lucide="refresh-cw"></i>
-        </button>
+
+        <!-- Title & Info Row -->
+        <div class="w-full flex justify-between items-end pb-2">
+            <div class="flex flex-col items-start">
+                <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 flex items-baseline gap-2">
+                    Szortírozó <span class="text-[10px] text-indigo-400 font-black">V13.7</span>
+                </h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
+            </div>
+            <button onclick="location.reload()" class="p-3 bg-white/80 hover:bg-white text-indigo-500 rounded-2xl shadow-sm border border-slate-100 transition-all active:scale-90">
+                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+            </button>
+        </div>
     </div>
 
     <div class="deck-container" id="deck">
@@ -457,7 +467,5 @@
         fetchCategories();
         initDeck();
     </script>
-</body>
-</html>
 </body>
 </html>

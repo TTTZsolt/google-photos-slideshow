@@ -82,23 +82,24 @@ class B2Client:
         
         return authorized_url
         
-    def upload_byte_stream(self, bucket_name: str, file_name: str, file_bytes: bytes, content_type: str = "image/jpeg"):
+    def upload_byte_stream(self, bucket_name: str, file_name: str, file_bytes: bytes, content_type: str = "image/jpeg", file_info: dict = None):
         """Felölti a memóriában lévő nyers byte tartalmat a megadott vödörbe, megadott néven."""
-        logger.info(f"Uploading file stream to {bucket_name}/{file_name}")
+        logger.info(f"Uploading file stream to {bucket_name}/{file_name} with info: {file_info}")
         bucket = self.b2_api.get_bucket_by_name(bucket_name)
         file_version = bucket.upload_bytes(
             file_bytes,
             file_name,
-            content_type=content_type
+            content_type=content_type,
+            file_info=file_info
         )
         return file_version
-        
-    def move_file(self, source_bucket_name: str, dest_bucket_name: str, file_name: str):
+
+    def move_file(self, source_bucket_name: str, dest_bucket_name: str, file_name: str, file_info: dict = None):
         """
         Natív B2 másolás a szerveren (letöltés nélkül!), majd az eredeti törlése.
         Ha a célvödör nem létezik, vagy nincs megadva, hibát dob.
         """
-        logger.info(f"Moving {file_name} from {source_bucket_name} to {dest_bucket_name}")
+        logger.info(f"Moving {file_name} from {source_bucket_name} to {dest_bucket_name} with info: {file_info}")
         
         source_bucket = self.b2_api.get_bucket_by_name(source_bucket_name)
         dest_bucket = self.b2_api.get_bucket_by_name(dest_bucket_name)
@@ -107,10 +108,18 @@ class B2Client:
         file_version = source_bucket.get_file_info_by_name(file_name)
         
         # 2. Másold át a cél vödörbe (ugyanazzal a névvel)
-        new_version = dest_bucket.copy(
-            file_id=file_version.id_,
-            new_file_name=file_name
-        )
+        # B2SDK handles metadata replacement internally if file_info is passed.
+        # However, passing file_info=None copies existing metadata. 
+        # If we explicitly want to clear metadata, we must pass file_info={}.
+        kwargs = {
+            "file_id": file_version.id_,
+            "new_file_name": file_name
+        }
+        if file_info is not None:
+             kwargs["file_info"] = file_info
+             kwargs["content_type"] = file_version.content_type or "b2/x-auto"
+
+        new_version = dest_bucket.copy(**kwargs)
         
         # 3. Töröld az eredetit a forrás vödörből
         source_bucket.delete_file_version(file_version.id_, file_name)
