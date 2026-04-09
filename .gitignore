@@ -25,7 +25,7 @@ debug_auth_fixed.py
 Thumbs.db
 
 # Logs and Temp
-log.txt
+log.txt*
 tmp_*.py
 test_*.py
 *.log
