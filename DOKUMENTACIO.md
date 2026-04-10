@@ -156,29 +156,7 @@ A V13.8-as verzió a legnagyobb mérföldkő az adatbiztonság és a konzisztenc
 
 ---
 
-## 5. Verziótörténet
-
-Az alábbi táblázat összefoglalja a rendszer fejlődésének legfontosabb mérföldköveit:
-
-| Verzió | Leírás |
-| :--- | :--- |
-| **V13.8** | Több felhasználós működés javítása és lokális fejlesztői környezet optimalizálása. |
-| **V13.7** | Stabil verzió, egységes Lumina branding és pixel-pontos UI elrendezés minden modulban. |
-| **V13.5** | Felhő-szintű metaadatok (B2 Info category), központi osztályozás szinkronizációja. |
-| **V13.0** | Moduláris Dashboard architektúra (SPA), aszinkron adathozzáférés és navigáció. |
-| **V12.0** | Interaktív Receiver vezérlés (Következő gomb), Cloudflare Proxy V2 integráció. |
-| **V11.0** | Dinamikus Kategória Kezelő (egyedi ikonok, színek és nevek). |
-| **V10.0** | Fotó Szortírozó (Classifier) & Lomtár (Trash) véglegesítése, élő számlálókkal. |
-| **V9.0** | Google Photos stílusú szortírozás (vödör-alapú mozgatás). |
-| **V8.2** | Screen Wake Lock implementáció (kijelző elsötétedés elleni védelem). |
-| **V7.9** | Digitális Labor (Retouch Queue) és Photopea integráció. |
-| **V3.1** | GoogleCast / Chromecast integráció (`catt`), vizuális Dashboard. |
-| **V3.0** | Első stabil web-alapú verzió (Optimalizált B2, Flicker-free). |
-| **v1.0** | Legacy verzió közvetlen Chromecast casting támogatással (deprecated). |
-
----
-
-## 6. Hibaelhárítás és Karbantartás
+## 5. Hibaelhárítás és Karbantartás
 
 *   **Lassú képbetöltés**: Ellenőrizd a Cloudflare Proxy URL-t a Dashboardon. Ha nincs beállítva, a B2 közvetlen lekérdezése lassabb lehet és hamarabb elérheti a napi limitet.
 *   **A Photopea nem tölti be a képet**: Ha a Digitális Laborban a Photopea felülete elindul, de a kép nem jelenik meg (üres vászon), az általában a **Cloudflare Proxy hiánya vagy hibás beállítása** miatt van. A közvetlen B2 letöltésnél a böngészők biztonsági szabályai (CORS) megakadályozhatják a kép betöltését. A megoldás a **Cloudflare Proxy beállítása és használata**, mivel ez biztosítja a szükséges engedélyeket a Photopea számára, miközben az adatforgalmi költségeket is minimalizálja.
