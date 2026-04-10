@@ -20,7 +20,7 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
             logger.error(f"B2 Account {b2_account_id} not found")
             return
 
-        # If target_bucket is not specified, sync both main and source
+        # If target_bucket is not specified, sync main, source and trash
         buckets_to_sync = []
         if target_bucket:
             buckets_to_sync = [target_bucket]
@@ -29,6 +29,8 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                 buckets_to_sync.append(b2_account.bucket_name)
             if b2_account.source_bucket_name:
                 buckets_to_sync.append(b2_account.source_bucket_name)
+            if b2_account.trash_bucket_name:
+                buckets_to_sync.append(b2_account.trash_bucket_name)
 
         logger.info(f"Starting B2 sync for account {b2_account_id}, buckets: {buckets_to_sync}")
         b2_account.sync_status = "Syncing"
@@ -40,6 +42,7 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
         total_count = 0
         for bucket_name in buckets_to_sync:
             logger.info(f"Syncing bucket: {bucket_name}")
+            is_trash_bucket = (bucket_name == b2_account.trash_bucket_name)
             
             # Clear existing items for THIS bucket only
             db.execute(delete(MediaItem).where(MediaItem.b2_account_id == b2_account_id, MediaItem.bucket_name == bucket_name))
@@ -57,10 +60,6 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                     if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
                         continue
                 
-                # Ensure it's not in the trash (just in case)
-                if b2_account.trash_bucket_name == bucket_name:
-                    continue
-
                 media_item = MediaItem(
                     id=file_version.id_,
                     b2_account_id=b2_account_id,
@@ -74,14 +73,29 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
 
                 # Process file_info metadata for category
                 category = file_version.file_info.get('category') if file_version.file_info else None
-                if category:
-                    class_item = db.query(MediaClassification).filter(MediaClassification.file_name == file_name).first()
-                    if not class_item:
-                        class_item = MediaClassification(file_name=file_name, category=category, is_deleted=False)
-                        db.add(class_item)
-                    elif class_item.category != category:
+                
+                # Sync classification
+                class_item = db.query(MediaClassification).filter(MediaClassification.file_name == file_name).first()
+                if not class_item:
+                    class_item = MediaClassification(
+                        file_name=file_name, 
+                        category=category, 
+                        is_deleted=is_trash_bucket
+                    )
+                    db.add(class_item)
+                else:
+                    # Update existing record
+                    if category:
                         class_item.category = category
-                        class_item.is_deleted = False
+                    
+                    # If it's in the trash bucket, it's definitely deleted. 
+                    # If it's in source/active, we mark it as NOT deleted (it might have been restored elsewhere)
+                    class_item.is_deleted = is_trash_bucket
+                    
+                    # If it was in trash but we found it in active/source, clear the 'deleted' flag
+                    if not is_trash_bucket:
+                        # Optionally: if it has no category meta but was marked deleted, we leave it unclassified
+                        pass
 
                 count += 1
                 total_count += 1

@@ -33,12 +33,35 @@ def get_b2_api(key_id: str, application_key: str):
         logger.error(f"B2 Authorization Failed: {str(e)}")
         raise
 
+# Cache for bucket download tokens: {(bucket_name, key_id): (token, expiration_ts)}
+_bucket_token_cache = {}
+
 class B2Client:
     def __init__(self, key_id: str, application_key: str):
         self.key_id = key_id
         self.application_key = application_key
         # Get authorized API from cache or create new
         self.b2_api = get_b2_api(key_id, application_key)
+
+    def get_bucket_token(self, bucket_name: str, valid_duration_seconds: int = 7200):
+        """Returns a cached or new bucket-wide download authorization token."""
+        cache_key = (bucket_name, self.key_id)
+        now = time.time()
+        
+        if cache_key in _bucket_token_cache:
+            token, expiry = _bucket_token_cache[cache_key]
+            # Reuse if more than 5 minutes remaining
+            if expiry > now + 300:
+                return token
+
+        logger.info(f"Fetching NEW bucket-wide download authorization for: {bucket_name}")
+        bucket = self.b2_api.get_bucket_by_name(bucket_name)
+        token = bucket.get_download_authorization(
+            file_name_prefix='',
+            valid_duration_in_seconds=valid_duration_seconds
+        )
+        _bucket_token_cache[cache_key] = (token, now + valid_duration_seconds)
+        return token
 
     def list_files(self, bucket_name: str):
         bucket = self.b2_api.get_bucket_by_name(bucket_name)
@@ -49,14 +72,8 @@ class B2Client:
     def get_download_url(self, bucket_name: str, file_name: str, cloudflare_proxy_url: str = None, valid_duration_seconds: int = 7200, use_proxy: bool = True):
         import urllib.parse
         
-        # We fetch a SPECIFIC download authorization for this EXACT file to avoid 'bad_auth_token' errors 
-        # which can happen with bucket-wide tokens on some clusters/configurations.
-        logger.info(f"Fetching specific download authorization for file: {file_name}")
-        bucket = self.b2_api.get_bucket_by_name(bucket_name)
-        download_auth_token = bucket.get_download_authorization(
-            file_name_prefix=file_name,
-            valid_duration_in_seconds=valid_duration_seconds
-        )
+        # V13.8 Optimization: Use bucket-wide token instead of per-file token
+        download_auth_token = self.get_bucket_token(bucket_name, valid_duration_seconds)
         
         # Construct the download URL
         base_url = self.b2_api.account_info.get_download_url()
@@ -74,12 +91,7 @@ class B2Client:
                     proxy_clean = 'https://' + proxy_clean
                 # Replace the B2 base URL with our Proxy URL
                 authorized_url = authorized_url.replace(base_url, proxy_clean, 1)
-                logger.info(f"Proxy applied: {proxy_clean}")
                 
-        # Debug logging with obscured token
-        debug_token = download_auth_token[:6] + "..." + download_auth_token[-4:] if len(download_auth_token) > 10 else "***"
-        logger.info(f"Generated URL (proxy={'YES' if cloudflare_proxy_url else 'NO'}): {authorized_url.split('?')[0]}?Authorization={debug_token}")
-        
         return authorized_url
         
     def upload_byte_stream(self, bucket_name: str, file_name: str, file_bytes: bytes, content_type: str = "image/jpeg", file_info: dict = None):

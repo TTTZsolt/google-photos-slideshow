@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lomtár Átnézése - V10.0</title>
+    <title>Lomtár Átnézése - V13.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -37,6 +37,23 @@
                 Lomtár Ürítése
             </button>
         </header>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center justify-center transition-all duration-500">
+            <div class="relative mb-8">
+                <div class="w-24 h-24 rounded-full border-4 border-slate-100 border-t-rose-500 animate-spin"></div>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i data-lucide="trash-2" class="w-8 h-8 text-rose-500"></i>
+                </div>
+            </div>
+            <h2 class="text-2xl font-black text-slate-800 tracking-tight mb-2">Lomtár beolvasása</h2>
+            <div class="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-xl border border-slate-100">
+                <span id="loadCurrent" class="text-2xl font-black text-rose-500">0</span>
+                <span class="text-slate-300 font-bold">/</span>
+                <span id="loadTotal" class="text-lg font-bold text-slate-400">0</span>
+            </div>
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-6 animate-pulse">Adatok lekérése a felhőből...</p>
+        </div>
 
         <!-- Empty State -->
         <div id="emptyState" class="hidden glass-panel rounded-3xl p-20 text-center flex flex-col items-center justify-center">
@@ -83,40 +100,82 @@
         let trashItems = [];
 
         async function fetchTrash() {
+            const overlay = document.getElementById('loadingOverlay');
+            const loadCurrent = document.getElementById('loadCurrent');
+            const loadTotal = document.getElementById('loadTotal');
+            const grid = document.getElementById('trashGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            grid.innerHTML = '';
+            loadCurrent.textContent = "0";
+            
             try {
+                // 1. Get Count first
+                const countRes = await fetch('/api/trash/count');
+                const countData = await countRes.json();
+                loadTotal.textContent = countData.count;
+
+                if (countData.count === 0) {
+                    trashItems = [];
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                    renderGrid();
+                    return;
+                }
+
+                // 2. Fetch Full Data
                 const res = await fetch('/api/trash');
-                trashItems = await res.json();
-                renderGrid();
+                const data = await res.json();
+                trashItems = data; // Assign to global
+                
+                // 3. Progressive Render to show counter move
+                const total = trashItems.length;
+                loadTotal.textContent = total;
+                
+                if (total === 0) {
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                    renderGrid();
+                    return;
+                }
+
+                // Batch rendering for visual progress
+                const batchSize = 10;
+                for (let i = 0; i < total; i += batchSize) {
+                    const chunk = trashItems.slice(i, i + batchSize);
+                    renderBatch(chunk);
+                    loadCurrent.textContent = Math.min(i + batchSize, total);
+                    // Minimal delay for visual feedback
+                    await new Promise(r => setTimeout(r, 40));
+                }
+
+                // Finish
+                setTimeout(() => {
+                    overlay.classList.add('opacity-0', 'pointer-events-none');
+                }, 300);
+
             } catch (err) {
+                console.error("Fetch error:", err);
                 showToast("Hiba a betöltéskor");
+                overlay.classList.add('opacity-0', 'pointer-events-none');
             }
         }
 
-        function renderGrid() {
+        function renderBatch(items) {
             const grid = document.getElementById('trashGrid');
             const emptyState = document.getElementById('emptyState');
             const emptyBtn = document.getElementById('emptyBtn');
             
-            grid.innerHTML = '';
-            
-            if (trashItems.length === 0) {
-                grid.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                emptyBtn.disabled = true;
-                return;
-            }
-
             grid.classList.remove('hidden');
             emptyState.classList.add('hidden');
             emptyBtn.disabled = false;
 
-            trashItems.forEach(item => {
+            items.forEach(item => {
                 const card = document.createElement('div');
-                card.className = 'glass-panel rounded-2xl overflow-hidden group hover:shadow-xl transition-all h-[240px] flex flex-col relative';
+                card.className = 'glass-panel rounded-2xl overflow-hidden group hover:shadow-xl transition-all h-[240px] flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500';
                 
                 const previewHtml = item.url 
                     ? `<div class="flex-1 bg-slate-200 relative overflow-hidden">
-                         <img src="${item.url}" class="w-full h-full object-cover">
+                         <img src="${item.url}" class="w-full h-full object-cover" loading="lazy">
                          <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
                        </div>`
                     : `<div class="flex-1 bg-slate-100 flex items-center justify-center text-slate-300 italic text-xs">Nincs előnézet</div>`;
@@ -136,6 +195,21 @@
                 grid.appendChild(card);
             });
             lucide.createIcons();
+        }
+
+        function renderGrid() {
+            // This is now handled by fetchTrash and renderBatch,
+            // but we keep a simplified version for empty states if called directly.
+            const grid = document.getElementById('trashGrid');
+            const emptyState = document.getElementById('emptyState');
+            const emptyBtn = document.getElementById('emptyBtn');
+            
+            if (trashItems.length === 0) {
+                grid.innerHTML = '';
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyBtn.disabled = true;
+            }
         }
 
         async function restoreItem(fileId, btn) {

@@ -242,9 +242,14 @@ def get_local_ip():
 @router.get("/slideshow/devices")
 def scan_devices():
     import subprocess
-    import re
+    import platform
+    
+    # Check if we are on Windows - catt/pkill are usually not available
+    if platform.system() == "Windows":
+        return {"devices": [], "info": "CATT scanning skipped on Windows"}
+
     try:
-        # Kill any zombie catt processes before scanning
+        # Kill any zombie catt processes before scanning (Linux only)
         subprocess.run(["pkill", "-f", "catt"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         # Run catt scan and capture output with strict timeout
         result = subprocess.run(["catt", "scan"], capture_output=True, text=True, timeout=12)
@@ -269,7 +274,11 @@ def scan_devices():
 def cast_to_device(device_name: str, request: Request):
     import subprocess
     import time
+    import platform
     from urllib.parse import urlencode
+
+    if platform.system() == "Windows":
+        raise HTTPException(status_code=400, detail="Casting via CATT is not supported on Windows.")
 
     local_ip = get_local_ip()
     port = request.url.port or 8080
@@ -299,7 +308,12 @@ def cast_to_device(device_name: str, request: Request):
 @router.post("/slideshow/stop-cast")
 def stop_casting(device_name: str):
     import subprocess
+    import platform
     print(f"DEBUG: Stopping cast on device: {device_name}")
+    
+    if platform.system() == "Windows":
+         return {"message": "Stopped (Windows simulated)"}
+
     try:
         # First kill the local catt process if it's hanging
         subprocess.run(["pkill", "-f", "catt"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
