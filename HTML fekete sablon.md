@@ -14,11 +14,13 @@ A stílus alapja a **TailwindCSS**, kiegészítve egyedi üveg-effektusokkal és
 
 ---
 
-## 2. Elrendezés (Layout & Width)
+## 2. Elrendezés (Layout & Margins)
 
-Minden oldalszélességet a Slideshow Setup oldalhoz kell igazítani:
-- **Fő konténer:** `max-w-2xl mx-auto`
-- **Tartalom:** `w-full px-6`
+Minden oldalszélességet és margót a Slideshow Setup oldalhoz kell igazítani:
+- **Külső konténer margója (Mobil):** `mx-6`
+- **Külső konténer margója (Desktop):** `sm:mx-auto`
+- **Fő konténer szélessége:** `max-w-2xl`
+- **Belső doboz paddingja:** `p-8 sm:p-10`
 
 ---
 
@@ -28,7 +30,7 @@ A fejlécnek minden oldalon **fix pozícióban**, ugyanazzal a magassággal és 
 
 ```html
 <header class="fixed top-0 left-0 w-full z-[100] px-6 py-4 flex items-center justify-between pointer-events-none">
-    <!-- Márkanév (Bal oldal) - Mindig aktív -->
+    <!-- Márkanév (Bal oldal) -->
     <div class="pointer-events-auto">
         <span class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 tracking-tighter select-none leading-none">
             Lumina
@@ -42,26 +44,33 @@ A fejlécnek minden oldalon **fix pozícióban**, ugyanazzal a magassággal és 
         </a>
     </div>
 </header>
-
-<!-- Tartalmi távolság a fix fejléctől -->
-<div class="mt-24"></div>
 ```
 
 ---
 
-## 4. Oldal Címe (Page Title)
+## 4. Oldal Címe és Panel (Title & Panel)
 
-Az oldal neve (pl. Szortírozó) ne a Lumina alá kerüljön, hanem a fő tartalmi területen jelenjen meg címként, Lucide ikonnal kiegészítve.
+Az oldal tartalma egy középre igazított panelben legyen, amelynek margói és belső távolságai megegyeznek a Setup oldallal.
 
 ```html
-<div class="w-full flex flex-col items-start mb-6">
-    <h1 class="text-2xl font-bold text-slate-200 flex items-center gap-3">
-        <i data-lucide="layout-template" class="text-indigo-500 w-7 h-7"></i>
-        Oldal Neve <span class="text-[10px] text-indigo-400 font-black ml-1">V14.0</span>
-    </h1>
-    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 ml-10">
-        Rövid leírás vagy állapotjelző
-    </p>
+<!-- Tartalmi távolság a fix fejléctől -->
+<div class="mt-24 w-full max-w-2xl mx-6 sm:mx-auto">
+    <div class="glass-panel rounded-3xl p-8 sm:p-10 shadow-2xl overflow-hidden">
+        
+        <!-- Cím Szekció -->
+        <div class="relative z-10 w-full flex flex-col items-start mb-8">
+            <h2 class="text-2xl font-bold text-slate-200 flex items-center gap-3">
+                <i data-lucide="layout-template" class="text-indigo-500 w-7 h-7"></i>
+                Oldal Neve <span class="text-[10px] text-indigo-400 font-black ml-1">V14.0</span>
+            </h2>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 ml-10">
+                Rövid leírás vagy állapotjelző
+            </p>
+        </div>
+
+        <!-- Ide jön az oldal specifikus tartalma -->
+        
+    </div>
 </div>
 ```
 
