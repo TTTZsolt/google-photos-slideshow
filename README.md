@@ -50,7 +50,7 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
-- **V13.8**: Több felhasználós működés javítása és lokális fejlesztői környezet optimalizálása.
+- **V13.8**: Több felhasználós működés javítása.
 - **V13.7**: Stabil verzió, UI egységesítés előtt, HTML sablonnal.
 - **V13.5**: Felhő-szintű metaadatok (B2 Info category), központi osztályozás szinkronizációja.
 - **V13.0**: Moduláris Dashboard architektúra (SPA), aszinkron adathozzáférés és navigáció.

@@ -123,7 +123,7 @@ A V12.0-ás verzióban a Slideshow Receiver felülete interaktívabbá vált, ho
 2. **Optimalizált Elrendezés**: A vezérlőikonok (Kilépés, Cast, Zászló, Következő) logikus csoportokba kerültek.
 3. **Cloudflare Proxy V2**: A rendszer újrakonfigurált Cloudflare Worker támogatást kapott, amely stabilabban kezeli a B2 letöltési tokeneket és biztosítja a gyors, adatforgalmi díjmentes képbetöltést minden eszközön.
 
-### 11. V13.8 Moduláris Architektúra (SPA)
+### 11. V13.8 Több felhasználós működés javítása
  
 A V13.8-as verzióval a rendszer egy modern **Single Page Application (SPA)** modellre váltott. Ez azt jelenti, hogy a Vezérlőpult funkciói nem külön oldalakon nyílnak meg, hanem egyetlen keretrendszeren belül cserélődnek, villámgyors navigációt biztosítva.
  
@@ -147,7 +147,7 @@ A **Visszamozgató** modul egy komplex karbantartó központtá vált:
 ### 11.3 Egységes Navigáció
 Minden modul és külső oldal (Slideshow Setup, Szortírozó) tartalmazza a **Házikó ikon + "Főoldal"** feliratú gombot, amely minden esetben a központi vezérlő rácshoz viszi vissza a felhasználót.
 
-### 12. Központi Osztályozás (V13.8)
+### 12. Több felhasználós működés javítása (V13.8)
 A V13.8-as verzió a legnagyobb mérföldkő az adatbiztonság és a konzisztencia terén. Eddig a fotókhoz rendelt kategóriák (pl. 'Utazás') csak a tableten lévő helyi SQLite adatbázisban léteztek. Ez a verzió ezt globálissá teszi:
 1. **Felhő-szintű Metaadatok (B2 File Info)**: A szortírozó által beállított kategória mostantól közvetlenül a felhőbeli fájlra tapad metaadat formájában (`X-Bz-Info-category`). Ezt minden mozgatás és szortírozás folyamatosan rögzíti, illetve üres értékkel radírozza, ha a képet visszamozgatjuk.
 2. **Központi Slideshow Megjelenítés**: A Receiver (Vetítési felület) a kép neve mellett kiírhatja a besorolt kategóriát, a saját ikonjával és egyedi színével (ki- és bekapcsolható beállítás).
