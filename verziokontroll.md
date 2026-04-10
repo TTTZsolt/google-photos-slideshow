@@ -5,7 +5,7 @@ Ez a dokumentum tartalmazza a projekt összes fontos mérföldkövét és stabil
 | Verzió | Leírás | Státusz |
 | :--- | :--- | :--- |
 | **V13.8** | Több felhasználós működés javítása és lokális fejlesztői környezet optimalizálása. | Aktív (Fejlesztés alatt) |
-| **V13.7** | Stabil verzió, egységes Lumina branding és pixel-pontos UI elrendezés minden modulban. | **Stabil** |
+| **V13.7** | Stabil verzió, UI egységesítés előtt, HTML sablonnal | **Stabil** |
 | **V13.5** | Felhő-szintű metaadatok (B2 Info category), központi osztályozás szinkronizációja. | Stabil |
 | **V13.0** | Moduláris Dashboard architektúra (SPA), aszinkron adathozzáférés és navigáció. | Stabil |
 | **V12.0** | Interaktív Receiver vezérlés (Következő gomb), Cloudflare Proxy V2 integráció. | Stabil |

@@ -51,7 +51,7 @@ This project is a high-performance, web-based random photo slideshow that pulls 
 
 ## Versions
 - **V13.8**: Több felhasználós működés javítása és lokális fejlesztői környezet optimalizálása.
-- **V13.7**: Stabil verzió, layout egységesítése és Lumina branding véglegesítése.
+- **V13.7**: Stabil verzió, UI egységesítés előtt, HTML sablonnal.
 - **V13.5**: Felhő-szintű metaadatok (B2 Info category), központi osztályozás szinkronizációja.
 - **V13.0**: Moduláris Dashboard architektúra (SPA), aszinkron adathozzáférés és navigáció.
 - **V12.0**: Interaktív Receiver vezérlés (Következő gomb), Cloudflare Proxy V2 integráció.
