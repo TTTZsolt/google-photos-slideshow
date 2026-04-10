@@ -1,4 +1,4 @@
-# Lumina Képtár - Rendszer Dokumentáció (V13.7)
+# Lumina Képtár - Rendszer Dokumentáció (V13.8)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -123,9 +123,9 @@ A V12.0-ás verzióban a Slideshow Receiver felülete interaktívabbá vált, ho
 2. **Optimalizált Elrendezés**: A vezérlőikonok (Kilépés, Cast, Zászló, Következő) logikus csoportokba kerültek.
 3. **Cloudflare Proxy V2**: A rendszer újrakonfigurált Cloudflare Worker támogatást kapott, amely stabilabban kezeli a B2 letöltési tokeneket és biztosítja a gyors, adatforgalmi díjmentes képbetöltést minden eszközön.
 
-### 11. V13.7 Moduláris Architektúra (SPA)
+### 11. V13.8 Moduláris Architektúra (SPA)
  
-A V13.7-es verzióval a rendszer egy modern **Single Page Application (SPA)** modellre váltott. Ez azt jelenti, hogy a Vezérlőpult funkciói nem külön oldalakon nyílnak meg, hanem egyetlen keretrendszeren belül cserélődnek, villámgyors navigációt biztosítva.
+A V13.8-as verzióval a rendszer egy modern **Single Page Application (SPA)** modellre váltott. Ez azt jelenti, hogy a Vezérlőpult funkciói nem külön oldalakon nyílnak meg, hanem egyetlen keretrendszeren belül cserélődnek, villámgyors navigációt biztosítva.
  
 ### 11.1 Központi Vezérlő rács (Main Menu)
 A Főoldal egy ergonomikus, 8-as rácsból álló indítópult, ahonnan minden fontos funkció elérhető:
@@ -147,8 +147,8 @@ A **Visszamozgató** modul egy komplex karbantartó központtá vált:
 ### 11.3 Egységes Navigáció
 Minden modul és külső oldal (Slideshow Setup, Szortírozó) tartalmazza a **Házikó ikon + "Főoldal"** feliratú gombot, amely minden esetben a központi vezérlő rácshoz viszi vissza a felhasználót.
 
-### 12. Központi Osztályozás (V13.7)
-A V13.7-es verzió a legnagyobb mérföldkő az adatbiztonság és a konzisztencia terén. Eddig a fotókhoz rendelt kategóriák (pl. 'Utazás') csak a tableten lévő helyi SQLite adatbázisban léteztek. Ez a verzió ezt globálissá teszi:
+### 12. Központi Osztályozás (V13.8)
+A V13.8-as verzió a legnagyobb mérföldkő az adatbiztonság és a konzisztencia terén. Eddig a fotókhoz rendelt kategóriák (pl. 'Utazás') csak a tableten lévő helyi SQLite adatbázisban léteztek. Ez a verzió ezt globálissá teszi:
 1. **Felhő-szintű Metaadatok (B2 File Info)**: A szortírozó által beállított kategória mostantól közvetlenül a felhőbeli fájlra tapad metaadat formájában (`X-Bz-Info-category`). Ezt minden mozgatás és szortírozás folyamatosan rögzíti, illetve üres értékkel radírozza, ha a képet visszamozgatjuk.
 2. **Központi Slideshow Megjelenítés**: A Receiver (Vetítési felület) a kép neve mellett kiírhatja a besorolt kategóriát, a saját ikonjával és egyedi színével (ki- és bekapcsolható beállítás).
 3. **Mindenhonnan Szinkronizálható (Worker Sync)**: Ha egy új gépen indítod el a rendszert, a háttérben futó worker (a 'B2 Index Frissítése' funkción keresztül) automatikusan kiolvassa a fájlok metaadataiból az összes kategóriát. Tehát a sok órás szortírozási munkád ezentúl sérthetetlen és eszközfüggetlen.

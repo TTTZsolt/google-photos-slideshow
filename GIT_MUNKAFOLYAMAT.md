@@ -23,7 +23,7 @@ Végezd el a módosításokat a kódban, majd mentsd el őket:
 git add .
 
 # 4. Készíts egy commit-ot leírással
-git commit -m "V13.7: Dashboard UI javítása és gombok igazítása"
+git commit -m "V13.8: Több felhasználós működés javítása"
 ```
 
 ## 3. Összefűzés a fő ággal (Merge)
@@ -47,7 +47,7 @@ Végül rögzítsd az új verziót és töltsd fel a GitHub-ra:
 
 ```bash
 # 8. Hozz létre egy új verzió címkét
-git tag -a v13.7 -m "Verzió 13.7: Stabil UI javítások"
+git tag -a v13.8 -m "Verzió 13.8: Több felhasználós működés javítása"
 
 # 9. Töltsd fel a kódod és a címkéket a GitHub-ra
 git push origin main --tags

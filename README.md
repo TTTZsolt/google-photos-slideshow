@@ -1,4 +1,4 @@
-# Lumina Képtár (V13.7)
+# Lumina Képtár (V13.8)
 
 **Cél**: Fényképek szortírozása nyomógombokkal
 
@@ -50,6 +50,7 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
+- **V13.8**: Fejlesztési ág a több felhasználós és lokális működés optimalizálásához.
 - **V13.7**: Stabil verzió, layout egységesítése és Lumina branding véglegesítése.
 - **V13.5**: Központi osztályozás B2 metaadatokkal, Modular SPA Dashboard.
 - **V13.4**: Modular SPA Dashboard alapverzió.

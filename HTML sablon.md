@@ -1,4 +1,4 @@
-# Képnézegető HTML Modul Sablon (V13.7 — Végleges)
+# Képnézegető HTML Modul Sablon (V13.8 — Végleges)
 
 Ez a dokumentum a **System Activity** modul véglegesített, pixel-pontos struktúráját írja le, amely az összes többi modul (`laborModule`, `connectionModule`, `categoriesModule`, `musicModule`, `moverModule`) átalakításának alapjául szolgál.
 
@@ -151,7 +151,7 @@ A kártya első eleme mindig egy belső fejléc szekció, elválasztó vonallal.
         <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
             <i data-lucide="activity" class="text-indigo-500 w-6 h-6"></i>
             System Activity
-            <span class="text-[10px] text-indigo-400 font-black ml-1">V13.7</span>
+            <span class="text-[10px] text-indigo-400 font-black ml-1">V13.8</span>
         </h1>
         <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 ml-8">
             Rendszer állapot és kapcsolatok
@@ -202,4 +202,4 @@ Amikor egy meglévő modult (`laborModule`, stb.) átalakítasz erre a sablonra,
 - [ ] A kártyán belül a tartalom egy `relative z-10` wrapperbe kerül
 - [ ] A kártyán belüli fejléc `border-b border-indigo-50 mb-8` elválasztóval rendelkezik
 - [ ] Nincsenek vízjelek, háttér-ikonok a kártyán belül
-- [ ] A verziószám a kártya belső fejlécében van feltüntetve (pl. `V13.7`)
+- [ ] A verziószám a kártya belső fejlécében van feltüntetve (pl. `V13.8`)
