@@ -10,41 +10,59 @@ A stílus alapja a **TailwindCSS**, kiegészítve egyedi üveg-effektusokkal és
 - **Background:** `bg-[#020617]` (Mélyfekete/Sötétkék)
 - **Primary Accent:** `from-indigo-600 to-purple-600` (Gradiens)
 - **Secondary Accent:** `text-indigo-400`
-- **Text:** `text-slate-200` (Főszöveg), `text-slate-400` (Másodlagos)
-
-### Effektusok
-- **Glassmorphism:**
-  ```css
-  .glass-panel {
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  ```
+- **Text:** `text-slate-200` (Főszöveg), `text-slate-400` (Másodlagos / Ikonok)
 
 ---
 
-## 2. Standard Fejléc Felépítés (Header)
+## 2. Elrendezés (Layout & Width)
 
-A fejlécnek minden oldalon követnie kell a megcserélt elrendezést: **Márkanév balra, Navigáció jobbra.**
+Minden oldalszélességet a Slideshow Setup oldalhoz kell igazítani:
+- **Fő konténer:** `max-w-2xl mx-auto`
+- **Tartalom:** `w-full px-6`
+
+---
+
+## 3. Standard Fejléc Felépítés (Header)
+
+A fejlécnek minden oldalon **fix pozícióban**, ugyanazzal a magassággal és margóval kell megjelennie.
 
 ```html
 <header class="fixed top-0 left-0 w-full z-[100] px-6 py-4 flex items-center justify-between pointer-events-none">
-    <!-- Márkanév (Bal oldal) -->
-    <div class="flex flex-col items-start pointer-events-auto">
+    <!-- Márkanév (Bal oldal) - Mindig aktív -->
+    <div class="pointer-events-auto">
         <span class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 tracking-tighter select-none leading-none">
             Lumina
         </span>
     </div>
 
-    <!-- Főoldal / Navigáció (Jobb oldal) -->
+    <!-- Navigáció (Jobb oldal) -->
     <div class="flex items-center gap-3 pointer-events-auto">
-        <a href="/" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center">
+        <a href="/" class="p-2 rounded-xl text-slate-400 hover:text-white transition-all flex items-center justify-center">
             <i data-lucide="home" class="w-6 h-6 mt-2"></i>
         </a>
     </div>
 </header>
+
+<!-- Tartalmi távolság a fix fejléctől -->
+<div class="mt-24"></div>
+```
+
+---
+
+## 4. Oldal Címe (Page Title)
+
+Az oldal neve (pl. Szortírozó) ne a Lumina alá kerüljön, hanem a fő tartalmi területen jelenjen meg címként, Lucide ikonnal kiegészítve.
+
+```html
+<div class="w-full flex flex-col items-start mb-6">
+    <h1 class="text-2xl font-bold text-slate-200 flex items-center gap-3">
+        <i data-lucide="layout-template" class="text-indigo-500 w-7 h-7"></i>
+        Oldal Neve <span class="text-[10px] text-indigo-400 font-black ml-1">V14.0</span>
+    </h1>
+    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 ml-10">
+        Rövid leírás vagy állapotjelző
+    </p>
+</div>
 ```
 
 ---
