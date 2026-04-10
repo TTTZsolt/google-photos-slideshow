@@ -26,29 +26,34 @@ Minden oldalszélességet és margót a Slideshow Setup oldalhoz kell igazítani
 
 ## 3. Standard Fejléc Felépítés (Header)
 
-A fejlécnek minden oldalon **fix pozícióban**, ugyanazzal a magassággal és margóval kell megjelennie.
+A fejlécnek minden oldalon **fix pozícióban**, ugyanazzal az igazítással kell megjelennie, mint a Slideshow Setup oldalon. A Lumina felirat és a Ház ikon az oldal központi szélességéhez (`max-w-2xl`) igazodik.
 
 ```html
-<header class="fixed top-0 left-0 w-full z-[100] px-6 py-4 flex items-center justify-between pointer-events-none">
-    <!-- Márkanév (Bal oldal) -->
-    <div class="pointer-events-auto">
+<header class="fixed top-0 left-0 w-full z-[100] pointer-events-none">
+    <div class="max-w-2xl mx-6 sm:mx-auto py-4 flex items-center justify-between pointer-events-auto">
+        <!-- Márkanév (Bal oldal) -->
         <span class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-500 tracking-tighter select-none leading-none">
             Lumina
         </span>
-    </div>
 
-    <!-- Navigáció (Jobb oldal) -->
-    <div class="flex items-center gap-3 pointer-events-auto">
-        <a href="/" class="p-2 rounded-xl text-slate-400 hover:text-white transition-all flex items-center justify-center">
-            <i data-lucide="home" class="w-6 h-6 mt-2"></i>
-        </a>
+        <!-- Navigáció (Jobb oldal) -->
+        <div class="flex items-center gap-3">
+            <a href="/" class="p-2 rounded-xl text-slate-400 hover:text-white transition-all flex items-center justify-center">
+                <i data-lucide="home" class="w-6 h-6 mt-2"></i>
+            </a>
+        </div>
     </div>
 </header>
 ```
 
 ---
 
-## 4. Oldal Címe és Panel (Title & Panel)
+## 4. Görgetés és Magasság (Scrolling)
+
+Az oldalnak görgethetőnek kell lennie, ha a tartalom nem fér el egy képernyőn.
+
+- **Body:** Ne használj `overflow-hidden` szabályt a body-n!
+- **Min-height:** Használj `min-h-screen` értéket a fő konténeren.
 
 Az oldal tartalma egy középre igazított panelben legyen, amelynek margói és belső távolságai megegyeznek a Setup oldallal.
 
