@@ -1,4 +1,4 @@
-# Lumina Képtár - Rendszer Dokumentáció (V13.8)
+# Lumina Képtár - Rendszer Dokumentáció (V14.0)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -122,6 +122,9 @@ A V12.0-ás verzióban a Slideshow Receiver felülete interaktívabbá vált, ho
 1. **Azonnali Képváltás (Next Button)**: A képernyő jobb alsó sarkában található "Következő" gombbal bármikor azonnal továbbléphetsz a következő fotóra. A gomb megnyomása automatikusan újraindítja a várakozási időzítőt is, elkerülve a dupla váltást.
 2. **Optimalizált Elrendezés**: A vezérlőikonok (Kilépés, Cast, Zászló, Következő) logikus csoportokba kerültek.
 3. **Cloudflare Proxy V2**: A rendszer újrakonfigurált Cloudflare Worker támogatást kapott, amely stabilabban kezeli a B2 letöltési tokeneket és biztosítja a gyors, adatforgalmi díjmentes képbetöltést minden eszközön.
+
+### 10. V14.0 Layout szépítés
+A V14.0 folyamatban lévő fejlesztéseinek célja a felhasználói felület finomítása, modernebb megjelenés és jobb ergonómia.
 
 ### 11. V13.8 Több felhasználós működés javítása
  
