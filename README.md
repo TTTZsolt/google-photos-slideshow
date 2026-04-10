@@ -56,7 +56,7 @@ This project is a high-performance, web-based random photo slideshow that pulls 
 - **V13.0**: Moduláris Dashboard architektúra (SPA), aszinkron adathozzáférés és navigáció.
 - **V12.0**: Interaktív Receiver vezérlés (Következő gomb), Cloudflare Proxy V2 integráció.
 - **V11.0**: Dinamikus Kategória Kezelő (egyedi ikonok, színek és nevek).
-- **V10.0**: Fotó Szortírozó (Classifier) & Lomtár (Trash) véglegesítés, élő számláló a Dashboard-on.
+- **V10.0**: Fotó Szortírozó (Classifier) gombokkal.
 - **V9.0**: Szortírozó: swipe stílusú.
 - **V8.3**: Stabil alapverzió (Fő verzió). Catt timeout kezelés és hálózati stabilitás.
 - **V8.2**: Screen Wake Lock implementáció (kijelző elsötétedés elleni védelem).

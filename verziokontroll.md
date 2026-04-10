@@ -10,7 +10,7 @@ Ez a dokumentum tartalmazza a projekt összes fontos mérföldkövét és stabil
 | **V13.0** | Moduláris Dashboard architektúra (SPA), aszinkron adathozzáférés és navigáció. | Stabil |
 | **V12.0** | Interaktív Receiver vezérlés (Következő gomb), Cloudflare Proxy V2 integráció. | Stabil |
 | **V11.0** | Dinamikus Kategória Kezelő (egyedi ikonok, színek és nevek). | Stabil |
-| **V10.0** | Fotó Szortírozó (Classifier) & Lomtár (Trash) véglegesítése, élő számlálókkal. | Stabil |
+| **V10.0** | Fotó Szortírozó (Classifier) gombokkal | Stabil |
 | **V9.0** | Szortírozó: swipe stílusú | Stabil |
 | **V8.3** | **Stabil alapverzió (Fő verzió)**. Catt timeout kezelés és megerősített hálózati stabilitás. | **Stabil** |
 | **V8.2** | Screen Wake Lock implementáció (kijelző elsötétedés elleni védelem). | Stabil |
