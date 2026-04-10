@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Lumina - Receiver V13.8</title>
+    <title>Lumina - Receiver V14.0</title>
 
     <!-- Design & Styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -394,11 +394,10 @@
                 </div>
 
                 <!-- Főoldal Button (Right) -->
-                <button onclick="window.location.href='/'" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
+                <button onclick="window.location.href='/'" class="flex items-center group transition-all hover:scale-105 active:scale-95 no-underline mt-2">
                     <div class="w-14 h-14 rounded-2xl bg-transparent text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-transparent group-hover:border-indigo-600/50">
                         <i data-lucide="home" class="w-7 h-7"></i>
                     </div>
-                    <span class="text-[11px] font-black text-indigo-400 group-hover:text-indigo-600 uppercase tracking-widest transition-colors">Főoldal</span>
                 </button>
             </div>
 
@@ -411,16 +410,16 @@
                     <div class="relative z-10 w-full flex flex-col items-start px-2">
                         <h2 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                             <i data-lucide="folders" class="text-indigo-500 w-6 h-6"></i>
-                            Slideshow Setup <span class="text-[10px] text-indigo-400 font-black ml-1">V13.8</span>
+                            Slideshow Setup <span class="text-[10px] text-indigo-400 font-black ml-1">V14.0</span>
                         </h2>
                         <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 ml-8">Select a folder to begin</p>
                     </div>
 
                     <!-- Shuffle Button BELOW title, centered -->
                     <button onclick="startSlideshow(null)"
-                        class="relative z-10 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg shrink-0 group h-12 w-3/4">
+                        class="relative z-10 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg shrink-0 group h-12 w-3/4 whitespace-nowrap">
                         <i data-lucide="shuffle" class="w-4 h-4 group-hover:rotate-180 transition-transform duration-500"></i>
-                        Shuffle All Photos
+                        Shuffle Photos
                     </button>
                 </div>
 

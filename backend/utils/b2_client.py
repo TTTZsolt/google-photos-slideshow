@@ -72,7 +72,7 @@ class B2Client:
     def get_download_url(self, bucket_name: str, file_name: str, cloudflare_proxy_url: str = None, valid_duration_seconds: int = 7200, use_proxy: bool = True):
         import urllib.parse
         
-        # V13.8 Optimization: Use bucket-wide token instead of per-file token
+        # V14.0 Optimization: Use bucket-wide token instead of per-file token
         download_auth_token = self.get_bucket_token(bucket_name, valid_duration_seconds)
         
         # Construct the download URL
