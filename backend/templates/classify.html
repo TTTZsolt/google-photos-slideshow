@@ -366,6 +366,7 @@
             if (!current) return;
             
             isAnimating = true;
+            resetZoom(); // Reset zoom state when moving to next card
 
             // Haptic feedback
             if (window.navigator && window.navigator.vibrate) {
@@ -463,6 +464,82 @@
             
             lucide.createIcons();
         }
+
+        // --- PERSISTENT PINCH TO ZOOM & PAN IMPLEMENTATION ---
+        let zoomState = {
+            scale: 1,
+            translateX: 0,
+            translateY: 0,
+            initialDist: 0,
+            initialScale: 1,
+            startX: 0,
+            startY: 0,
+            initialTranslateX: 0,
+            initialTranslateY: 0,
+            isZooming: false,
+            isPanning: false
+        };
+
+        function resetZoom() {
+            zoomState.scale = 1;
+            zoomState.translateX = 0;
+            zoomState.translateY = 0;
+            const currentImg = deck.querySelector('.card.current .card-image');
+            if (currentImg) {
+                currentImg.style.transition = 'transform 0.3s ease';
+                currentImg.style.transform = 'translate(0px, 0px) scale(1)';
+                setTimeout(() => { currentImg.style.transition = ''; }, 300);
+            }
+        }
+
+        deck.addEventListener('touchstart', e => {
+            if (e.touches.length === 2) {
+                zoomState.isZooming = true;
+                zoomState.isPanning = false;
+                zoomState.initialDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                zoomState.initialScale = zoomState.scale;
+            } else if (e.touches.length === 1 && zoomState.scale > 1) {
+                zoomState.isPanning = true;
+                zoomState.startX = e.touches[0].pageX;
+                zoomState.startY = e.touches[0].pageY;
+                zoomState.initialTranslateX = zoomState.translateX;
+                zoomState.initialTranslateY = zoomState.translateY;
+            }
+        }, { passive: false });
+
+        deck.addEventListener('touchmove', e => {
+            const currentImg = deck.querySelector('.card.current .card-image');
+            if (!currentImg) return;
+
+            if (zoomState.isZooming && e.touches.length === 2) {
+                e.preventDefault();
+                const currentDist = Math.hypot(
+                    e.touches[0].pageX - e.touches[1].pageX,
+                    e.touches[0].pageY - e.touches[1].pageY
+                );
+                
+                zoomState.scale = Math.max(1, (currentDist / zoomState.initialDist) * zoomState.initialScale);
+                currentImg.style.transform = `translate(${zoomState.translateX}px, ${zoomState.translateY}px) scale(${zoomState.scale})`;
+                currentImg.style.zIndex = "500";
+            } else if (zoomState.isPanning && e.touches.length === 1) {
+                e.preventDefault();
+                const deltaX = e.touches[0].pageX - zoomState.startX;
+                const deltaY = e.touches[0].pageY - zoomState.startY;
+                
+                zoomState.translateX = zoomState.initialTranslateX + deltaX;
+                zoomState.translateY = zoomState.initialTranslateY + deltaY;
+                
+                currentImg.style.transform = `translate(${zoomState.translateX}px, ${zoomState.translateY}px) scale(${zoomState.scale})`;
+            }
+        }, { passive: false });
+
+        deck.addEventListener('touchend', e => {
+            if (e.touches.length < 2) zoomState.isZooming = false;
+            if (e.touches.length === 0) zoomState.isPanning = false;
+        });
 
         fetchCategories();
         initDeck();
