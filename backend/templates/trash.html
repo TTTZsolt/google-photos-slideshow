@@ -96,6 +96,16 @@
         Üzenet helye
     </div>
 
+    <!-- Fullscreen Preview Overlay -->
+    <div id="fullscreenOverlay" class="fixed inset-0 z-[200] bg-black flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <img id="fullscreenImg" src="" class="max-w-full max-h-full object-contain shadow-2xl">
+        
+        <!-- Exit Button -->
+        <button onclick="closeFullscreen()" class="absolute bottom-8 left-8 w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all shadow-2xl">
+            <i data-lucide="minimize" class="w-8 h-8"></i>
+        </button>
+    </div>
+
     <script>
         let trashItems = [];
 
@@ -175,8 +185,11 @@
                 
                 const previewHtml = item.url 
                     ? `<div class="flex-1 bg-slate-200 relative overflow-hidden">
-                         <img src="${item.url}" class="w-full h-full object-cover" loading="lazy">
-                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors"></div>
+                         <img src="${item.url}" 
+                              class="w-full h-full object-cover cursor-zoom-in" 
+                              loading="lazy"
+                              onclick="openFullscreen('${item.url}')">
+                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"></div>
                        </div>`
                     : `<div class="flex-1 bg-slate-100 flex items-center justify-center text-slate-300 italic text-xs">Nincs előnézet</div>`;
 
@@ -283,6 +296,36 @@
                 toast.classList.remove('opacity-100', 'translate-y-0');
             }, 3000);
         }
+
+        // --- FULLSCREEN PREVIEW ---
+        function openFullscreen(url) {
+            const overlay = document.getElementById('fullscreenOverlay');
+            const img = document.getElementById('fullscreenImg');
+            img.src = url;
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFullscreen() {
+            const overlay = document.getElementById('fullscreenOverlay');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                document.getElementById('fullscreenImg').src = '';
+            }, 300);
+            document.body.style.overflow = '';
+        }
+
+        // Global Esc Key Listener
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeFullscreen();
+                closeModal();
+            }
+        });
 
         // Init
         document.addEventListener('DOMContentLoaded', () => {

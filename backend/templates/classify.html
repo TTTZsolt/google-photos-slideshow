@@ -160,6 +160,71 @@
         }
         .glass-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.15); }
 
+        /* Fullscreen Mode Overrides */
+        body.fullscreen-mode {
+            padding: 0 !important;
+            background: #000 !important;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        body.fullscreen-mode header {
+            display: none !important;
+        }
+
+        body.fullscreen-mode .deck-container {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: none !important;
+            margin: 0 !important;
+            border-radius: 0;
+        }
+
+        body.fullscreen-mode .card {
+            border-radius: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        body.fullscreen-mode #controlsContainer {
+            bottom: 20px !important;
+            z-index: 10000;
+        }
+
+        body.fullscreen-mode #categoryGrid {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            padding: 8px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        body.fullscreen-mode .glass-btn span {
+            display: none !important; /* No text in fullscreen */
+        }
+        
+        body.fullscreen-mode .glass-btn {
+            padding: 6px !important;
+        }
+
+        #exitFullscreenBtn {
+            display: none;
+        }
+
+        body.fullscreen-mode #exitFullscreenBtn {
+            display: flex;
+            position: fixed;
+            bottom: 24px;
+            left: 20px;
+            z-index: 10001;
+        }
+        
+        body.fullscreen-mode .card.next {
+            bottom: 100px !important; /* Move next preview up in fullscreen */
+        }
+
+        /* End of Fullscreen */
+
         /* Undo Warning */
         #undoOverlay {
             position: fixed;
@@ -218,10 +283,15 @@
             <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
 
-        <!-- Right: Refresh -->
-        <button onclick="location.reload()" class="p-2 text-indigo-400 hover:text-indigo-600 transition-all">
-            <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-        </button>
+        <!-- Right Tools: Fullscreen & Refresh -->
+        <div class="flex items-center gap-1">
+            <button onclick="toggleFullscreen(true)" class="p-2 text-slate-400 hover:text-indigo-600 transition-all">
+                <i data-lucide="maximize" class="w-5 h-5"></i>
+            </button>
+            <button onclick="location.reload()" class="p-2 text-slate-400 hover:text-indigo-600 transition-all">
+                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+            </button>
+        </div>
     </header>
 
     <div class="deck-container" id="deck">
@@ -255,6 +325,11 @@
             <span>Törlés</span>
         </button>
     </div>
+
+    <!-- Exit Fullscreen Button -->
+    <button id="exitFullscreenBtn" onclick="toggleFullscreen(false)" class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all shadow-2xl">
+        <i data-lucide="minimize" class="w-6 h-6"></i>
+    </button>
 
     <!-- Controls (Bottom Row) -->
     <div id="controlsContainer" class="fixed bottom-4 left-0 w-full px-4 hidden">
@@ -662,6 +737,23 @@
             if (e.touches.length < 2) zoomState.isZooming = false;
             if (e.touches.length === 0) zoomState.isPanning = false;
         });
+
+        function toggleFullscreen(enable) {
+            if (enable) {
+                document.body.classList.add('fullscreen-mode');
+                // Try to use native API if possible for real immersive feel
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+            } else {
+                document.body.classList.remove('fullscreen-mode');
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                }
+            }
+            // Update icons if needed
+            lucide.createIcons();
+        }
 
         fetchCategories();
         initDeck();
