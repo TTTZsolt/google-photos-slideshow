@@ -28,6 +28,12 @@ This project is a high-performance, web-based random photo slideshow that pulls 
 - Adjustable slideshow interval.
 - Direct link to the Slideshow Receiver.
 
+### 5. Immersive UI & Smart Sorting (V14.0)
+- **Full-Screen Sorting**: Immersive, distraction-free environment for photo classification with floating transparent controls.
+- **Smart Undo (Visszavonás)**: Immediate recovery of the last classification or deletion with a simple click and server-side revert.
+- **Trash Preview**: High-resolution, full-screen inspection of the trash bin before final deletion.
+- **Adaptive UX**: Intelligent notifications that learn from usage to become less intrusive over time.
+
 ## How to use
 
 1.  **Requirement**: Run all commands from the project root directory:
@@ -50,6 +56,7 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
+- **V14.0**: Full screen Szortírozó + undo megvalósítása.
 - **V13.8**: Több felhasználós működés javítása.
 - **V13.7**: Stabil verzió, UI egységesítés előtt, HTML sablonnal.
 - **V13.5**: Felhő-szintű metaadatok (B2 Info category), központi osztályozás szinkronizációja.
