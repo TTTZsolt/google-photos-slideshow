@@ -210,6 +210,49 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/api/classify/undo")
+def undo_classification(req: ClassificationRequest, db: Session = Depends(get_db)):
+    """ Reverts the last classification: moves file back to source and clears category. """
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
+
+    # If action was "delete", it's in trash_bucket. Otherwise in main bucket.
+    current_bucket = b2_account.trash_bucket_name if req.action == "delete" else b2_account.bucket_name
+    
+    if not current_bucket:
+        raise HTTPException(status_code=400, detail="Cél vödör nem található a visszavonáshoz.")
+
+    try:
+        # 1. Start background move back to source
+        threading.Thread(target=b2_move_background_task, args=(
+            b2_account.key_id, 
+            b2_account.application_key, 
+            current_bucket, 
+            b2_account.source_bucket_name, 
+            req.file_name,
+            {} # strip metadata
+        )).start()
+
+        # 2. Revert DB classification
+        classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
+        if classification:
+            classification.category = None
+            classification.is_deleted = False
+
+        # 3. Revert MediaItem bucket
+        db.query(MediaItem).filter(
+            MediaItem.file_name == req.file_name, 
+            MediaItem.bucket_name == current_bucket
+        ).update({"bucket_name": b2_account.source_bucket_name})
+
+        db.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        logger.exception(f"Undo error: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/api/classify/sync")
 def trigger_source_sync(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

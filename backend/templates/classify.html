@@ -69,7 +69,7 @@
             opacity: 1;
             box-shadow: 0 8px 25px rgba(0,0,0,0.8);
             border: 3px solid var(--accent-blue);
-            pointer-events: none; /* User interacts with current card */
+            pointer-events: auto; /* Clickable for Undo */
         }
         
         .card.next .card-info { display: none; } /* Hide text for thumbnail */
@@ -159,9 +159,49 @@
             transition: all 0.2s;
         }
         .glass-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.15); }
+
+        /* Undo Warning */
+        #undoOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        #undoOverlay.subtle {
+            background: transparent;
+            backdrop-filter: none;
+            align-items: flex-start;
+            padding-top: 80px;
+            pointer-events: none;
+        }
+
+        #undoOverlay.subtle .warning-content {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            padding: 8px 16px;
+            border-radius: 100px;
+            transform: scale(0.9);
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-start py-2 sm:py-4 bg-[#f8fafc]">
+    
+    <!-- Undo Alert Overlay -->
+    <div id="undoOverlay">
+        <div class="warning-content flex flex-col items-center gap-3 p-8 rounded-3xl text-center max-w-[280px]">
+            <div class="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-2xl flex items-center justify-center mb-1">
+                <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
+            </div>
+            <p class="text-white font-bold text-sm leading-tight">Visszavonás...<br><span class="text-[10px] font-medium text-slate-300">Az előző kép visszakerül a listába.</span></p>
+        </div>
+    </div>
     <!-- Header Wrapper - Single Compact Row -->
     <header class="w-full max-w-2xl px-4 flex items-center justify-between mb-2">
         <!-- Left: Home -->
@@ -172,7 +212,7 @@
         <!-- Center: Status Info -->
         <div class="flex items-center gap-3">
             <h1 class="text-sm font-bold tracking-tight text-slate-800">
-                Szortírozó <span class="text-[9px] text-indigo-400 font-black">V13.9</span>
+                Szortírozó <span class="text-[9px] text-indigo-400 font-black">V14.0</span>
             </h1>
             <div class="h-3 w-[1px] bg-slate-200"></div>
             <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest" id="remainingCount">SCANNING...</p>
@@ -235,9 +275,31 @@
         
         let activeFileNames = new Set();
         let cardQueue = [];
+        let history = null;
         let isAnimating = false;
         let currentRemaining = 0;
         let categories = [];
+
+        function showUndoWarning() {
+            const overlay = document.getElementById('undoOverlay');
+            const count = parseInt(localStorage.getItem('undo_count') || '0');
+            
+            if (count > 3) {
+                overlay.classList.add('subtle');
+            } else {
+                overlay.classList.remove('subtle');
+            }
+            
+            overlay.style.display = 'flex';
+            overlay.style.opacity = '1';
+            
+            localStorage.setItem('undo_count', (count + 1).toString());
+            
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => { overlay.style.display = 'none'; }, 300);
+            }, 1800);
+        }
 
         function updateRemainingUI(val) {
             currentRemaining = Math.max(0, val);
@@ -322,10 +384,20 @@
                         Hiba a betöltéskor
                     </div>
                 </div>
-                <div class="card-info p-3 bg-slate-800/80 backdrop-blur-md border-t border-white/5">
-                    <p class="text-[10px] truncate font-medium text-slate-400">${data.file_name}</p>
+                <div class="card-info p-2 bg-slate-800/80 backdrop-blur-md border-t border-white/5">
+                    <p class="text-[9px] truncate font-medium text-slate-400">${data.file_name}</p>
                 </div>
             `;
+
+            // Make next card clickable for Undo
+            if (isNext) {
+                card.onclick = (e) => {
+                    e.stopPropagation();
+                    undo();
+                };
+                card.style.cursor = 'pointer';
+                card.title = "Az utolsó kép újraosztályozása (undo)";
+            }
 
             const imgChecker = new Image();
             imgChecker.onerror = () => {
@@ -368,6 +440,10 @@
             }
 
             const currentFileName = current.dataset.filename;
+            const currentUrl = current.dataset.url;
+
+            // Save to history for Undo
+            history = { file_name: currentFileName, url: currentUrl, action: action };
 
             // 1. Immediate UI update
             updateRemainingUI(currentRemaining - 1);
@@ -427,6 +503,58 @@
                     replenishQueue();
                 }
             }, 350);
+        }
+
+        async function undo() {
+            if (!history || isAnimating) return;
+            isAnimating = true;
+            
+            showUndoWarning();
+
+            const undoData = { ...history };
+            history = null; // Clear history to prevent double undo
+
+            try {
+                // Call API
+                const res = await fetch('/api/classify/undo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_name: undoData.file_name, action: undoData.action })
+                });
+
+                if (!res.ok) throw new Error("Undo failed on server");
+
+                // UI Logic:
+                // 1. Current card becomes Next card
+                const current = deck.querySelector('.card.current');
+                const next = deck.querySelector('.card.next');
+                
+                if (next) next.remove(); // Remove the "preview" next
+                
+                if (current) {
+                    current.classList.replace('current', 'next');
+                    current.style.pointerEvents = 'auto'; // Enable interaction for next card
+                    current.title = "Az utolsó kép újraosztályozása (undo)";
+                    // Re-bind click for future undo
+                    current.onclick = (e) => { e.stopPropagation(); undo(); };
+                }
+
+                // 2. Add history item back as Current
+                const prevCard = createCardElement(undoData, false);
+                deck.insertBefore(prevCard, deck.firstChild);
+                
+                // 3. Update count
+                updateRemainingUI(currentRemaining + 1);
+                
+                // 4. Update file tracking
+                activeFileNames.add(undoData.file_name);
+
+            } catch (e) {
+                console.error("Undo error:", e);
+                history = undoData; // Restore history if failed
+            } finally {
+                isAnimating = false;
+            }
         }
 
         function showEmpty(msg) {
