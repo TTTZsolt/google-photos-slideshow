@@ -28,10 +28,10 @@
 
         .deck-container {
             position: relative;
-            width: 90vw;
-            height: 60vh;
-            max-width: 450px;
-            margin-top: 10px;
+            width: 95vw;
+            height: 72vh;
+            max-width: 500px;
+            margin-top: 5px;
         }
 
         .card {
@@ -161,34 +161,28 @@
         .glass-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.15); }
     </style>
 </head>
-<body class="flex flex-col items-center justify-start py-4 sm:py-6">
+<body class="flex flex-col items-center justify-start py-2 sm:py-4 bg-[#f8fafc]">
+    <!-- Header Wrapper - Single Compact Row -->
+    <header class="w-full max-w-2xl px-4 flex items-center justify-between mb-2">
+        <!-- Left: Home -->
+        <a href="/" class="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all">
+            <i data-lucide="home" class="w-5 h-5"></i>
+        </a>
 
-    <!-- Header Wrapper for Proportional Főoldal spacing -->
-    <div class="w-full max-w-2xl px-6 flex flex-col items-start min-h-[25vh] sm:min-h-[30vh]">
-        
-        <!-- Főoldal Button Area (Proportional) -->
-        <div class="flex-grow flex flex-col items-start justify-center w-full">
-            <a href="/" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50 backdrop-blur-md">
-                    <i data-lucide="home" class="w-6 h-6 sm:w-7 sm:h-7"></i>
-                </div>
-                <span class="text-[10px] sm:text-[11px] font-black text-indigo-400 group-hover:text-indigo-600 uppercase tracking-widest transition-colors">Főoldal</span>
-            </a>
+        <!-- Center: Status Info -->
+        <div class="flex items-center gap-3">
+            <h1 class="text-sm font-bold tracking-tight text-slate-800">
+                Szortírozó <span class="text-[9px] text-indigo-400 font-black">V13.9</span>
+            </h1>
+            <div class="h-3 w-[1px] bg-slate-200"></div>
+            <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest" id="remainingCount">SCANNING...</p>
         </div>
 
-        <!-- Title & Info Row -->
-        <div class="w-full flex justify-between items-end pb-2">
-            <div class="flex flex-col items-start">
-                <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 flex items-baseline gap-2">
-                    Szortírozó <span class="text-[10px] text-indigo-400 font-black">V13.8</span>
-                </h1>
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest" id="remainingCount">SCANNING...</p>
-            </div>
-            <button onclick="location.reload()" class="p-3 bg-white/80 hover:bg-white text-indigo-500 rounded-2xl shadow-sm border border-slate-100 transition-all active:scale-90">
-                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-            </button>
-        </div>
-    </div>
+        <!-- Right: Refresh -->
+        <button onclick="location.reload()" class="p-2 text-indigo-400 hover:text-indigo-600 transition-all">
+            <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+        </button>
+    </header>
 
     <div class="deck-container" id="deck">
         <!-- Cards injected by JS -->
@@ -222,9 +216,9 @@
         </button>
     </div>
 
-    <!-- Controls (Dynamic Grid) -->
-    <div id="controlsContainer" class="w-full px-4 mt-6 pb-20 overflow-y-auto hidden" style="max-height: 40vh;">
-        <div id="categoryGrid" class="grid grid-cols-2 gap-3">
+    <!-- Controls (Bottom Row) -->
+    <div id="controlsContainer" class="fixed bottom-4 left-0 w-full px-4 hidden">
+        <div id="categoryGrid" class="grid grid-cols-4 gap-2 max-w-md mx-auto">
              <!-- Dynamic category buttons go here -->
         </div>
     </div>
