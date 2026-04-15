@@ -2,6 +2,11 @@
 
 Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szakaszait.
 
+## [V14.1] - Szinkronizációs Hőmérő (2026-04-15)
+- **Progress Tracking**: Vizualizált szinkronizációs haladás (hőmérő) a Connect oldalon.
+- **Pontos számláló**: Valós idejű "X/Y items" kijelzés a B2 Node-oknál.
+- **Adatbázis robusztusság**: Továbbfejlesztett migrációs adatszerkezet.
+
 ## [V14.0] - Immerzív Szortírozó és Undo Rendszer (2026-04-12)
 - **Full Screen Szortírozó**: Teljes kijelzős nézet a fotók átnézéséhez, helytakarékos áttetsző ikonokkal.
 - **Smart Undo (Visszavonás)**: Az utolsó művelet (osztályozás/törlés) azonnali javítása a kis előnézeti képre kattintva.
