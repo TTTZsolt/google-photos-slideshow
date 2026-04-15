@@ -2,6 +2,12 @@
 
 Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szakaszait.
 
+## [V14.2] - Robusztus Szinkronizáció és Kategória Javítás (2026-04-15)
+- **B2 Sync Progress Tracker**: Vizuális "hőmérő" a szinkronizáció előrehaladásának követéséhez (X/Y fájl).
+- **Hibatűrő Kategóriák**: Ékezet-érzéketlen keresés a vetítő motorban (pl. Siklóernyő vs sikloernyo).
+- **Automatikus Adatbázis Tisztítás**: A migrációs script most már javítja a véletlen szóközökből/kötőjelekből eredő kategória-elcsúszásokat.
+- **Debug API**: Új `/api/debug/categories` végpont a kategóriák ellenőrzéséhez.
+
 ## [V14.1] - Szinkronizációs Hőmérő (2026-04-15)
 - **Progress Tracking**: Vizualizált szinkronizációs haladás (hőmérő) a Connect oldalon.
 - **Pontos számláló**: Valós idejű "X/Y items" kijelzés a B2 Node-oknál.
