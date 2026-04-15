@@ -120,6 +120,20 @@ class SlideshowController:
                     query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
                 
                 all_items = [row[0] for row in query.all()]
+                
+                # V14.1 fallback: Try without accents if empty
+                if not all_items:
+                    alt_category = category.lower().replace('ó', 'o').replace('ő', 'o').replace('ö', 'o').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ú', 'u').replace('ü', 'u')
+                    if alt_category != category:
+                        logger.info(f"Retrying category query with fallback: {alt_category}")
+                        query = db.query(MediaClassification.file_name).filter(
+                            MediaClassification.category == alt_category,
+                            MediaClassification.is_deleted == False
+                        )
+                        if folder_prefix:
+                            query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
+                        all_items = [row[0] for row in query.all()]
+
                 logger.info(f"Building category deck for '{category}'. Found {len(all_items)} items in DB.")
             else:
                 # Standard shuffle

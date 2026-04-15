@@ -28,7 +28,8 @@ try:
         # Ensure default values for existing rows
         if col == "sync_total":
             cursor.execute("UPDATE b2_accounts SET sync_total = 0 WHERE sync_total IS NULL;")
-            print("Verified default 0 for sync_total.")
+            cursor.execute("UPDATE b2_accounts SET sync_count = 0 WHERE sync_count IS NULL;")
+            print("Verified default 0 for sync_total and sync_count.")
 
     # 2. MediaItem additions
     try:

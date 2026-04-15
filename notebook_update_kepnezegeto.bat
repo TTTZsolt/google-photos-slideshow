@@ -11,6 +11,8 @@ echo Aktualis ag: %BRANCH%
 :: Frissítés a jelenlegi branch-en
 git fetch origin
 git pull origin %BRANCH%
+echo Adatbazis migratio...
+python migrate_db.py
 
 echo.
 echo A frissites befejezodott.

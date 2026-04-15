@@ -444,7 +444,7 @@
                                 </div>
                                 <div class="sync-progress-container w-full bg-slate-100/50 rounded-full h-1.5 mt-2.5 overflow-hidden border border-slate-200/30 {% if b2_account.sync_status != 'Syncing' %}hidden{% endif %}">
                                     <div class="sync-progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-1000" 
-                                         style="width: {% if b2_account.sync_total and b2_account.sync_total > 0 %}{{ (b2_account.sync_count / b2_account.sync_total * 100)|round }}{% else %}0{% endif %}%"></div>
+                                         style="width: {% if b2_account.sync_total and b2_account.sync_total > 0 %}{{ ((b2_account.sync_count|default(0)) / b2_account.sync_total * 100)|round }}{% else %}0{% endif %}%"></div>
                                 </div>
                             </div>
                             <div class="flex gap-2 transition-opacity">
