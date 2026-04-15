@@ -53,6 +53,14 @@ try:
         print(f"Error creating media_classifications: {e}")
 
     conn.commit()
+    try:
+        cursor.execute("UPDATE category_definitions SET name = 'sikloernyo', display_name = 'Siklóernyő' WHERE name = 'sikloernyo-';")
+        cursor.execute("UPDATE media_classifications SET category = 'sikloernyo' WHERE category = 'sikloernyo-';")
+        conn.commit()
+        print("Cleanup: Unified paragliding category names.")
+    except Exception as e:
+        print(f"Cleanup error: {e}")
+
     conn.close()
     print("Migration successful.")
 except Exception as e:
