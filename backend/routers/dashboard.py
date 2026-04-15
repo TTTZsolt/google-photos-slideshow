@@ -454,3 +454,25 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"DEBUG Photopea Save Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+@router.get("/api/debug/categories")
+def debug_categories(db: Session = Depends(get_db)):
+    """Returns detailed info about categories in the database for debugging."""
+    from sqlalchemy import func
+    
+    # 1. Check definitions
+    defs = db.query(CategoryDefinition).all()
+    definitions = [{"id": c.id, "name": c.name, "display_name": c.display_name} for c in defs]
+    
+    # 2. Check classifications
+    counts = db.query(MediaClassification.category, func.count(MediaClassification.file_name)).group_by(MediaClassification.category).all()
+    class_counts = [{"category": row[0], "count": row[1]} for row in counts]
+    
+    # 3. Check for 'sikloernyo' specifically
+    sikl_items = db.query(MediaClassification).filter(MediaClassification.category.like('%sikl%')).all()
+    sikl_details = [{"file": s.file_name, "cat": s.category, "deleted": s.is_deleted} for s in sikl_items]
+    
+    return {
+        "definitions": definitions,
+        "class_counts": class_counts,
+        "sikl_details": sikl_details
+    }
