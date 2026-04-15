@@ -39,9 +39,25 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
 
         client = B2Client(b2_account.key_id, b2_account.application_key)
         
-        total_count = 0
+        # V14.1 Improvement: Pre-calculate total files for progress bar
+        logger.info(f"Pre-calculating total file count for account {b2_account_id}...")
+        total_expected = 0
+        all_bucket_files = {} # bucket_name -> [file_versions]
+        
         for bucket_name in buckets_to_sync:
-            logger.info(f"Syncing bucket: {bucket_name}")
+            logger.info(f"Listing files in {bucket_name} for count...")
+            files = list(client.list_files(bucket_name))
+            all_bucket_files[bucket_name] = files
+            total_expected += len(files)
+        
+        b2_account.sync_total = total_expected
+        b2_account.sync_count = 0
+        db.commit()
+        logger.info(f"Total files to process: {total_expected}")
+
+        total_count = 0
+        for bucket_name, file_versions in all_bucket_files.items():
+            logger.info(f"Syncing bucket: {bucket_name} ({len(file_versions)} files)")
             is_trash_bucket = (bucket_name == b2_account.trash_bucket_name)
             
             # Clear existing items for THIS bucket only
@@ -49,7 +65,7 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
             db.commit()
 
             count = 0
-            for file_version in client.list_files(bucket_name):
+            for file_version in file_versions:
                 # Filter for images
                 mime = file_version.content_type
                 file_name = file_version.file_name
@@ -58,6 +74,10 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                 ext = file_name.lower().split('.')[-1]
                 if mime and not mime.startswith('image/'):
                     if ext not in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+                        # Even if skipped, we should count it as "processed" to keep percentage correct?
+                        # Or better: total_expected should only include images.
+                        # Let's subtract from total if skipped.
+                        total_expected -= 1
                         continue
                 
                 media_item = MediaItem(
@@ -88,29 +108,28 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                     if category:
                         class_item.category = category
                     
-                    # If it's in the trash bucket, it's definitely deleted. 
-                    # If it's in source/active, we mark it as NOT deleted (it might have been restored elsewhere)
                     class_item.is_deleted = is_trash_bucket
-                    
-                    # If it was in trash but we found it in active/source, clear the 'deleted' flag
                     if not is_trash_bucket:
-                        # Optionally: if it has no category meta but was marked deleted, we leave it unclassified
                         pass
 
                 count += 1
                 total_count += 1
-                if total_count % 100 == 0:
+                
+                # Progress update every 100 items or at the end
+                if total_count % 100 == 0 or total_count == b2_account.sync_total:
                     db.commit()
-                    # Update account progress
+                    # Refresh object to update sync_count
                     b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
                     b2_account.sync_count = total_count
+                    b2_account.sync_total = total_expected # Update in case it changed due to filter
                     db.commit()
-                    logger.info(f"Indexed {total_count} files so far...")
+                    logger.info(f"Indexed {total_count}/{total_expected} files...")
             
         b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
         b2_account.last_synced_at = func.now()
         b2_account.sync_status = "Finished"
         b2_account.sync_count = total_count
+        b2_account.sync_total = total_expected
         db.commit()
         logger.info(f"Finished sync for account {b2_account_id}. Total items: {total_count}")
 

@@ -439,8 +439,12 @@
                                         {{ b2_account.sync_status }}
                                     </span>
                                     <span class="count-text text-[10px] font-bold text-slate-400">
-                                        {{ b2_account.sync_count }} items
+                                        {{ b2_account.sync_count }}{% if b2_account.sync_total and b2_account.sync_total > 0 %}/{{ b2_account.sync_total }}{% endif %} items
                                     </span>
+                                </div>
+                                <div class="sync-progress-container w-full bg-slate-100/50 rounded-full h-1.5 mt-2.5 overflow-hidden border border-slate-200/30 {% if b2_account.sync_status != 'Syncing' %}hidden{% endif %}">
+                                    <div class="sync-progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-1000" 
+                                         style="width: {% if b2_account.sync_total and b2_account.sync_total > 0 %}{{ (b2_account.sync_count / b2_account.sync_total * 100)|round }}{% else %}0{% endif %}%"></div>
                                 </div>
                             </div>
                             <div class="flex gap-2 transition-opacity">
@@ -871,9 +875,24 @@
 
                     if (countTextEl) {
                         if (acc.sync_status === 'Syncing' || acc.sync_status === 'Finished') {
-                            countTextEl.textContent = `${acc.sync_count} items`;
+                            let text = `${acc.sync_count}`;
+                            if (acc.sync_total > 0) text += `/${acc.sync_total}`;
+                            countTextEl.textContent = `${text} items`;
                         } else {
                             countTextEl.textContent = '';
+                        }
+                    }
+
+                    const progressContainer = document.querySelector(`#acc-${acc.id} .sync-progress-container`);
+                    const progressBar = document.querySelector(`#acc-${acc.id} .sync-progress-bar`);
+                    
+                    if (progressContainer && progressBar) {
+                        if (acc.sync_status === 'Syncing' && acc.sync_total > 0) {
+                            progressContainer.classList.remove('hidden');
+                            const percent = Math.round((acc.sync_count / acc.sync_total) * 100);
+                            progressBar.style.width = `${percent}%`;
+                        } else if (acc.sync_status !== 'Syncing') {
+                            progressContainer.classList.add('hidden');
                         }
                     }
 
@@ -990,8 +1009,12 @@
                                     ${acc.sync_status}
                                 </span>
                                 <span class="count-text text-[10px] font-bold text-slate-400">
-                                    ${acc.sync_count} items
+                                    ${acc.sync_count}${acc.sync_total > 0 ? '/' + acc.sync_total : ''} items
                                 </span>
+                            </div>
+                            <div class="sync-progress-container w-full bg-slate-100/50 rounded-full h-1.5 mt-2.5 overflow-hidden border border-slate-200/30 ${acc.sync_status !== 'Syncing' ? 'hidden' : ''}">
+                                <div class="sync-progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-1000" 
+                                     style="width: ${acc.sync_total > 0 ? Math.round(acc.sync_count / acc.sync_total * 100) : 0}%"></div>
                             </div>
                         </div>
                         <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
