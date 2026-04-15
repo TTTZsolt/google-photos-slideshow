@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
-from ..models import B2Account, MediaItem, FlaggedImage
+from ..models import B2Account, MediaItem, FlaggedImage, CategoryDefinition, MediaClassification
 from pydantic import BaseModel
 
 router = APIRouter()
