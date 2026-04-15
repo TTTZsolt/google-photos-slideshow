@@ -8,7 +8,7 @@ from . import models  # Ensure all models are loaded for create_all
 import sqlite3
 import os
 
-app = FastAPI(title="Lumina - Control Center V14.0")
+app = FastAPI(title="Lumina - Control Center V14.2")
 
 # CORS
 app.add_middleware(
@@ -102,7 +102,7 @@ templates = Jinja2Templates(directory="backend/templates")
 
 @app.get("/")
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "version": "14.0"})
+    return templates.TemplateResponse("index.html", {"request": request, "version": "14.2"})
 
 if __name__ == "__main__":
     import uvicorn
