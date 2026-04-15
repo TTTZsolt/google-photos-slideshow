@@ -1,4 +1,4 @@
-# Lumina Képtár - Rendszer Dokumentáció (V13.8)
+# Lumina Képtár - Rendszer Dokumentáció (V14.0)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -154,6 +154,14 @@ A V13.8-as verzió a legnagyobb mérföldkő az adatbiztonság és a konzisztenc
 3. **Mindenhonnan Szinkronizálható (Worker Sync)**: Ha egy új gépen indítod el a rendszert, a háttérben futó worker (a 'B2 Index Frissítése' funkción keresztül) automatikusan kiolvassa a fájlok metaadataiból az összes kategóriát. Tehát a sok órás szortírozási munkád ezentúl sérthetetlen és eszközfüggetlen.
 4. **Adat Migráció**: Bevezetésre került egy `migrate_categories_to_b2.py` önálló szkript, ami képes a korábban lokálisan kategorizált képek százainak attribútumait átírni a felhőben, minimális kockázattal.
 
+### 13. Immerzív Szortírozó és Undo Rendszer (V14.0)
+A V14.0 fókuszában a felhasználói élmény és a sebesség áll, különösen a nagy mennyiségű kép feldolgozása során:
+1. **Full Screen Szortírozó**: Teljes kijelzős, zavaró tényezőktől mentes mód a fotók átnézéséhez. Helytakarékos, áttetsző ikonok a képernyő alján a maximális láthatóság érdekében.
+2. **Undo (Visszavonás) Funkció**: Az utolsó osztályozási vagy törlési művelet azonnal visszavonható. A rendszer ilyenkor automatikusan visszarendezni a képeket és a háttérben korrigálja a B2 felhőtárhely állományainak lokációját is.
+3. **Lomtár Teljes Képernyős Előnézet**: A törlésre jelölt képek ellenőrzése nagy méretben a végleges ürítés előtt (Esc billentyű támogatás).
+4. **Adaptív Értesítési Rendszer**: Az értesítések tanulnak a használatból, így a tapasztalt felhasználók számára diszkrétebb formában jelennek meg a visszajelzések.
+
+---
 ---
 
 ## 5. Hibaelhárítás és Karbantartás

@@ -13,12 +13,22 @@ try:
     cursor = conn.cursor()
     
     # 1. B2Account additions
-    for col in ["source_bucket_name", "trash_bucket_name"]:
+    for col in ["source_bucket_name", "trash_bucket_name", "sync_total"]:
         try:
-            cursor.execute(f"ALTER TABLE b2_accounts ADD COLUMN {col} TEXT;")
+            # Set INTEGER for sync_total, TEXT for others
+            col_type = "INTEGER" if col == "sync_total" else "TEXT"
+            cursor.execute(f"ALTER TABLE b2_accounts ADD COLUMN {col} {col_type};")
             print(f"Column '{col}' added to b2_accounts.")
+            if col == "sync_total":
+                cursor.execute("UPDATE b2_accounts SET sync_total = 0 WHERE sync_total IS NULL;")
+                print("Set default 0 for sync_total.")
         except sqlite3.OperationalError:
             print(f"Column '{col}' already exists in b2_accounts.")
+        
+        # Ensure default values for existing rows
+        if col == "sync_total":
+            cursor.execute("UPDATE b2_accounts SET sync_total = 0 WHERE sync_total IS NULL;")
+            print("Verified default 0 for sync_total.")
 
     # 2. MediaItem additions
     try:

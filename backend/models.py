@@ -17,6 +17,7 @@ class B2Account(Base):
     last_synced_at = Column(DateTime(timezone=True), nullable=True)
     sync_status = Column(String, default="Idle") # Idle, Syncing, Finished, Error
     sync_count = Column(Integer, default=0) # Number of items indexed in last/current sync
+    sync_total = Column(Integer, default=0) # Total estimated items to sync
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class MediaItem(Base):
