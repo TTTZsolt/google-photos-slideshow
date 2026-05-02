@@ -1,4 +1,4 @@
-# Lumina Képtár (V14.2)
+# Lumina Képtár (V14.3)
 
 **Cél**: Fényképek szortírozása nyomógombokkal
 
@@ -56,8 +56,8 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
 ## Versions
-- **V14.2**: Robusztus szinkronizáció + ékezet-érzéketlen kategória-keresés (hibajavítás).
-- **V14.1**: Szinkronizációs folyamatjelző (hőmérő) implementálása.
+- **V14.3**: Teljes verzió egységesítés és elmaradt dokumentációs javítások.
+- **V14.2**: 2026-05-02-i stabil verzió (Robusztus szinkronizáció + ékezet-érzéketlen keresés).
 - **V14.0**: Full screen Szortírozó + undo megvalósítása.
 - **V13.8**: Több felhasználós működés javítása.
 - **V13.7**: Stabil verzió, UI egységesítés előtt, HTML sablonnal.
