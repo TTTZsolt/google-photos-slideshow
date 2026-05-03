@@ -268,29 +268,37 @@
         </div>
     </div>
     <!-- Header Wrapper - Single Compact Row -->
+    <!-- Header Wrapper - Single Compact Row -->
     <header class="w-full max-w-2xl px-4 flex items-center justify-between mb-2">
-        <!-- Left: Home -->
-        <a href="/" class="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all">
-            <i data-lucide="home" class="w-5 h-5"></i>
-        </a>
-
-        <!-- Center: Status Info -->
-        <div class="flex items-center gap-3">
-            <h1 class="text-sm font-bold tracking-tight text-slate-800">
-                Szortírozó <span class="text-[9px] text-indigo-400 font-black">V{{ version }}</span>
+        <!-- Integrated Left Group: Branding + Home -->
+        <a href="/" class="flex items-center gap-3 group no-underline transition-all active:scale-95" title="Vissza a főoldalra">
+            <h1 class="text-sm font-black tracking-tight text-slate-800 uppercase group-hover:text-indigo-600 transition-colors">
+                Lumina <span class="text-indigo-500 group-hover:text-indigo-700">Szortírozó</span>
             </h1>
             <div class="h-3 w-[1px] bg-slate-200"></div>
             <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest" id="remainingCount">SCANNING...</p>
-        </div>
+        </a>
 
-        <!-- Right Tools: Fullscreen & Refresh -->
-        <div class="flex items-center gap-1">
-            <button onclick="toggleFullscreen(true)" class="p-2 text-slate-400 hover:text-indigo-600 transition-all">
-                <i data-lucide="maximize" class="w-5 h-5"></i>
-            </button>
-            <button onclick="location.reload()" class="p-2 text-slate-400 hover:text-indigo-600 transition-all">
-                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
-            </button>
+        <!-- Right Tools: Final Home Style + Other Tools -->
+        <div class="flex items-start gap-4 mt-1.5">
+            <div class="flex items-center gap-1">
+                <button onclick="toggleFullscreen(true)" class="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Teljes képernyő">
+                    <i data-lucide="maximize" class="w-5 h-5"></i>
+                </button>
+                <button onclick="location.reload()" class="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Frissítés">
+                    <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="w-[1px] h-4 bg-slate-200 mt-3 mx-1"></div>
+
+            <!-- FINAL HOME BUTTON STYLE -->
+            <div class="flex flex-col items-center gap-1">
+                <a href="/" class="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100" title="Vissza a főoldalra">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                </a>
+                <span class="text-[7px] font-black text-indigo-500 opacity-40 uppercase tracking-tighter">V{{ version }}</span>
+            </div>
         </div>
     </header>
 
@@ -340,7 +348,7 @@
 
     <script>
         lucide.createIcons();
-
+        const ACTIVE_ACCOUNT_ID = "{{ active_account_id }}";
         const deck = document.getElementById('deck');
         const emptyMessage = document.getElementById('emptyMessage');
         const remainingCount = document.getElementById('remainingCount');
@@ -456,7 +464,10 @@
                 <div class="card-image" style="background-image: url('${data.thumb_url || data.url}')">
                     <div class="error-overlay" id="err-${data.file_name.replace(/[^a-z0-9]/gi, '_')}">
                         <i data-lucide="image-off" class="w-8 h-8 mb-2"></i>
-                        Hiba a betöltéskor
+                        <span class="font-bold text-sm mb-3">Hiba a betöltéskor</span>
+                        <button onclick="syncDatabase(event)" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black px-4 py-2 rounded-xl transition shadow-lg active:scale-95 pointer-events-auto">
+                            Adatbázis frissítése
+                        </button>
                     </div>
                 </div>
                 <div class="card-info p-2 bg-slate-800/80 backdrop-blur-md border-t border-white/5">
@@ -755,8 +766,45 @@
             lucide.createIcons();
         }
 
+        async function syncDatabase(event) {
+            if (event) event.stopPropagation();
+            if (!ACTIVE_ACCOUNT_ID) {
+                alert("Nincs aktív B2 fiók azonosítva.");
+                return;
+            }
+
+            const btn = event ? event.target : null;
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="flex items-center gap-2">Frissítés...</span>`;
+            }
+
+            try {
+                const response = await fetch(`/b2/sync/${ACTIVE_ACCOUNT_ID}`, { method: 'POST' });
+                if (response.ok) {
+                    if (btn) btn.innerText = "Sikeres! Újratöltés...";
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    throw new Error("Sync failed");
+                }
+            } catch (e) {
+                console.error("Sync error:", e);
+                if (btn) {
+                    btn.innerText = "Hiba történt";
+                    btn.disabled = false;
+                }
+            }
+        }
+
         fetchCategories();
         initDeck();
     </script>
+    <!-- Subtle Version Watermark -->
+    <div class="fixed bottom-4 right-4 pointer-events-none select-none opacity-20 hover:opacity-50 transition-opacity z-[10002]">
+        <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase">Lumina v{{ version }}</span>
+    </div>
 </body>
 </html>

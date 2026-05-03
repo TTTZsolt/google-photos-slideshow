@@ -13,6 +13,7 @@
         body {
             font-family: 'Outfit', sans-serif;
             overflow-x: hidden;
+            scrollbar-gutter: stable;
         }
 
         /* Scrollbar styling */
@@ -154,457 +155,37 @@
 </head>
 
 <body class="bg-[#f5f8ff] min-h-screen text-slate-900 selection:bg-indigo-100">
-    <div class="container mx-auto px-4 py-8 max-w-5xl">
-        <!-- Header -->
-        <header id="dashboardHeader" class="mb-10 w-full pt-2 sm:pt-3">
-            <div class="w-full max-w-2xl mx-auto px-6 flex items-start justify-between">
-                <div class="flex flex-col items-start">
-                    <span class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 tracking-tighter drop-shadow-sm select-none leading-none">Lumina</span>
-                    <p class="text-slate-500 font-medium tracking-tight relative -top-1">Képtár+</p>
+    <div class="container mx-auto px-4 pt-8 pb-8 max-w-5xl">
+        <!-- 0. Universal Header (V15.8.1) -->
+        <header id="universalHeader" class="w-full mb-10 flex items-center justify-between glass-panel p-4 rounded-2xl border-indigo-100 shadow-sm sticky top-4 z-[100]">
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col items-start group cursor-pointer" onclick="showMainMenu()">
+                    <span class="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 tracking-tighter select-none leading-none">Lumina</span>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest" id="headerSubtext">Control Center</p>
                 </div>
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-semibold uppercase tracking-widest text-indigo-400">v{{ version }}</span>
+                
+                <div id="headerTitleContainer" class="hidden items-center gap-3 pl-4 border-l border-slate-200">
+                    <i id="headerIcon" data-lucide="layout" class="w-5 h-5 text-indigo-500"></i>
+                    <h2 id="headerTitle" class="text-lg font-bold text-slate-800">Module</h2>
                 </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-1 rounded-lg uppercase tracking-tighter border border-indigo-100">V{{ version }}</span>
+                <button id="headerHomeBtn" onclick="showMainMenu()" class="hidden p-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md active:scale-95 group" title="Vissza a főoldalra">
+                    <i data-lucide="home" class="w-5 h-5"></i>
+                </button>
             </div>
         </header>
 
-        <!-- V14.0 Main Grid Menu -->
-        <!-- V14.0 Perfect Lean Pyramid Layout -->
-        <div id="mainMenu" class="flex flex-col gap-2 md:gap-3 mb-10 mx-auto px-4 items-center">
-            
-            <!-- Row 1: The Peak (1 item) -->
-            <div class="w-full max-w-[180px] md:max-w-[220px]">
-                <a href="/receiver" class="menu-card glass-panel rounded-2xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group no-underline border-2 border-indigo-100/50 hover:border-indigo-400">
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-sm">
-                        <i data-lucide="monitor" class="w-5 h-5 md:w-6 md:h-6"></i>
-                    </div>
-                    <h3 class="text-sm md:text-base font-bold text-slate-800">Slideshow</h3>
-                </a>
-            </div>
+        <!-- 1. Mover Module -->
+        <div id="moverModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-0">
+            <div class="space-y-8 w-full max-w-[500px] md:max-w-4xl mx-auto px-4 sm:px-6">
 
-            <!-- Row 2: Management (3 items) -->
-            <div class="grid grid-cols-3 gap-2 md:gap-3 w-full max-w-[400px] md:max-w-[500px]">
-                <a href="/classify" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group no-underline">
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                        <i data-lucide="layout-template" class="w-4 h-4 md:w-5 md:h-5"></i>
-                    </div>
-                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Szortírozó</h3>
-                </a>
-
-                <button onclick="showModule('laborModule')" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group">
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors relative">
-                        <i data-lucide="beaker" class="w-4 h-4 md:w-5 md:h-5"></i>
-                        <span id="laborCountMenu" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full hidden">0</span>
-                    </div>
-                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Labor</h3>
-                </button>
-
-                <button onclick="showModule('moverModule')" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group">
-                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <i data-lucide="undo" class="w-4 h-4 md:w-5 md:h-5"></i>
-                    </div>
-                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Mover</h3>
-                </button>
-            </div>
-
-            <!-- Row 3: Utilities (4 items) -->
-            <div class="grid grid-cols-4 gap-2 md:gap-3 w-full max-w-[500px] md:max-w-[650px]">
-                <button onclick="showModule('activityModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
-                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                        <i data-lucide="activity" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
-                    </div>
-                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Activity</h3>
-                </button>
-
-                <button onclick="showModule('connectionModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
-                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition-colors border border-cyan-200/50">
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
-                    </div>
-                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Connect</h3>
-                </button>
-
-                <button onclick="showModule('categoriesModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
-                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                        <i data-lucide="tag" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
-                    </div>
-                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Tags</h3>
-                </button>
-
-                <button onclick="showModule('musicModule')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
-                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                        <i data-lucide="music" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
-                    </div>
-                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Music</h3>
-                </button>
-            </div>
-        </div>
-        </div>
-        </div>
-
-        <div id="hiddenOriginal" class="hidden">
-            <!-- This container holds old IDs to satisfy legacy JS if needed, but is never shown -->
-        </div>
-             <!-- 2. Activity Module -->
-        <div id="activityModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-8">
-            <!-- Unified Header Wrapper per HTML sablon.md -->
-            <div class="w-full max-w-2xl mx-auto px-6 flex flex-col items-start pt-2 pb-3 sm:pt-3 sm:pb-5">
-                <div class="w-full flex items-start justify-between">
-                    <!-- Lumina Branding -->
-                    <div class="flex items-start">
-                        <span class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 tracking-tighter drop-shadow-sm select-none leading-none">Lumina</span>
-                    </div>
-
-                    <!-- Főoldal Gomb -->
-                    <button onclick="showMainMenu()" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
-                        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50 backdrop-blur-md">
-                            <i data-lucide="home" class="w-6 h-6 sm:w-7 sm:h-7"></i>
-                        </div>
-                        <span class="text-[10px] sm:text-[11px] font-black text-indigo-400 group-hover:text-indigo-600 uppercase tracking-widest transition-colors">Főoldal</span>
-                    </button>
-                </div>
-
-            </div>
-            
-            <div class="space-y-8 w-full max-w-[500px] md:max-w-2xl mx-auto px-4 sm:px-6">
-                <!-- System Activity Card -->
-                <div class="glass-panel w-full rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                <!-- Main Content Card -->
+                <div class="glass-panel w-full rounded-3xl p-8 shadow-2xl border-2 border-rose-100 relative overflow-hidden">
                     <div class="relative z-10">
-                        <!-- Címsor áthelyezve a panelbe -->
-                        <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 sm:pb-8 border-b border-indigo-50 mb-8 border-opacity-50 gap-4">
-                            <div class="flex flex-col items-start">
-                                <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
-                                    <i data-lucide="activity" class="text-indigo-500 w-6 h-6"></i>
-                                    System Activity <span class="text-[10px] text-indigo-400 font-black ml-1">V{{ version }}</span>
-                                </h1>
-                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 ml-8">Rendszer állapot és kapcsolatok</p>
-                            </div>
-                            <div class="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-100 shadow-inner">
-                                <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></div>
-                                <span class="text-indigo-600 font-black text-sm" id="activeClientsCount">0</span>
-                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Active Clients</span>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col sm:flex-row gap-4 items-stretch mb-8">
-                            <!-- Toggle Master Switch -->
-                            <div class="flex-1 bg-white/60 p-5 rounded-2xl border border-slate-100 flex items-center justify-between transition-colors shadow-sm"
-                                id="masterSwitchContainer">
-                                <div>
-                                    <h3 class="font-bold text-slate-800 text-sm">Főkapcsoló (Master Switch)</h3>
-                                    <p class="text-[11px] text-slate-500 mt-1">Globális adatforgalom engedélyezése</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="masterSwitchToggle" class="sr-only switch-peer"
-                                        onchange="toggleMasterSwitch()">
-                                    <div
-                                        class="w-14 h-7 bg-rose-400 rounded-full transition-all switch-target after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner border border-black/5">
-                                    </div>
-                                </label>
-                            </div>
-
-                            <!-- Kill All -->
-                            <button onclick="killAllSessions()"
-                                class="bg-rose-500 hover:bg-rose-600 text-white p-5 rounded-2xl shadow-lg transition flex items-center justify-center gap-3 group shrink-0 w-full sm:w-auto">
-                                <i data-lucide="skull" class="w-5 h-5 group-hover:animate-bounce"></i>
-                                <span class="font-bold text-sm">Minden Szál Bezárása</span>
-                            </button>
-                        </div>
-
-                        <!-- TV Casting (Stop Only) - Moved here in V13.5 -->
-                        <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 mb-8">
-                            <h3 class="text-sm font-bold text-slate-500 mb-4 flex items-center gap-2">
-                                <i data-lucide="cast" class="w-4 h-4"></i> Stop TV Cast
-                            </h3>
-                            <div class="flex items-center gap-4">
-                                <select id="deviceSelect"
-                                    class="flex-1 bg-white border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-rose-500 shadow-sm appearance-none">
-                                    <option value="">Scanning for TVs...</option>
-                                </select>
-                                <button onclick="stopCastingLocal()"
-                                    class="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-lg shadow transition"
-                                    title="Stop Cast">
-                                    <i data-lucide="square" class="w-5 h-5"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Connected Clients List -->
-                        <div class="mt-8 border-t border-slate-200/50 pt-6">
-                             <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-4">
-                                <i data-lucide="users" class="w-4 h-4"></i> Csatlakoztatott Eszközök
-                            </h3>
-                            <div id="activeClientsList" class="space-y-3">
-                                <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. Labor Module -->
-        <div id="laborModule" class="module-page max-w-[500px] md:max-w-[650px] mx-auto min-h-[90vh] flex flex-col items-start pt-12">
-            <div class="flex-grow flex flex-col items-start justify-center w-full">
-                <button onclick="showMainMenu()" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline ml-2">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50">
-                        <i data-lucide="home" class="w-7 h-7"></i>
-                    </div>
-                    <span class="text-[11px] font-black text-indigo-400 uppercase tracking-widest">Főoldal</span>
-                </button>
-            </div>
-            
-            <div class="glass-panel rounded-3xl p-8 shadow-2xl">
-                <h2 class="text-2xl font-bold mb-6 flex items-center justify-between gap-3 text-rose-500">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="beaker" class="w-8 h-8"></i>
-                        Digitális Labor
-                    </div>
-                    <span class="text-[10px] text-rose-400 font-black px-2 py-1 bg-rose-50 rounded-lg border border-rose-100">V{{ version }}</span>
-                </h2>
-                <p class="text-sm text-slate-500 mb-8">Itt javíthatod azokat a fotókat, amiket vetítés közben valaki megjelölt (Flag).</p>
-                
-                <div id="flaggedImagesList" class="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
-                    <div class="text-center py-10 text-slate-400 text-sm font-medium">Betöltés...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. Connection Module -->
-        <div id="connectionModule" class="module-page max-w-[500px] md:max-w-[650px] mx-auto min-h-[90vh] flex flex-col items-start pt-12">
-            <div class="flex-grow flex flex-col items-start justify-center w-full">
-                <button onclick="showMainMenu()" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline ml-2">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50">
-                        <i data-lucide="home" class="w-7 h-7"></i>
-                    </div>
-                    <span class="text-[11px] font-black text-indigo-400 uppercase tracking-widest">Főoldal</span>
-                </button>
-            </div>
-            
-            <div class="grid grid-cols-1 gap-8">
-                <!-- Add New -->
-                <div class="glass-panel rounded-2xl p-5 shadow-lg h-fit">
-                    <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="w-4 h-4 text-indigo-500"></i>
-                        Add New Connection
-                    </h3>
-                    <form id="b2Form" class="space-y-3">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="text" id="b2KeyId" placeholder="Key ID" required
-                                class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                            <input type="password" id="b2AppKey" placeholder="App Key" required
-                                class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="text" id="b2BucketName" placeholder="Bucket (kepek02)" required
-                                title="Melyik bucket-ben tárolod a megjelenítendő képeket?"
-                                class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                            <input type="text" id="b2ArchiveBucketName" placeholder="Archive (kepek01)"
-                                title="Melyik bucket-be mozgassam át a javításon áteső képek eredetijét?"
-                                class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="text" id="b2SourceBucketName" placeholder="Source (forras)" required
-                                title="Melyik bucket-ben helyezed el a válogatásra váró új képeket?"
-                                class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                            <input type="text" id="b2TrashBucketName" placeholder="Trash (torles-elott)" required
-                                title="Melyik bucket-be helyezzem át a törlésre ítélt képeket a végleges megsemmisítés előtt?"
-                                class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        </div>
-                        <input type="text" id="b2CloudflareUrl" placeholder="Cloudflare Proxy URL"
-                            class="w-full bg-white p-3 rounded-xl text-xs border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm">
-                        <button type="submit"
-                            class="w-full bg-slate-900 text-white font-black p-3 rounded-xl hover:bg-slate-800 transition shadow-lg mt-2 flex items-center justify-center gap-2 text-xs">
-                            <i data-lucide="link" class="w-4 h-4"></i> Link B2 Node
-                        </button>
-                    </form>
-                </div>
-
-                <!-- Node List -->
-                <div class="glass-panel rounded-3xl p-8 shadow-lg">
-                    <h3 class="text-lg font-bold text-slate-700 mb-6 flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="cloud" class="w-6 h-6 text-blue-500"></i>
-                            Connected B2 Nodes
-                        </div>
-                        <span class="text-[10px] text-blue-400 font-black px-2 py-1 bg-blue-50 rounded-lg border border-blue-100">V{{ version }}</span>
-                    </h3>
-                    <div id="b2AccountList" class="space-y-4">
-                        {% for b2_account in b2_accounts %}
-                        <div id="acc-{{ b2_account.id }}"
-                            class="p-5 bg-white/40 border border-slate-100 rounded-2xl flex items-center justify-between group transition-all hover:bg-white/80 shadow-sm">
-                            <div class="truncate pr-4">
-                                <div class="flex items-center gap-2">
-                                    <p class="font-black text-slate-800 truncate text-sm" title="Main Bucket">{{ b2_account.bucket_name }}</p>
-                                    {% if b2_account.archive_bucket_name %}
-                                    <i data-lucide="arrow-right" class="w-3 h-3 text-slate-300 shrink-0"></i>
-                                    <span class="text-slate-500 font-bold text-xs" title="Edit Archive">{{ b2_account.archive_bucket_name }}</span>
-                                    {% endif %}
-                                </div>
-                                <div class="flex items-center gap-2 mt-1.5">
-                                    <span class="status-text text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded">
-                                        {{ b2_account.sync_status }}
-                                    </span>
-                                    <span class="count-text text-[10px] font-bold text-slate-400">
-                                        {{ b2_account.sync_count }}{% if b2_account.sync_total and b2_account.sync_total > 0 %}/{{ b2_account.sync_total }}{% endif %} items
-                                    </span>
-                                </div>
-                                <div class="sync-progress-container w-full bg-slate-100/50 rounded-full h-1.5 mt-2.5 overflow-hidden border border-slate-200/30 {% if b2_account.sync_status != 'Syncing' %}hidden{% endif %}">
-                                    <div class="sync-progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-1000" 
-                                         style="width: {% if b2_account.sync_total and b2_account.sync_total > 0 %}{{ ((b2_account.sync_count|default(0)) / b2_account.sync_total * 100)|round }}{% else %}0{% endif %}%"></div>
-                                </div>
-                            </div>
-                            <div class="flex gap-2 transition-opacity">
-                                <button onclick="syncB2Account('{{ b2_account.id }}')" id="sync-btn-{{ b2_account.id }}"
-                                    class="p-2.5 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition shadow-sm bg-white border border-indigo-100" title="Resync">
-                                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                                </button>
-                                <button onclick="deleteB2Account('{{ b2_account.id }}')"
-                                    class="p-2.5 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition shadow-sm bg-white border border-rose-100" title="Delete">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-                        {% else %}
-                        <div class="text-center py-10 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                            <i data-lucide="cloud-off" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
-                            <p class="text-xs text-slate-400 font-black uppercase tracking-widest">Nincsenek aktív kapcsolatok</p>
-                            <p class="text-[10px] text-slate-300 mt-1 uppercase">Adj hozzá egy új B2 Node-ot bal oldalon!</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Placeholder for remaining modules -->
-        <div id="categoriesModule" class="module-page max-w-[500px] md:max-w-[650px] mx-auto min-h-[90vh] flex flex-col items-start pt-12">
-            <div class="flex-grow flex flex-col items-start justify-center w-full">
-                <button onclick="showMainMenu()" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline ml-2">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50">
-                        <i data-lucide="home" class="w-7 h-7"></i>
-                    </div>
-                    <span class="text-[11px] font-black text-indigo-400 uppercase tracking-widest">Főoldal</span>
-                </button>
-            </div>
-            
-            <div class="glass-panel rounded-3xl p-8 shadow-2xl">
-                <div class="flex items-center justify-between mb-8">
-                    <h2 class="text-2xl font-bold flex items-center gap-3 text-indigo-500">
-                        <i data-lucide="tags" class="w-8 h-8"></i>
-                        Kategóriák Kezelése
-                    </h2>
-                    <button onclick="document.getElementById('addCategoryForm').classList.toggle('hidden')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition active:scale-95 shadow-lg">
-                        <i data-lucide="plus" class="w-4 h-4"></i> Új Kategória
-                    </button>
-                </div>
-
-                <!-- Add Category Form -->
-                <div id="addCategoryForm" class="hidden bg-indigo-50/50 border border-indigo-100 p-6 rounded-3xl mb-8 space-y-4 shadow-inner">
-                    <h3 class="font-bold text-indigo-700 text-sm uppercase tracking-widest">Kategória Létrehozása</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <input type="text" id="newCatDisplayName" placeholder="Megjelenített név (pl. Család)" class="w-full bg-white p-4 rounded-xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500">
-                        <select id="newCatIcon" class="w-full bg-white p-4 rounded-xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500">
-                            <option value="tag">Ikon: Alapértelmezett</option>
-                            <option value="users">Ikon: Emberek</option>
-                            <option value="heart">Ikon: Szív</option>
-                            <option value="plane">Ikon: Utazás</option>
-                            <option value="cat">Ikon: Állat</option>
-                            <option value="camera">Ikon: Fotó</option>
-                            <option value="star">Ikon: Kedvenc</option>
-                            <option value="car">Ikon: Autó</option>
-                            <option value="home">Ikon: Otthon</option>
-                            <option value="tree-pine">Ikon: Természet</option>
-                            <option value="music">Ikon: Zene</option>
-                        </select>
-                        <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
-                            <span class="text-xs font-bold text-slate-400 ml-2">Szín:</span>
-                            <input type="color" id="newCatColor" value="#6366f1" class="flex-1 h-10 p-0 border-none bg-transparent cursor-pointer rounded">
-                        </div>
-                    </div>
-                    <button onclick="addCategory()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-lg active:scale-95">
-                        Létrehozás és Mentés
-                    </button>
-                </div>
-
-                <div id="categoryList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <!-- Populated by JS -->
-                </div>
-            </div>
-        </div>
-        
-        <div id="musicModule" class="module-page max-w-[500px] md:max-w-[650px] mx-auto min-h-[90vh] flex flex-col items-start pt-12">
-            <div class="flex-grow flex flex-col items-start justify-center w-full">
-                <button onclick="showMainMenu()" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline ml-2">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50">
-                        <i data-lucide="home" class="w-7 h-7"></i>
-                    </div>
-                    <span class="text-[11px] font-black text-indigo-400 uppercase tracking-widest">Főoldal</span>
-                </button>
-            </div>
-            
-            <div class="glass-panel rounded-3xl p-8 shadow-2xl">
-                <h2 class="text-2xl font-bold mb-6 flex items-center justify-between gap-3 text-red-500">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="music" class="w-8 h-8"></i>
-                        YouTube Zene
-                    </div>
-                    <span class="text-[10px] text-red-400 font-black px-2 py-1 bg-red-50 rounded-lg border border-red-100">V{{ version }}</span>
-                </h2>
-                
-                <div class="max-w-xl mx-auto space-y-8 bg-white/40 p-8 rounded-3xl border border-white shadow-inner">
-                    <div class="space-y-3">
-                        <label class="text-sm font-bold text-slate-600 uppercase tracking-widest">YouTube Playlist vagy Video ID</label>
-                        <input type="text" id="youtubePlaylistId" placeholder="pl: PLxxxxxxxx vagy vXvXvXvX"
-                            class="w-full bg-white p-4 rounded-2xl text-lg font-bold border-slate-100 focus:ring-2 focus:ring-red-500 shadow-sm text-center">
-                        <p class="text-[11px] text-slate-400 italic">Másold be a YouTube lista 'list' paraméterét, vagy egy sima videó azonosítóját.</p>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                             <label class="text-sm font-bold text-slate-600 uppercase tracking-widest">Alapértelmezett Hangerő</label>
-                             <span id="volumeDisplay" class="font-black text-red-500 text-xl">50%</span>
-                        </div>
-                        <input type="range" id="musicVolume" min="0" max="100" value="50" oninput="document.getElementById('volumeDisplay').innerText = this.value + '%'"
-                            class="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-500">
-                    </div>
-
-                    <div class="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                        <div>
-                            <span class="text-lg font-bold text-slate-700">Zene automatikus indítása</span>
-                            <p class="text-[10px] text-slate-400">A Slideshow betöltésekor azonnal elindul</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="musicToggle" class="sr-only switch-peer">
-                            <div class="w-14 h-7 bg-slate-200 rounded-full transition-all switch-target after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner"></div>
-                        </label>
-                    </div>
-
-                    <button onclick="saveMusicSettings()"
-                        class="w-full bg-red-600 text-white font-black py-5 rounded-2xl hover:bg-red-700 transition shadow-xl flex items-center justify-center gap-3 active:scale-95">
-                        <i data-lucide="save" class="w-6 h-6"></i> Beállítások Mentése
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div id="moverModule" class="module-page w-full max-w-5xl mx-auto min-h-[90vh] flex flex-col items-start pt-12 px-4">
-            <div class="flex-grow flex flex-col items-start w-full mb-8">
-                <button onclick="showMainMenu()" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline ml-2">
-                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-200/50">
-                        <i data-lucide="home" class="w-7 h-7"></i>
-                    </div>
-                    <span class="text-[11px] font-black text-indigo-400 uppercase tracking-widest">Főoldal</span>
-                </button>
-            </div>
-            
-            <div class="glass-panel w-full rounded-3xl p-8 shadow-2xl border-2 border-rose-100">
-                <h2 class="text-2xl font-bold mb-6 flex items-center justify-between gap-3 text-rose-500">
-                    <div class="flex items-center gap-3">
-                        <i data-lucide="archive-restore" class="w-8 h-8"></i>
-                        Visszamozgató (Mover)
-                    </div>
-                    <span class="text-[10px] text-rose-400 font-black px-2 py-1 bg-rose-50 rounded-lg border border-rose-100">V{{ version }}</span>
-                </h2>
+                        <!-- Header removed in V15.8.1 (Universal Header used instead) -->
                 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 text-slate-700">
                     <div class="lg:col-span-1 space-y-6">
@@ -680,6 +261,431 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+        <!-- 2. Labor Module -->
+        <div id="laborModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-0">
+            <div class="space-y-8 w-full max-w-[500px] md:max-w-xl mx-auto px-4 sm:px-6">
+
+                <!-- Main Content Card -->
+                <div class="glass-panel w-full rounded-3xl p-8 shadow-2xl border-2 border-emerald-100 relative overflow-hidden">
+                    <div class="relative z-10">
+                        <!-- Header removed in V15.8.1 (Universal Header used instead) -->
+
+                        <p class="text-sm text-slate-500 mb-8 leading-relaxed">
+                            Itt javíthatod azokat a fotókat, amiket vetítés közben valaki megjelölt (Flag). A javítás után a jelölés automatikusan törlődik.
+                        </p>
+                        
+                        <div id="flaggedImagesList" class="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar p-2">
+                            <div class="text-center py-10 text-slate-400 text-sm font-medium">
+                                <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500 mb-4"></div>
+                                <p>Labor állományok betöltése...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+        <!-- 3. Activity Module -->
+        <div id="activityModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-0">
+            <div class="space-y-8 w-full max-w-[500px] md:max-w-2xl mx-auto px-4 sm:px-6">
+
+                <!-- System Activity Card -->
+                <div class="glass-panel w-full rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                    <div class="relative z-10">
+                        <!-- Header removed in V15.8.1 (Universal Header used instead) -->
+                                <div class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                                <span class="text-indigo-600 font-black text-sm" id="activeClientsCount">0</span>
+                                <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Active Clients</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-4 items-stretch mb-8">
+                            <!-- Toggle Master Switch -->
+                            <div class="flex-1 bg-white/60 p-5 rounded-2xl border border-slate-100 flex items-center justify-between transition-colors shadow-sm"
+                                id="masterSwitchContainer">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-sm">Főkapcsoló (Master Switch)</h3>
+                                    <p class="text-[11px] text-slate-500 mt-1">Globális adatforgalom engedélyezése</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="masterSwitchToggle" class="sr-only switch-peer"
+                                        onchange="toggleMasterSwitch()">
+                                    <div
+                                        class="w-14 h-7 bg-rose-400 rounded-full transition-all switch-target after:absolute after:top-[4px] after:left-[4px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all shadow-inner border border-black/5">
+                                    </div>
+                                </label>
+                            </div>
+
+                            <!-- Kill All -->
+                            <button onclick="killAllSessions()"
+                                class="bg-rose-500 hover:bg-rose-600 text-white p-5 rounded-2xl shadow-lg transition flex items-center justify-center gap-3 group shrink-0 w-full sm:w-auto">
+                                <i data-lucide="skull" class="w-5 h-5 group-hover:animate-bounce"></i>
+                                <span class="font-bold text-sm">Minden Szál Bezárása</span>
+                            </button>
+                        </div>
+
+                        <!-- TV Casting (Stop Only) - Moved here in V13.5 -->
+                        <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 mb-8">
+                            <h3 class="text-sm font-bold text-slate-500 mb-4 flex items-center gap-2">
+                                <i data-lucide="cast" class="w-4 h-4"></i> Stop TV Cast
+                            </h3>
+                            <div class="flex items-center gap-4">
+                                <select id="deviceSelect"
+                                    class="flex-1 bg-white border-slate-200 rounded-lg py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-rose-500 shadow-sm appearance-none">
+                                    <option value="">Scanning for TVs...</option>
+                                </select>
+                                <button onclick="stopCastingLocal()"
+                                    class="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-lg shadow transition"
+                                    title="Stop Cast">
+                                    <i data-lucide="square" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Connected Clients List -->
+                        <div class="mt-8 border-t border-slate-200/50 pt-6">
+                             <h3 class="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2 mb-4">
+                                <i data-lucide="users" class="w-4 h-4"></i> Csatlakoztatott Eszközök
+                            </h3>
+                            <div id="activeClientsList" class="space-y-3">
+                                <div class="text-center py-6 text-slate-400 text-sm font-medium">Betöltés...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Connection Module -->
+        <div id="connectionModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-0">
+            <div class="space-y-8 w-full max-w-[500px] md:max-w-4xl mx-auto px-4 sm:px-6">
+
+                <!-- Header Panel -->
+                <div class="glass-panel w-full rounded-3xl p-8 shadow-2xl border-2 border-indigo-100 relative overflow-hidden">
+                    <div class="relative z-10">
+                        <!-- Header removed in V15.8.1 (Universal Header used instead) -->
+                                <i data-lucide="plus-circle" class="text-indigo-500 w-6 h-6"></i>
+                                Új B2 <span class="text-indigo-500 font-medium">Node</span>
+                            </h3>
+                            <form id="b2Form" class="space-y-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Key ID</label>
+                                        <input type="text" id="b2KeyId" placeholder="B2 Key ID" required
+                                            class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">App Key</label>
+                                        <input type="password" id="b2AppKey" placeholder="B2 App Key" required
+                                            class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Main Bucket</label>
+                                        <input type="text" id="b2BucketName" placeholder="pl. kepek02" required
+                                            class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Archive Bucket</label>
+                                        <input type="text" id="b2ArchiveBucketName" placeholder="pl. kepek01"
+                                            class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Source Bucket</label>
+                                        <input type="text" id="b2SourceBucketName" placeholder="pl. forras" required
+                                            class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Trash Bucket</label>
+                                        <input type="text" id="b2TrashBucketName" placeholder="pl. torles-elott" required
+                                            class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cloudflare Proxy URL (Optional)</label>
+                                    <input type="text" id="b2CloudflareUrl" placeholder="https://photos.yourdomain.com"
+                                        class="w-full bg-white/60 p-4 rounded-xl text-sm border-slate-100 focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all focus:bg-white">
+                                </div>
+                                <button type="submit"
+                                    class="w-full bg-slate-900 text-white font-black p-4 rounded-2xl hover:bg-indigo-600 transition-all shadow-xl mt-4 flex items-center justify-center gap-3 group">
+                                    <i data-lucide="link" class="w-5 h-5 group-hover:scale-110 transition-transform"></i> Link B2 Node
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Node List -->
+                    <div class="glass-panel rounded-3xl p-8 shadow-2xl border-2 border-blue-100 relative overflow-hidden h-fit">
+                        <div class="relative z-10">
+                            <h3 class="text-xl font-bold tracking-tight text-slate-800 flex items-center justify-between gap-2 mb-6 border-b border-blue-50 pb-4">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="cloud" class="text-blue-500 w-6 h-6"></i>
+                                    Aktív <span class="text-blue-500 font-medium">B2 Node-ok</span>
+                                </div>
+                                <span class="text-[10px] text-blue-400 font-black px-2 py-1 bg-blue-50 rounded-lg border border-blue-100">V{{ version }}</span>
+                            </h3>
+                            <div id="b2AccountList" class="space-y-4">
+                                {% for b2_account in b2_accounts %}
+                                <div id="acc-{{ b2_account.id }}"
+                                    class="p-5 bg-white/40 border border-slate-100 rounded-2xl flex items-center justify-between group transition-all hover:bg-white hover:shadow-md border-opacity-50">
+                                    <div class="truncate pr-4 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                                                <i data-lucide="database" class="w-4 h-4"></i>
+                                            </div>
+                                            <div class="truncate">
+                                                <p class="font-black text-slate-800 truncate text-sm" title="Main Bucket">{{ b2_account.bucket_name }}</p>
+                                                {% if b2_account.archive_bucket_name %}
+                                                <div class="flex items-center gap-1 mt-0.5">
+                                                    <i data-lucide="arrow-right-left" class="w-3 h-3 text-slate-300"></i>
+                                                    <span class="text-slate-500 font-bold text-[10px] truncate" title="Edit Archive">{{ b2_account.archive_bucket_name }}</span>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-3">
+                                            <span class="status-text text-[9px] font-black uppercase tracking-widest {% if b2_account.sync_status == 'Syncing' %}text-indigo-500 bg-indigo-50 animate-pulse{% else %}text-emerald-500 bg-emerald-50{% endif %} px-2 py-0.5 rounded shadow-sm">
+                                                {{ b2_account.sync_status }}
+                                            </span>
+                                            <span class="count-text text-[10px] font-bold text-slate-400">
+                                                {{ b2_account.sync_count }}{% if b2_account.sync_total and b2_account.sync_total > 0 %}/{{ b2_account.sync_total }}{% endif %} items
+                                            </span>
+                                        </div>
+                                        <div class="sync-progress-container w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden border border-slate-200/50 {% if b2_account.sync_status != 'Syncing' %}hidden{% endif %}">
+                                            <div class="sync-progress-bar bg-gradient-to-r from-indigo-500 to-blue-500 h-full transition-all duration-1000" 
+                                                 style="width: {% if b2_account.sync_total and b2_account.sync_total > 0 %}{{ ((b2_account.sync_count|default(0)) / b2_account.sync_total * 100)|round }}{% else %}0{% endif %}%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col sm:flex-row gap-2">
+                                        <button onclick="syncB2Account('{{ b2_account.id }}')" id="sync-btn-{{ b2_account.id }}"
+                                            class="p-3 text-indigo-500 hover:bg-indigo-500 hover:text-white rounded-xl transition shadow-sm bg-white border border-indigo-100 active:scale-95" title="Resync">
+                                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                        </button>
+                                        <button onclick="deleteB2Account('{{ b2_account.id }}')"
+                                            class="p-3 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition shadow-sm bg-white border border-rose-100 active:scale-95" title="Delete">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-12 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
+                                    <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm mx-auto mb-4 border border-slate-100">
+                                        <i data-lucide="cloud-off" class="w-8 h-8 text-slate-300"></i>
+                                    </div>
+                                    <p class="text-xs text-slate-400 font-black uppercase tracking-widest">Nincsenek aktív kapcsolatok</p>
+                                    <p class="text-[10px] text-slate-300 mt-2 uppercase">Adj hozzá egy új B2 Node-ot a bal oldali űrlapon!</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Categories Module -->
+        <div id="categoriesModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-0">
+            <div class="space-y-8 w-full max-w-[500px] md:max-w-4xl mx-auto px-4 sm:px-6">
+
+                <!-- Main Content Card -->
+                <div class="glass-panel w-full rounded-3xl p-8 shadow-2xl border-2 border-indigo-100 relative overflow-hidden">
+                    <div class="relative z-10">
+                        <!-- Header removed in V15.8.1 (Universal Header used instead) -->
+
+                        <!-- Add Category Form -->
+                        <div id="addCategoryForm" class="hidden bg-indigo-50/50 border border-indigo-100 p-8 rounded-3xl mb-10 space-y-6 shadow-inner relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-4 opacity-10">
+                                <i data-lucide="plus-circle" class="w-20 h-20 text-indigo-500"></i>
+                            </div>
+                            <h3 class="font-black text-indigo-700 text-xs uppercase tracking-[0.2em] relative z-10">Kategória Létrehozása</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Megjelenített név</label>
+                                    <input type="text" id="newCatDisplayName" placeholder="pl. Család" 
+                                        class="w-full bg-white p-4 rounded-xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500 transition-all">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ikon kiválasztása</label>
+                                    <select id="newCatIcon" class="w-full bg-white p-4 rounded-xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500 transition-all">
+                                        <option value="tag">Alapértelmezett</option>
+                                        <option value="users">Emberek / Család</option>
+                                        <option value="heart">Szív / Kedvenc</option>
+                                        <option value="plane">Utazás / Nyaralás</option>
+                                        <option value="cat">Állatok</option>
+                                        <option value="camera">Fotózás</option>
+                                        <option value="star">Kiemelt</option>
+                                        <option value="car">Autó</option>
+                                        <option value="home">Otthon</option>
+                                        <option value="tree-pine">Természet</option>
+                                        <option value="music">Zene</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Kategória színe</label>
+                                    <div class="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm h-[52px]">
+                                        <input type="color" id="newCatColor" value="#6366f1" class="flex-1 h-full p-0 border-none bg-transparent cursor-pointer rounded overflow-hidden">
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="addCategory()" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl hover:bg-indigo-700 transition-all shadow-xl active:scale-95 text-sm uppercase tracking-widest">
+                                Létrehozás és Mentés
+                            </button>
+                        </div>
+
+                        <div id="categoryList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- Populated by JS -->
+                            <div class="col-span-full text-center py-12 text-slate-400 animate-pulse">
+                                Kategóriák betöltése...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Music Module -->
+        <div id="musicModule" class="module-page w-full flex-col items-center justify-start pb-20 pt-0">
+            <div class="space-y-8 w-full max-w-[500px] md:max-w-2xl mx-auto px-4 sm:px-6">
+
+                <!-- Main Content Card -->
+                <div class="glass-panel w-full rounded-3xl p-8 shadow-2xl border-2 border-rose-100 relative overflow-hidden">
+                    <div class="relative z-10">
+                        <!-- Header removed in V15.8.1 (Universal Header used instead) -->
+
+                        <div class="max-w-xl mx-auto space-y-10">
+                            <div class="space-y-4">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">YouTube Playlist vagy Video ID</label>
+                                <div class="relative">
+                                    <input type="text" id="youtubePlaylistId" placeholder="pl: PLxxxxxxxx vagy vXvXvXvX"
+                                        class="w-full bg-white/60 p-5 rounded-2xl text-lg font-bold border-slate-100 focus:ring-2 focus:ring-rose-500 shadow-sm text-center transition-all focus:bg-white">
+                                    <div class="absolute left-4 top-1/2 -translate-y-1/2 opacity-20">
+                                        <i data-lucide="youtube" class="w-6 h-6"></i>
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-slate-400 italic text-center px-4 leading-relaxed">
+                                    Másold be a YouTube lista 'list' paraméterét, vagy egy sima videó azonosítóját. A mentés után a slideshow ezt fogja játszani.
+                                </p>
+                            </div>
+
+                            <div class="space-y-6 bg-rose-50/30 p-8 rounded-3xl border border-rose-100/50 shadow-inner">
+                                <div class="flex items-center justify-between">
+                                     <div class="flex flex-col">
+                                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alapértelmezett Hangerő</label>
+                                         <span class="text-xs text-rose-400 font-medium mt-0.5">Minden indításkor ezen szólal meg</span>
+                                     </div>
+                                     <span id="volumeDisplay" class="font-black text-rose-500 text-3xl tabular-nums">50%</span>
+                                </div>
+                                <input type="range" id="musicVolume" min="0" max="100" value="50" oninput="document.getElementById('volumeDisplay').innerText = this.value + '%'"
+                                    class="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-500">
+                                <div class="flex justify-between px-1">
+                                    <i data-lucide="volume-x" class="w-4 h-4 text-slate-300"></i>
+                                    <i data-lucide="volume-2" class="w-4 h-4 text-slate-300"></i>
+                                </div>
+                            </div>
+
+                            <button onclick="saveMusicSettings()"
+                                class="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-rose-600 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 group text-sm uppercase tracking-[0.2em]">
+                                <i data-lucide="save" class="w-5 h-5 group-hover:scale-110 transition-transform"></i> Beállítások Mentése
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- V14.0 Main Grid Menu -->
+        <!-- V14.0 Perfect Lean Pyramid Layout -->
+        <div id="mainMenu" class="flex flex-col gap-2 md:gap-3 mb-10 mx-auto px-4 items-center">
+            
+            <!-- Row 1: The Peak (1 item) -->
+            <div class="w-full max-w-[180px] md:max-w-[220px]">
+                <a href="/receiver" class="menu-card glass-panel rounded-2xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group no-underline border-2 border-indigo-100/50 hover:border-indigo-400">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500 shadow-sm">
+                        <i data-lucide="monitor" class="w-5 h-5 md:w-6 md:h-6"></i>
+                    </div>
+                    <h3 class="text-sm md:text-base font-bold text-slate-800">Slideshow</h3>
+                </a>
+            </div>
+
+            <!-- Row 2: Management (3 items) -->
+            <div class="grid grid-cols-3 gap-2 md:gap-3 w-full max-w-[400px] md:max-w-[500px]">
+                <a href="/classify" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group no-underline">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <i data-lucide="layout-template" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    </div>
+                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Szortírozó</h3>
+                </a>
+
+                <button onclick="showModule('laborModule', 'Digitális Labor', 'beaker')" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors relative">
+                        <i data-lucide="beaker" class="w-4 h-4 md:w-5 md:h-5"></i>
+                        <span id="laborCountMenu" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] font-black px-1 py-0.5 rounded-full hidden">0</span>
+                    </div>
+                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Labor</h3>
+                </button>
+
+                <button onclick="showModule('moverModule', 'Visszamozgató Mover', 'undo')" class="menu-card glass-panel rounded-xl p-2 md:p-3 flex flex-col items-center justify-center gap-1.5 text-center group">
+                    <div class="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <i data-lucide="undo" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    </div>
+                    <h3 class="text-xs md:text-sm font-bold text-slate-700">Mover</h3>
+                </button>
+            </div>
+
+            <!-- Row 3: Utilities (4 items) -->
+            <div class="grid grid-cols-4 gap-2 md:gap-3 w-full max-w-[500px] md:max-w-[650px]">
+                <button onclick="showModule('activityModule', 'System Activity', 'activity')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                        <i data-lucide="activity" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Activity</h3>
+                </button>
+
+                <button onclick="showModule('connectionModule', 'B2 Kapcsolatok', 'plus-circle')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-cyan-100 text-cyan-600 flex items-center justify-center group-hover:bg-cyan-600 group-hover:text-white transition-colors border border-cyan-200/50">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Connect</h3>
+                </button>
+
+                <button onclick="showModule('categoriesModule', 'Kategóriák Kezelése', 'tag')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                        <i data-lucide="tag" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Tags</h3>
+                </button>
+
+
+                <button onclick="showModule('musicModule', 'YouTube Zene', 'music')" class="menu-card glass-panel rounded-xl p-1.5 md:p-2.5 flex flex-col items-center justify-center gap-1 text-center group">
+                    <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                        <i data-lucide="music" class="w-3.5 h-3.5 md:w-4.5 md:h-4.5"></i>
+                    </div>
+                    <h3 class="text-[10px] md:text-xs font-bold text-slate-600">Music</h3>
+                </button>
+            </div>
+        </div>
+        </div>
+
+        <div id="hiddenOriginal" class="hidden">
+            <!-- This container holds old IDs to satisfy legacy JS if needed, but is never shown -->
+        </div>
+             <!-- 2. Activity Module -->
+
+        <!-- 3. Labor Module -->
+
+
+        <!-- Placeholder for remaining modules -->
+        
+
 
     <!-- Alerts -->
     <div id="runtimeError"
@@ -712,20 +718,49 @@
     </div>
 
     <script>
-        // --- V13.5 NAVIGATION ENGINE ---
-        function showModule(id) {
+        // --- V15.8.1 UNIVERSAL NAVIGATION ENGINE ---
+        function showModule(id, title, iconName = 'layout') {
             document.getElementById('mainMenu').style.display = 'none';
-            document.getElementById('dashboardHeader').style.display = 'none';
+            
+            // Universal Header Updates
+            document.getElementById('headerTitleContainer').style.display = 'flex';
+            document.getElementById('headerHomeBtn').style.display = 'flex';
+            document.getElementById('headerTitle').textContent = title;
+            document.getElementById('headerSubtext').textContent = "Module Active";
+            const iconEl = document.getElementById('headerIcon');
+            iconEl.setAttribute('data-lucide', iconName);
+
             const modules = document.querySelectorAll('.module-page');
             modules.forEach(m => m.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             window.scrollTo(0, 0);
+            
+            // Refresh data based on module
+            if (id === 'moverModule') {
+                loadBulkReverseFolders();
+                fetchCategoriesDashboard();
+            } else if (id === 'categoriesModule') {
+                fetchCategoriesDashboard();
+            } else if (id === 'activityModule') {
+                refreshDevices();
+                fetchSystemStatus();
+            } else if (id === 'connectionModule') {
+                updateB2Status();
+            } else if (id === 'laborModule') {
+                fetchSystemStatus();
+            }
+            
             lucide.createIcons();
         }
 
         function showMainMenu() {
             document.getElementById('mainMenu').style.display = 'flex';
-            document.getElementById('dashboardHeader').style.display = 'flex';
+            
+            // Universal Header Reset
+            document.getElementById('headerTitleContainer').style.display = 'none';
+            document.getElementById('headerHomeBtn').style.display = 'none';
+            document.getElementById('headerSubtext').textContent = "Control Center";
+            
             const modules = document.querySelectorAll('.module-page');
             modules.forEach(m => m.classList.remove('active'));
             window.scrollTo(0, 0);
@@ -1594,32 +1629,6 @@
         setInterval(fetchBulkReverseStatus, 2000);
         fetchBulkReverseStatus();
 
-        // --- V13.0 NAVIGATION ENGINE ---
-        function showModule(id) {
-            document.getElementById('mainMenu').style.display = 'none';
-            document.getElementById('dashboardHeader').style.display = 'none';
-            const modules = document.querySelectorAll('.module-page');
-            modules.forEach(m => m.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            window.scrollTo(0, 0);
-            
-            // Refresh data based on module
-            if (id === 'moverModule') {
-                loadBulkReverseFolders();
-                fetchCategoriesDashboard();
-            } else if (id === 'categoriesModule') {
-                fetchCategoriesDashboard();
-            } else if (id === 'activityModule') {
-                refreshDevices();
-                fetchSystemStatus();
-            } else if (id === 'connectionModule') {
-                updateB2Status();
-            } else if (id === 'laborModule') {
-                fetchSystemStatus();
-            }
-            
-            lucide.createIcons();
-        }
 
         async function fetchCategoriesDashboard() {
             try {
@@ -1736,6 +1745,7 @@
         fetchCategoriesDashboard();
         updateB2Status();
     </script>
+    </div>
 </body>
 
 </html>

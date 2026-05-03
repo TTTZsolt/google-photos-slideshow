@@ -2,6 +2,15 @@
 
 Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szakaszait.
 
+## [V15.8.1] - Universal Header és Strukturális Frissítés (2026-05-03)
+- **Universal Header**: Központi fejléc bevezetése minden modulhoz a tisztább átláthatóság érdekében.
+- **Dinamikus Navigáció**: A fejléc automatikusan alkalmazkodik az aktív modulhoz (ikon + cím).
+- **UX Finomhangolás**: Kisebb méretű branding és állandó elérhetőségű Home gomb a modulokban.
+
+## [V15.8.0] - Moduláris Alapok (2026-05-03)
+- **SPA Architektúra**: Teljes átállás Single Page Application modellre.
+- **Egyedi Fejlécek**: Modulonkénti elkülönített navigáció és stílus.
+
 ## [V14.3] - Verzió Egységesítés és Polírozás (2026-05-02)
 - **Standardizálás**: A verziószámok egységesítése minden modulban V14.3-ra.
 - **Dokumentáció**: README és verziótörténet frissítése.

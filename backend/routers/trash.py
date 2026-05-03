@@ -104,8 +104,15 @@ def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
     try:
         client = B2Client(b2_acc.key_id, b2_acc.application_key)
         
-        # 1. Move physically in B2
+        # 1. Move physically in B2 (Main File)
         new_version = client.move_file(mi.bucket_name, b2_acc.source_bucket_name, mi.file_name)
+        
+        # 1b. Move physically in B2 (Thumbnail) - Optional, don't fail if missing
+        try:
+            client.move_file(f"{mi.bucket_name}-thumbs", f"{b2_acc.source_bucket_name}-thumbs", mi.file_name)
+            logger.info(f"Thumbnail restored for {mi.file_name}")
+        except:
+            pass # Thumbs might not exist yet
         
         # 2. Update MediaItem entry
         mi.bucket_name = b2_acc.source_bucket_name

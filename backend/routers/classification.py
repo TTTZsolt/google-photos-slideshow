@@ -55,8 +55,13 @@ bulk_reverse_status: Dict[str, Any] = {
 }
 
 @router.get("/classify")
-def classify_page(request: Request):
-    return templates.TemplateResponse("classify.html", {"request": request, "version": VERSION})
+def classify_page(request: Request, db: Session = Depends(get_db)):
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    return templates.TemplateResponse("classify.html", {
+        "request": request, 
+        "version": VERSION, 
+        "active_account_id": b2_account.id if b2_account else None
+    })
 
 @router.get("/api/classify/next")
 def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):

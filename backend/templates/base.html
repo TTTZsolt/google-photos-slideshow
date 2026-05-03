@@ -17,32 +17,29 @@
 </head>
 <body class="bg-[#f5f8ff] min-h-screen">
 
-    <div class="container mx-auto px-4 py-6 max-w-5xl">
+    <div class="container mx-auto px-4 pt-0 pb-6 max-w-5xl">
         <!-- Unified Header -->
-        <header class="mb-8 flex items-center justify-between px-2">
-            <div class="flex items-center gap-4">
-                {% block back_button %}
-                <a href="/" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
-                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-100">
-                        <i data-lucide="home" class="w-6 h-6"></i>
-                    </div>
+        <header class="mb-10 w-full pt-8">
+            <div class="w-full max-w-2xl mx-auto px-6 flex items-start justify-between">
+                <a href="/" class="flex flex-col items-start group no-underline" title="Vissza a főoldalra">
+                    <span class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 tracking-tighter drop-shadow-sm select-none leading-none group-hover:from-indigo-600 group-hover:to-purple-700 transition-all">Lumina</span>
+                    <p class="text-slate-500 font-medium tracking-tight relative -top-1 group-hover:text-indigo-500 transition-colors">Képtár +</p>
                 </a>
-                {% endblock %}
                 
-                <div class="flex flex-col">
-                    <span class="lumina-logo">Lumina</span>
-                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest -mt-1 ml-1">{% block subtitle %}Képtár+{% endblock %}</p>
+                <div class="flex items-start gap-4 mt-2">
+                    {% block back_button %}
+                    <!-- FINAL HOME BUTTON STYLE -->
+                    <div class="flex flex-col items-center gap-1">
+                        <a href="/" class="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-indigo-100" title="Vissza a főoldalra">
+                            <i data-lucide="home" class="w-5 h-5"></i>
+                        </a>
+                        <span class="text-[8px] font-black text-indigo-500 opacity-40 uppercase tracking-tighter">V{{ version }}</span>
+                    </div>
+                    {% endblock %}
                 </div>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">
-                    V{{ version }}
-                </span>
             </div>
         </header>
 
-        <!-- Page Content -->
         <main>
             {% block content %}{% endblock %}
         </main>
@@ -54,5 +51,10 @@
     </script>
     
     {% block extra_scripts %}{% endblock %}
+
+    <!-- Subtle Version Watermark -->
+    <div class="fixed bottom-4 right-4 pointer-events-none select-none opacity-20 hover:opacity-50 transition-opacity z-[10002]">
+        <span class="text-[9px] font-black tracking-widest text-slate-400 uppercase">Lumina v{{ version }}</span>
+    </div>
 </body>
 </html>
