@@ -6,6 +6,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 - **Universal Header**: Központi fejléc bevezetése minden modulhoz a tisztább átláthatóság érdekében.
 - **Dinamikus Navigáció**: A fejléc automatikusan alkalmazkodik az aktív modulhoz (ikon + cím).
 - **UX Finomhangolás**: Kisebb méretű branding és állandó elérhetőségű Home gomb a modulokban.
+- **Premium Dark Mode**: Teljesen fekete/sötétkék téma (`slate-950`) üveghatású sötét panelekkel.
 
 ## [V15.8.0] - Moduláris Alapok (2026-05-03)
 - **SPA Architektúra**: Teljes átállás Single Page Application modellre.
