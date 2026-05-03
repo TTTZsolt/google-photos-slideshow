@@ -18,12 +18,18 @@ def get_db():
         db.close()
 
 @router.get("/api/trash")
-def get_trash_items(db: Session = Depends(get_db)):
-    """Returns a list of items currently in the trash."""
+def get_trash_items(limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
+    """Returns a paginated list of items currently in the trash."""
     # Using outerjoin to ensure we see items even if MediaItem record is missing
-    results = db.query(MediaClassification, MediaItem).outerjoin(
+    query = db.query(MediaClassification, MediaItem).outerjoin(
         MediaItem, MediaClassification.file_name == MediaItem.file_name
-    ).filter(MediaClassification.is_deleted == True).all()
+    ).filter(MediaClassification.is_deleted == True)
+    
+    # Sort by date descending (assuming mc.updated_at is a good indicator)
+    from sqlalchemy import desc
+    query = query.order_by(desc(MediaClassification.updated_at))
+    
+    results = query.offset(offset).limit(limit).all()
 
     items = []
     # Get active account for base URL / auth
@@ -34,19 +40,27 @@ def get_trash_items(db: Session = Depends(get_db)):
     client = B2Client(b2_acc.key_id, b2_acc.application_key)
 
     for mc, mi in results:
-        # Generate temporary download URL for preview if needed
+        # Generate temporary download URL for preview
         url = None
-        if mi:
+        thumb_url = None
+        bucket_name = mi.bucket_name if mi else b2_acc.trash_bucket_name
+        file_name = mc.file_name
+        
+        if bucket_name and file_name:
             try:
-                url = client.get_download_url(mi.bucket_name, mi.file_name, b2_acc.cloudflare_proxy_url)
-            except:
-                pass
+                # Original URL
+                url = client.get_download_url(bucket_name, file_name, b2_acc.cloudflare_proxy_url)
+                # Thumbnail URL (from the -thumbs bucket)
+                thumb_url = client.get_download_url(f"{bucket_name}-thumbs", file_name, b2_acc.cloudflare_proxy_url)
+            except Exception as e:
+                logger.warning(f"Could not generate trash URL for {file_name}: {e}")
 
         items.append({
             "id": mi.id if mi else f"virtual-{mc.file_name}",
             "file_name": mc.file_name,
-            "bucket_name": mi.bucket_name if mi else b2_acc.trash_bucket_name,
+            "bucket_name": bucket_name,
             "url": url,
+            "thumb_url": thumb_url,
             "updated_at": mc.updated_at
         })
     
@@ -165,6 +179,12 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
                     if file_id and not skip_b2:
                         try:
                             client.delete_file_version(current_bucket, file_name, file_id)
+                            # V14.3.3: Also try to delete thumbnail
+                            try:
+                                thumb_bucket = f"{current_bucket}-thumbs"
+                                client.delete_file_version(thumb_bucket, file_name, "") # Use empty ID for listing/finding if possible, or just skip if fail
+                            except:
+                                pass # Thumbs might not exist, that's fine
                         except Exception as b2_del_err:
                             err_msg = str(b2_del_err).lower()
                             # If file not present or bad id, it's effectively "deleted"

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}Lumina{% endblock %}</title>
+    
+    <!-- Design & Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Lumina Design System -->
+    <link rel="stylesheet" href="{{ url_for('static', path='css/lumina.css') }}">
+    
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-[#f5f8ff] min-h-screen">
+
+    <div class="container mx-auto px-4 py-6 max-w-5xl">
+        <!-- Unified Header -->
+        <header class="mb-8 flex items-center justify-between px-2">
+            <div class="flex items-center gap-4">
+                {% block back_button %}
+                <a href="/" class="flex flex-col items-center gap-1 group transition-all hover:scale-105 active:scale-95 no-underline">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm border border-indigo-100">
+                        <i data-lucide="home" class="w-6 h-6"></i>
+                    </div>
+                </a>
+                {% endblock %}
+                
+                <div class="flex flex-col">
+                    <span class="lumina-logo">Lumina</span>
+                    <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest -mt-1 ml-1">{% block subtitle %}Képtár+{% endblock %}</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">
+                    V{{ version }}
+                </span>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+    
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

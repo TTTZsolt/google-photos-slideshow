@@ -1,88 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lomtár Átnézése - V14.2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
-        body { font-family: 'Outfit', sans-serif; }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-        }
-    </style>
-</head>
-<body class="bg-slate-50 min-h-screen text-slate-900 pb-20">
-    <div class="container mx-auto px-4 py-8 max-w-5xl">
-        <header class="flex items-center justify-between mb-10">
-            <div>
-                <nav class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                    <a href="/" class="hover:text-indigo-600 transition-colors">Dashboard</a>
-                    <i data-lucide="chevron-right" class="w-3 h-3"></i>
-                    <span class="text-slate-600">Lomtár</span>
-                </nav>
-                <h1 class="text-4xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-rose-600 to-orange-600">
-                    Lomtár Átnézése
-                </h1>
-                <p class="text-slate-500 font-medium mt-1">Törlésre jelölt képek biztonsági tárolója</p>
-            </div>
-            
-            <button onclick="confirmEmptyTrash()" id="emptyBtn"
-                class="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
-                <i data-lucide="trash-2" class="w-5 h-5"></i>
-                Lomtár Ürítése
-            </button>
-        </header>
+{% extends "base.html" %}
 
-        <!-- Loading Overlay -->
-        <div id="loadingOverlay" class="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center justify-center transition-all duration-500">
-            <div class="relative mb-8">
-                <div class="w-24 h-24 rounded-full border-4 border-slate-100 border-t-rose-500 animate-spin"></div>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <i data-lucide="trash-2" class="w-8 h-8 text-rose-500"></i>
-                </div>
-            </div>
-            <h2 class="text-2xl font-black text-slate-800 tracking-tight mb-2">Lomtár beolvasása</h2>
-            <div class="flex items-center gap-3 bg-white px-6 py-3 rounded-2xl shadow-xl border border-slate-100">
-                <span id="loadCurrent" class="text-2xl font-black text-rose-500">0</span>
-                <span class="text-slate-300 font-bold">/</span>
-                <span id="loadTotal" class="text-lg font-bold text-slate-400">0</span>
-            </div>
-            <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-6 animate-pulse">Adatok lekérése a felhőből...</p>
-        </div>
+{% block title %}Lomtár Átnézése - V{{ version }}{% endblock %}
+{% block subtitle %}Lomtár{% endblock %}
 
-        <!-- Empty State -->
-        <div id="emptyState" class="hidden glass-panel rounded-3xl p-20 text-center flex flex-col items-center justify-center">
-            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-6">
-                <i data-lucide="trash" class="w-10 h-10"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-slate-400">Üres a lomtár</h2>
-            <p class="text-slate-400 mt-2 font-medium">Minden kép biztonságban van, vagy már véglegesen törölve lett.</p>
-            <a href="/" class="mt-8 text-indigo-600 font-bold hover:underline flex items-center gap-2">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                Vissza a vezérlőpulthoz
-            </a>
-        </div>
+{% block extra_head %}
+<style>
+    .trash-card {
+        height: 240px;
+        display: flex;
+        flex-col: column;
+        position: relative;
+    }
+</style>
+{% endblock %}
 
-        <!-- Trash Grid -->
-        <div id="trashGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <!-- Dynamic content -->
+{% block content %}
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-all duration-500">
+        <div class="relative mb-8">
+            <div class="w-20 h-20 rounded-full border-4 border-slate-100 border-t-rose-500 animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="trash-2" class="w-7 h-7 text-rose-500"></i>
+            </div>
         </div>
+        <h2 class="text-xl font-bold text-slate-800 mb-2">Lomtár beolvasása</h2>
+        <div class="flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl shadow-xl border border-slate-100">
+            <span id="loadCurrent" class="text-2xl font-black text-rose-500">0</span>
+            <span class="text-slate-300 font-bold">/</span>
+            <span id="loadTotal" class="text-lg font-bold text-slate-400">0</span>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-10">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Lomtár Átnézése</h1>
+            <p class="text-slate-500 font-medium">Törlésre jelölt képek biztonsági tárolója</p>
+        </div>
+        
+        <button onclick="confirmEmptyTrash()" id="emptyBtn"
+            class="bg-rose-500 hover:bg-rose-600 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+            Lomtár Ürítése
+        </button>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden glass-card p-20 text-center flex flex-col items-center justify-center">
+        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 mb-6">
+            <i data-lucide="trash" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-400">Üres a lomtár</h2>
+        <p class="text-slate-400 mt-2 font-medium">Minden kép biztonságban van.</p>
+    </div>
+
+    <!-- Trash Grid -->
+    <div id="trashGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <!-- Dynamic content -->
+    </div>
+
+    <!-- Load More Trigger -->
+    <div id="loadMoreTrigger" class="h-20 flex items-center justify-center mt-8">
+        <div id="loadMoreSpinner" class="hidden w-10 h-10 border-4 border-slate-200 border-t-rose-500 rounded-full animate-spin"></div>
+    </div>
+
+    <!-- Fullscreen Preview Overlay -->
+    <div id="fullscreenOverlay" class="fixed inset-0 z-[200] bg-black flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <img id="fullscreenImg" src="" class="max-w-full max-h-full object-contain">
+        <button onclick="closeFullscreen()" class="absolute bottom-8 left-8 w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all shadow-2xl">
+            <i data-lucide="minimize" class="w-8 h-8"></i>
+        </button>
     </div>
 
     <!-- Confirmation Modal -->
     <div id="confirmModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4">
-        <div class="glass-panel w-full max-w-md rounded-3xl shadow-2xl p-8 transform transition-transform duration-300 scale-95 opacity-0" id="modalContent">
+        <div class="glass-card w-full max-w-md p-8 transform transition-transform duration-300 scale-95 opacity-0" id="modalContent">
             <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-6">
                 <i data-lucide="alert-triangle" class="w-8 h-8"></i>
             </div>
             <h2 class="text-2xl font-bold text-slate-900 mb-2">Lomtár ürítése?</h2>
             <p class="text-slate-500 font-medium mb-8 leading-relaxed">
-                Ez a művelet <span class="text-rose-600 font-bold">véglegesen törli</span> az összes itt lévő állományt a felhőből. Ezt később nem lehet visszavonni.
+                Ez a művelet <span class="text-rose-600 font-bold">véglegesen törli</span> az összes itt lévő állományt. Ezt nem lehet visszavonni.
             </p>
             <div class="grid grid-cols-2 gap-3">
                 <button onclick="closeModal()" class="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-colors">Mégse</button>
@@ -91,247 +89,206 @@
         </div>
     </div>
 
-    <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-slate-900 text-white rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 pointer-events-none translate-y-4">
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-slate-900 text-white rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 pointer-events-none translate-y-4 z-[500]">
         Üzenet helye
     </div>
+{% endblock %}
 
-    <!-- Fullscreen Preview Overlay -->
-    <div id="fullscreenOverlay" class="fixed inset-0 z-[200] bg-black flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <img id="fullscreenImg" src="" class="max-w-full max-h-full object-contain shadow-2xl">
+{% block extra_scripts %}
+<script>
+    let trashItems = [];
+    let currentOffset = 0;
+    const PAGE_SIZE = 40;
+    let isLastPage = false;
+    let isLoading = false;
+
+    async function fetchTrash(reset = true) {
+        if (isLoading) return;
+        if (reset) {
+            currentOffset = 0;
+            isLastPage = false;
+            trashItems = [];
+            document.getElementById('trashGrid').innerHTML = '';
+        }
+        if (isLastPage) return;
+
+        isLoading = true;
+        const overlay = document.getElementById('loadingOverlay');
+        const loadCurrent = document.getElementById('loadCurrent');
+        const loadTotal = document.getElementById('loadTotal');
+        const spinner = document.getElementById('loadMoreSpinner');
         
-        <!-- Exit Button -->
-        <button onclick="closeFullscreen()" class="absolute bottom-8 left-8 w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all shadow-2xl">
-            <i data-lucide="minimize" class="w-8 h-8"></i>
-        </button>
-    </div>
+        if (reset) overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+        spinner.classList.remove('hidden');
 
-    <script>
-        let trashItems = [];
-
-        async function fetchTrash() {
-            const overlay = document.getElementById('loadingOverlay');
-            const loadCurrent = document.getElementById('loadCurrent');
-            const loadTotal = document.getElementById('loadTotal');
-            const grid = document.getElementById('trashGrid');
-            const emptyState = document.getElementById('emptyState');
-            
-            overlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-            grid.innerHTML = '';
-            loadCurrent.textContent = "0";
-            
-            try {
-                // 1. Get Count first
+        try {
+            if (reset) {
                 const countRes = await fetch('/api/trash/count');
                 const countData = await countRes.json();
                 loadTotal.textContent = countData.count;
+            }
 
-                if (countData.count === 0) {
-                    trashItems = [];
-                    overlay.classList.add('opacity-0', 'pointer-events-none');
-                    renderGrid();
-                    return;
-                }
+            const res = await fetch(`/api/trash?limit=${PAGE_SIZE}&offset=${currentOffset}`);
+            const data = await res.json();
+            
+            if (data.length < PAGE_SIZE) isLastPage = true;
 
-                // 2. Fetch Full Data
-                const res = await fetch('/api/trash');
-                const data = await res.json();
-                trashItems = data; // Assign to global
-                
-                // 3. Progressive Render to show counter move
-                const total = trashItems.length;
-                loadTotal.textContent = total;
-                
-                if (total === 0) {
-                    overlay.classList.add('opacity-0', 'pointer-events-none');
-                    renderGrid();
-                    return;
-                }
+            trashItems = [...trashItems, ...data];
+            currentOffset += data.length;
+            renderBatch(data);
+            loadCurrent.textContent = trashItems.length;
 
-                // Batch rendering for visual progress
-                const batchSize = 10;
-                for (let i = 0; i < total; i += batchSize) {
-                    const chunk = trashItems.slice(i, i + batchSize);
-                    renderBatch(chunk);
-                    loadCurrent.textContent = Math.min(i + batchSize, total);
-                    // Minimal delay for visual feedback
-                    await new Promise(r => setTimeout(r, 40));
-                }
-
-                // Finish
+            if (reset) {
                 setTimeout(() => {
                     overlay.classList.add('opacity-0', 'pointer-events-none');
                 }, 300);
-
-            } catch (err) {
-                console.error("Fetch error:", err);
-                showToast("Hiba a betöltéskor");
-                overlay.classList.add('opacity-0', 'pointer-events-none');
             }
+        } catch (err) {
+            console.error("Fetch error:", err);
+            showToast("Hiba a betöltéskor");
+        } finally {
+            isLoading = false;
+            spinner.classList.add('hidden');
         }
+    }
 
-        function renderBatch(items) {
-            const grid = document.getElementById('trashGrid');
-            const emptyState = document.getElementById('emptyState');
-            const emptyBtn = document.getElementById('emptyBtn');
-            
+    function renderBatch(items) {
+        const grid = document.getElementById('trashGrid');
+        const emptyState = document.getElementById('emptyState');
+        const emptyBtn = document.getElementById('emptyBtn');
+        
+        if (trashItems.length > 0) {
             grid.classList.remove('hidden');
             emptyState.classList.add('hidden');
             emptyBtn.disabled = false;
-
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'glass-panel rounded-2xl overflow-hidden group hover:shadow-xl transition-all h-[240px] flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500';
-                
-                const previewHtml = item.url 
-                    ? `<div class="flex-1 bg-slate-200 relative overflow-hidden">
-                         <img src="${item.url}" 
-                              class="w-full h-full object-cover cursor-zoom-in" 
-                              loading="lazy"
-                              onclick="openFullscreen('${item.url}')">
-                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none"></div>
-                       </div>`
-                    : `<div class="flex-1 bg-slate-100 flex items-center justify-center text-slate-300 italic text-xs">Nincs előnézet</div>`;
-
-                card.innerHTML = `
-                    ${previewHtml}
-                    <div class="p-3 bg-white/90">
-                        <p class="text-[10px] font-black text-slate-800 truncate mb-2" title="${item.file_name}">${item.file_name.split('/').pop()}</p>
-                        <div class="flex gap-2">
-                            <button onclick="restoreItem('${item.id}', this)" class="flex-1 bg-indigo-50 text-indigo-600 py-1.5 rounded-lg text-[10px] font-black border border-indigo-100 hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1">
-                                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
-                                VISSZA
-                            </button>
-                        </div>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-            lucide.createIcons();
         }
 
-        function renderGrid() {
-            // This is now handled by fetchTrash and renderBatch,
-            // but we keep a simplified version for empty states if called directly.
-            const grid = document.getElementById('trashGrid');
-            const emptyState = document.getElementById('emptyState');
-            const emptyBtn = document.getElementById('emptyBtn');
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'glass-card overflow-hidden group hover:shadow-xl transition-all h-[260px] flex flex-col relative animate-in fade-in slide-in-from-bottom-4 duration-500';
             
-            if (trashItems.length === 0) {
-                grid.innerHTML = '';
-                grid.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                emptyBtn.disabled = true;
-            }
-        }
+            const displayUrl = item.thumb_url || item.url;
+            const previewHtml = displayUrl 
+                ? `<div class="flex-1 bg-slate-200 relative overflow-hidden">
+                     <img src="${displayUrl}" class="w-full h-full object-cover cursor-zoom-in" loading="lazy" onclick="openFullscreen('${item.url}')">
+                   </div>`
+                : `<div class="flex-1 bg-slate-100 flex items-center justify-center text-slate-300 italic text-xs">Nincs előnézet</div>`;
 
-        async function restoreItem(fileId, btn) {
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>';
-            btn.disabled = true;
-            lucide.createIcons();
+            card.innerHTML = `
+                ${previewHtml}
+                <div class="p-3 bg-white/60">
+                    <p class="text-[10px] font-black text-slate-800 truncate mb-2" title="${item.file_name}">${item.file_name.split('/').pop()}</p>
+                    <button onclick="restoreItem('${item.id}', this)" class="w-full bg-white text-indigo-600 py-2 rounded-xl text-[10px] font-black border border-indigo-100 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-1 shadow-sm">
+                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i> VISSZAÁLLÍTÁS
+                    </button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+        lucide.createIcons();
+    }
 
-            try {
-                const res = await fetch(`/api/trash/restore/${fileId}`, { method: 'POST' });
-                if (res.ok) {
-                    showToast("Kép visszaállítva a forrásba");
-                    fetchTrash();
-                } else {
-                    showToast("Sikertelen visszaállítás");
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                showToast("Hálózati hiba");
+    async function restoreItem(fileId, btn) {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>';
+        btn.disabled = true;
+        lucide.createIcons();
+
+        try {
+            const res = await fetch(`/api/trash/restore/${fileId}`, { method: 'POST' });
+            if (res.ok) {
+                showToast("Kép visszaállítva");
+                fetchTrash(true);
+            } else {
+                showToast("Sikertelen visszaállítás");
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+                lucide.createIcons();
             }
+        } catch (e) {
+            showToast("Hálózati hiba");
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
         }
+    }
 
-        function confirmEmptyTrash() {
-            const modal = document.getElementById('confirmModal');
-            const content = document.getElementById('modalContent');
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                content.classList.remove('scale-95', 'opacity-0');
-            }, 10);
-        }
+    function confirmEmptyTrash() {
+        const modal = document.getElementById('confirmModal');
+        const content = document.getElementById('modalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('opacity-0', 'scale-95');
+        }, 10);
+    }
 
-        function closeModal() {
-            const modal = document.getElementById('confirmModal');
-            const content = document.getElementById('modalContent');
-            content.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-            }, 300);
-        }
+    function closeModal() {
+        const modal = document.getElementById('confirmModal');
+        const content = document.getElementById('modalContent');
+        content.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
 
-        async function executeEmptyTrash() {
-            const btn = document.getElementById('finalEmptyBtn');
-            btn.disabled = true;
-            btn.textContent = "Törlés folyamatban...";
-            
-            try {
-                const res = await fetch('/api/trash/empty', { method: 'POST' });
-                if (res.ok) {
-                    showToast("Lomtár ürítése megkezdődött");
-                    closeModal();
-                    // Since it's background, we just refresh after a short delay or assume success
-                    setTimeout(fetchTrash, 2000);
-                } else {
-                    showToast("Hiba történt");
-                }
-            } catch (err) {
-                showToast("Hálózati hiba");
-            }
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.classList.remove('opacity-0', 'translate-y-4');
-            toast.classList.add('opacity-100', 'translate-y-0');
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-4');
-                toast.classList.remove('opacity-100', 'translate-y-0');
-            }, 3000);
-        }
-
-        // --- FULLSCREEN PREVIEW ---
-        function openFullscreen(url) {
-            const overlay = document.getElementById('fullscreenOverlay');
-            const img = document.getElementById('fullscreenImg');
-            img.src = url;
-            overlay.classList.remove('hidden');
-            setTimeout(() => {
-                overlay.classList.remove('opacity-0');
-            }, 10);
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeFullscreen() {
-            const overlay = document.getElementById('fullscreenOverlay');
-            overlay.classList.add('opacity-0');
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                document.getElementById('fullscreenImg').src = '';
-            }, 300);
-            document.body.style.overflow = '';
-        }
-
-        // Global Esc Key Listener
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeFullscreen();
+    async function executeEmptyTrash() {
+        const btn = document.getElementById('finalEmptyBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin mr-2"></i> Törlés...';
+        
+        try {
+            const res = await fetch('/api/trash/empty', { method: 'POST' });
+            if (res.ok) {
+                showToast("Lomtár sikeresen kiürítve");
                 closeModal();
+                fetchTrash(true);
+            } else {
+                showToast("Hiba az ürítés során");
             }
-        });
+        } catch (e) {
+            showToast("Hálózati hiba");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Igen, töröld mind';
+        }
+    }
 
-        // Init
-        document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
-            fetchTrash();
-        });
-    </script>
-</body>
-</html>
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-4');
+            toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 3000);
+    }
+
+    function openFullscreen(url) {
+        const overlay = document.getElementById('fullscreenOverlay');
+        const img = document.getElementById('fullscreenImg');
+        img.src = url;
+        overlay.classList.remove('hidden');
+        setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeFullscreen() {
+        const overlay = document.getElementById('fullscreenOverlay');
+        overlay.classList.add('opacity-0');
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            document.getElementById('fullscreenImg').src = '';
+        }, 300);
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchTrash(true);
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && !isLoading && !isLastPage) {
+                fetchTrash(false);
+            }
+        }, { threshold: 0, rootMargin: '200px' });
+        observer.observe(document.getElementById('loadMoreTrigger'));
+    });
+</script>
+{% endblock %}

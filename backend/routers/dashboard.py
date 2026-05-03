@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from ..models import B2Account, MediaItem, FlaggedImage, CategoryDefinition, MediaClassification
 from pydantic import BaseModel
+from ..version import VERSION
 
 router = APIRouter()
 templates = Jinja2Templates(directory="backend/templates")
@@ -30,7 +31,8 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     b2_accounts = db.query(B2Account).all()
     return templates.TemplateResponse("index.html", {
         "request": request, 
-        "b2_accounts": b2_accounts
+        "b2_accounts": b2_accounts,
+        "version": VERSION
     })
 
 @router.get("/b2/accounts")
@@ -44,11 +46,11 @@ def get_receiver(request: Request):
     client_ip = request.client.host
     now = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-4]
     print(f"[{now}] DEBUG: Connection attempt to /receiver from IP: {client_ip}")
-    return templates.TemplateResponse("receiver.html", {"request": request})
+    return templates.TemplateResponse("receiver.html", {"request": request, "version": VERSION})
 
 @router.get("/trash")
 def get_trash_page(request: Request):
-    return templates.TemplateResponse("trash.html", {"request": request})
+    return templates.TemplateResponse("trash.html", {"request": request, "version": VERSION})
 
 @router.post("/b2/connect")
 def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

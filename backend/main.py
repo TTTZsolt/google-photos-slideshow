@@ -4,11 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from .routers import dashboard, music, classification, trash
 from .database import engine, Base
+from .version import VERSION, PROJECT_NAME
 from . import models  # Ensure all models are loaded for create_all
 import sqlite3
 import os
 
-app = FastAPI(title="Lumina - Control Center V14.3")
+app = FastAPI(title=f"{PROJECT_NAME} V{VERSION}")
 
 # CORS
 app.add_middleware(
@@ -43,6 +44,12 @@ def auto_migrate():
             # Add missing MediaItem columns
             try:
                 cursor.execute("ALTER TABLE media_items ADD COLUMN bucket_name TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            
+            # Ensure index exists on file_name
+            try:
+                cursor.execute("CREATE INDEX IF NOT EXISTS ix_media_items_file_name ON media_items (file_name);")
             except sqlite3.OperationalError:
                 pass
 
@@ -102,7 +109,7 @@ templates = Jinja2Templates(directory="backend/templates")
 
 @app.get("/")
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "version": "14.3"})
+    return templates.TemplateResponse("index.html", {"request": request, "version": VERSION})
 
 if __name__ == "__main__":
     import uvicorn

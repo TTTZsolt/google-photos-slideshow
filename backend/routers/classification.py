@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import SessionLocal
 from ..models import B2Account, MediaItem, MediaClassification, CategoryDefinition
 from pydantic import BaseModel
+from ..version import VERSION
 from typing import Optional, Dict, Any, List
 import logging
 from ..utils.b2_client import B2Client
@@ -55,7 +56,7 @@ bulk_reverse_status: Dict[str, Any] = {
 
 @router.get("/classify")
 def classify_page(request: Request):
-    return templates.TemplateResponse("classify.html", {"request": request})
+    return templates.TemplateResponse("classify.html", {"request": request, "version": VERSION})
 
 @router.get("/api/classify/next")
 def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):
@@ -115,6 +116,7 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         return {
             "done": False,
             "url": url,
+            "thumb_url": client.get_download_url(f"{media_item.bucket_name}-thumbs", media_item.file_name, b2_account.cloudflare_proxy_url),
             "file_name": media_item.file_name,
             "total_remaining": total_remaining
         }
@@ -146,12 +148,21 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             if not b2_account.trash_bucket_name:
                 raise HTTPException(status_code=400, detail="Lomtár vödör (torles-elott) nincs beállítva.")
             
-            # 1. Start pure background thread for B2 move
+            # 1. Start pure background thread for B2 move (Original)
             threading.Thread(target=b2_move_background_task, args=(
                 b2_account.key_id, 
                 b2_account.application_key, 
                 b2_account.source_bucket_name, 
                 b2_account.trash_bucket_name, 
+                req.file_name
+            )).start()
+            
+            # 1b. Start background thread for Thumbnail move (Silent fail if doesn't exist)
+            threading.Thread(target=b2_move_background_task, args=(
+                b2_account.key_id, 
+                b2_account.application_key, 
+                f"{b2_account.source_bucket_name}-thumbs", 
+                f"{b2_account.trash_bucket_name}-thumbs", 
                 req.file_name
             )).start()
             
@@ -175,13 +186,23 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
             if not b2_account.bucket_name:
                 raise HTTPException(status_code=400, detail="Cél vödör (kepek02) nincs beállítva.")
             
-            # 1. Start pure background thread for B2 move (with category metadata)
+            # 1. Start pure background thread for B2 move (Original)
             file_info = {"category": req.action}
             threading.Thread(target=b2_move_background_task, args=(
                 b2_account.key_id, 
                 b2_account.application_key, 
                 b2_account.source_bucket_name, 
                 b2_account.bucket_name, 
+                req.file_name,
+                file_info
+            )).start()
+
+            # 1b. Start background thread for Thumbnail move (Silent fail)
+            threading.Thread(target=b2_move_background_task, args=(
+                b2_account.key_id, 
+                b2_account.application_key, 
+                f"{b2_account.source_bucket_name}-thumbs", 
+                f"{b2_account.bucket_name}-thumbs", 
                 req.file_name,
                 file_info
             )).start()

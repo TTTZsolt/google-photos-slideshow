@@ -164,10 +164,33 @@ A V14.0 fókuszában a felhasználói élmény és a sebesség áll, különöse
 ---
 ---
 
-## 5. Hibaelhárítás és Karbantartás
+## 5. B2 Vödör Struktúra és Bélyegképek (V14.3+)
+
+A rendszer a sebesség optimalizálása érdekében bélyegkép (thumbnail) rendszert használ. Minden fő vödörhöz tartozik egy párhuzamos "thumbs" vödör.
+
+### Névkonvenció
+Az eredeti vödör neve után egy `-thumbs` utótagot használunk.
+*   Példa: `kepek02` -> `kepek02-thumbs`
+
+### Szükséges vödrök listája
+| Funkció | Eredeti vödör | Bélyegkép vödör |
+| :--- | :--- | :--- |
+| **Éles Képtár** | `kepek02` | `kepek02-thumbs` |
+| **Szortírozó (Forrás)** | `forras` | `forras-thumbs` |
+| **Lomtár** | `torles-elott` | `torles-elott-thumbs` |
+| **Archívum** | `kepek01` | `kepek01-thumbs` |
+
+### Feltöltés és Generálás
+A képek feltöltésekor az `upload_with_thumbs.py` scriptet kell használni. Ez automatikusan:
+1. Feltölti az eredeti képet a célvödörbe.
+2. Legenerál egy 400px széles JPEG változatot.
+3. Feltölti a bélyegképet a megfelelő `-thumbs` vödörbe.
+
+---
+
+## 6. Telepítés és Karbantartás
 
 *   **Lassú képbetöltés**: Ellenőrizd a Cloudflare Proxy URL-t a Dashboardon. Ha nincs beállítva, a B2 közvetlen lekérdezése lassabb lehet és hamarabb elérheti a napi limitet.
 *   **A Photopea nem tölti be a képet**: Ha a Digitális Laborban a Photopea felülete elindul, de a kép nem jelenik meg (üres vászon), az általában a **Cloudflare Proxy hiánya vagy hibás beállítása** miatt van. A közvetlen B2 letöltésnél a böngészők biztonsági szabályai (CORS) megakadályozhatják a kép betöltését. A megoldás a **Cloudflare Proxy beállítása és használata**, mivel ez biztosítja a szükséges engedélyeket a Photopea számára, miközben az adatforgalmi költségeket is minimalizálja.
 *   **Nem frissül a mappalista**: Nyomj a **[Resync]** gombra az adott B2 fióknál.
 *   **Hiányzó előnézet a Lomtárban**: Előfordulhat, hogy a szinkronizáció még nem fejeződött be, vagy a fájl metaadatai sérültek. A törlés/visszaállítás ilyenkor is működik a fájlnév alapján.
-

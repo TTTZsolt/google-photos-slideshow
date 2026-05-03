@@ -26,7 +26,7 @@ class MediaItem(Base):
     id = Column(String, primary_key=True, index=True) # B2 File ID
     b2_account_id = Column(Integer, index=True) # ForeignKey relation to B2Account.id
     bucket_name = Column(String, index=True) # Which bucket this file is currently in
-    file_name = Column(Text) # B2 File Name (Path)
+    file_name = Column(Text, index=True) # B2 File Name (Path)
     mime_type = Column(String)
     size = Column(Integer, nullable=True)
     creation_time = Column(DateTime(timezone=True), nullable=True)

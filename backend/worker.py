@@ -131,7 +131,16 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
         b2_account.sync_count = total_count
         b2_account.sync_total = total_expected
         db.commit()
-        logger.info(f"Finished sync for account {b2_account_id}. Total items: {total_count}")
+
+        # V14.3.1 Cleanup: Remove classification records that no longer exist in ANY B2 bucket
+        logger.info("Cleaning up orphaned classification records...")
+        # Get all unique file names currently in MediaItem
+        subquery = db.query(MediaItem.file_name)
+        # Delete from MediaClassification where file_name is NOT in the list of existing files
+        orphaned_count = db.query(MediaClassification).filter(~MediaClassification.file_name.in_(subquery)).delete(synchronize_session=False)
+        db.commit()
+        
+        logger.info(f"Finished sync for account {b2_account_id}. Total items: {total_count}, Cleaned up: {orphaned_count} orphans.")
 
     except Exception as e:
         logger.exception(f"Error syncing B2 account {b2_account_id}: {e}")

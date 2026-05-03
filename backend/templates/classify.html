@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lumina - Szortírozó V14.2</title>
+    <title>Lumina - Szortírozó V{{ version }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -277,7 +277,7 @@
         <!-- Center: Status Info -->
         <div class="flex items-center gap-3">
             <h1 class="text-sm font-bold tracking-tight text-slate-800">
-                Szortírozó <span class="text-[9px] text-indigo-400 font-black">V14.2</span>
+                Szortírozó <span class="text-[9px] text-indigo-400 font-black">V{{ version }}</span>
             </h1>
             <div class="h-3 w-[1px] bg-slate-200"></div>
             <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest" id="remainingCount">SCANNING...</p>
@@ -440,7 +440,7 @@
                 if (data && !data.error && !data.done && data.file_name) {
                     cardQueue.push(data);
                     const img = new Image();
-                    img.src = data.url;
+                    img.src = data.thumb_url || data.url;
                     return data;
                 }
             }
@@ -453,7 +453,7 @@
             card.dataset.url = data.url;
             
             card.innerHTML = `
-                <div class="card-image" style="background-image: url('${data.url}')">
+                <div class="card-image" style="background-image: url('${data.thumb_url || data.url}')">
                     <div class="error-overlay" id="err-${data.file_name.replace(/[^a-z0-9]/gi, '_')}">
                         <i data-lucide="image-off" class="w-8 h-8 mb-2"></i>
                         Hiba a betöltéskor
@@ -479,7 +479,7 @@
                 const errBox = card.querySelector('.error-overlay');
                 if (errBox) errBox.style.display = 'flex';
             };
-            imgChecker.src = data.url;
+            imgChecker.src = data.thumb_url || data.url;
 
             lucide.createIcons();
             return card;

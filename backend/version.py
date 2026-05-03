@@ -1,0 +1,3 @@
+VERSION = "15.0"
+PROJECT_NAME = "Lumina - Control Center"
+STABLE_RELEASE_DATE = "2026-05-03"
