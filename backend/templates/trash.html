@@ -239,7 +239,20 @@
             if (res.ok) {
                 showToast("Lomtár sikeresen kiürítve");
                 closeModal();
-                fetchTrash(true);
+                // Force UI to empty state immediately
+                trashItems = [];
+                currentOffset = 0;
+                isLastPage = true;
+                document.getElementById('trashGrid').innerHTML = '';
+                document.getElementById('trashGrid').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('emptyBtn').disabled = true;
+                
+                // Also update count UI if present
+                const loadTotal = document.getElementById('loadTotal');
+                const loadCurrent = document.getElementById('loadCurrent');
+                if (loadTotal) loadTotal.textContent = "0";
+                if (loadCurrent) loadCurrent.textContent = "0";
             } else {
                 showToast("Hiba az ürítés során");
             }

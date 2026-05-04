@@ -132,81 +132,72 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
     if not b2_acc or not b2_acc.trash_bucket_name:
         raise HTTPException(status_code=400, detail="Nincs Lomtár vödör beállítva.")
 
-    # Convert to primitives for background task safety (avoid DetachedInstanceError)
+    # 1. Identify items to delete
+    query = db.query(MediaClassification, MediaItem).outerjoin(
+        MediaItem, MediaItem.file_name == MediaClassification.file_name
+    ).filter(MediaClassification.is_deleted == True)
+    
+    results = query.all()
+    if not results:
+        return {"status": "ok", "message": "A lomtár már üres."}
+
+    # Prepare data for background task
+    items_to_delete = []
+    for mc, mi in results:
+        items_to_delete.append({
+            "file_name": mc.file_name,
+            "file_id": mi.id if mi else None,
+            "bucket_name": mi.bucket_name if mi else b2_acc.trash_bucket_name
+        })
+
+    # 2. IMMEDIATE DB CLEANUP (Main thread)
+    # This ensures the UI sees the empty state right away
+    for mc, mi in results:
+        db.delete(mc)
+        if mi:
+            db.delete(mi)
+    db.commit()
+
+    # Convert to primitives for background task safety
     key_id = b2_acc.key_id
     app_key = b2_acc.application_key
-    trash_bucket_name = b2_acc.trash_bucket_name
 
-    def perform_empty(b2_key: str, b2_secret: str, bucket_name: str):
-        # Independent session for background
-        from ..database import SessionLocal
-        local_db = SessionLocal()
-        try:
-            # Query items to kill
-            query = local_db.query(MediaClassification, MediaItem).outerjoin(
-                MediaItem, MediaItem.file_name == MediaClassification.file_name
-            ).filter(MediaClassification.is_deleted == True)
-            
-            results = query.all()
-            logger.info(f"Empty Trash: Found {len(results)} items to delete.")
+    def perform_physical_delete(b2_key: str, b2_secret: str, items: List[dict]):
+        client = B2Client(b2_key, b2_secret)
+        for item in items:
+            file_name = item["file_name"]
+            file_id = item["file_id"]
+            current_bucket = item["bucket_name"]
 
-            client = B2Client(b2_key, b2_secret)
-            trash_bucket = client.b2_api.get_bucket_by_name(bucket_name)
-            
-            for mc, mi in results:
-                file_name = mc.file_name
-                file_id = mi.id if mi else None
-                current_bucket = mi.bucket_name if mi else bucket_name
+            try:
+                # Skip B2 if ID is virtual
+                if file_id and str(file_id).startswith('repair-'):
+                    continue
 
-                try:
-                    # 1. Skip B2 if ID is virtual (repair-*)
-                    skip_b2 = False
-                    if file_id and str(file_id).startswith('repair-'):
-                        logger.info(f"Skipping B2 delete for virtual ID: {file_id}")
-                        skip_b2 = True
+                # Fetch missing B2 ID if needed
+                if not file_id:
+                    try:
+                        trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
+                        file_info = trash_bucket.get_file_info_by_name(file_name)
+                        file_id = file_info.id_
+                    except:
+                        pass
 
-                    # 2. Fetch missing B2 ID if needed (only if not skipping)
-                    if not file_id and not skip_b2:
-                        logger.info(f"Fetching B2 ID for virtual trash item: {file_name}")
+                # Delete B2 file
+                if file_id:
+                    try:
+                        client.delete_file_version(current_bucket, file_name, file_id)
+                        # Also try to delete thumbnail
                         try:
-                            file_info = trash_bucket.get_file_info_by_name(file_name)
-                            file_id = file_info.id_
-                        except Exception as b2_id_err:
-                            logger.warning(f"Could not find {file_name} in B2 trash bucket: {b2_id_err}")
-                            # Continue to DB cleanup anyway
+                            client.delete_file_version(f"{current_bucket}-thumbs", file_name, "")
+                        except:
+                            pass
+                    except Exception as b2_err:
+                        logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
+            except Exception as e:
+                logger.error(f"Failed background trash delete for {file_name}: {e}")
 
-                    # 3. Delete B2 file
-                    if file_id and not skip_b2:
-                        try:
-                            client.delete_file_version(current_bucket, file_name, file_id)
-                            # V14.3.3: Also try to delete thumbnail
-                            try:
-                                thumb_bucket = f"{current_bucket}-thumbs"
-                                client.delete_file_version(thumb_bucket, file_name, "") # Use empty ID for listing/finding if possible, or just skip if fail
-                            except:
-                                pass # Thumbs might not exist, that's fine
-                        except Exception as b2_del_err:
-                            err_msg = str(b2_del_err).lower()
-                            # If file not present or bad id, it's effectively "deleted"
-                            if "not found" in err_msg or "not present" in err_msg or "bad" in err_msg:
-                                logger.info(f"File already gone from B2 or ID invalid: {file_name}")
-                            else:
-                                raise b2_del_err # Rethrow critical errors
-
-                    # 4. DB Cleanup
-                    local_db.delete(mc)
-                    if mi:
-                        local_db.delete(mi)
-                    
-                    local_db.commit()
-                    logger.info(f"Trash finalized for {file_name}")
-                except Exception as e:
-                    logger.error(f"Failed to process trash item {file_name}: {e}")
-                    local_db.rollback()
-        finally:
-            local_db.close()
-
-    background_tasks.add_task(perform_empty, key_id, app_key, trash_bucket_name)
-    return {"status": "started", "message": "Lomtár ürítése megkezdődött a háttérben."}
+    background_tasks.add_task(perform_physical_delete, key_id, app_key, items_to_delete)
+    return {"status": "ok", "message": f"{len(items_to_delete)} elem törlése megkezdődött."}
 
 

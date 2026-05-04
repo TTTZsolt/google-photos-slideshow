@@ -364,6 +364,14 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
                 # Passing empty dict to strip existing category metadata
                 new_version = client.move_file(current_bucket, b2_account.source_bucket_name, file_name, file_info={})
                 
+                # 1b. Move thumbnail if possible (silent fail if doesn't exist)
+                try:
+                    client.move_file(f"{current_bucket}-thumbs", f"{b2_account.source_bucket_name}-thumbs", file_name, file_info={})
+                    logger.info(f"Thumbnail also moved back for {file_name}")
+                except Exception as thumb_err:
+                    # Not an error if thumb doesn't exist, just log it
+                    logger.debug(f"No thumbnail found to move back for {file_name}: {thumb_err}")
+
                 # 2. Delete old MediaItem records for this file (across all buckets to be safe)
                 db.execute(delete(MediaItem).where(MediaItem.file_name == file_name))
                 
