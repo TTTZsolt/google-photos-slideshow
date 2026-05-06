@@ -1,6 +1,11 @@
-# Lumina Képtár - Verziótörténet
-
 Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szakaszait.
+1. Kérlek minden fejlesztési lépésről készíts egy commit-ot magyarázó szöveggel.
+2. Mindíg ajánlj fel egy magyarázó szöveget és legyen lehetőségem azt átfogalmazni.
+3. Készíts táblázatot a commit-okról egy verzión belül: minden commitnak legyen egysora: verzió szám, commit szám és a magyarázó szöveg.
+4. A commit táblázatot a Lumina Képtár Commit fejezetben helyezd el.
+5. A fő verziók és magyarázatuk továbbra is a Verziótörténet fejezetben kerüljön felsorolásra.
+
+# Lumina Képtár - Verziótörténet   
 
 ## [V15.8.1] - Univerzális Fejléc és Robusztus Lomtár (2026-05-04)
 - **Navigáció**: SPA architektúra előkészítése központosított fejléc motorral.
@@ -67,3 +72,11 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 ## [V3.0] - Alapkiadás (2025-12-01)
 - Első stabil, B2 alapú, villódzásmentes slideshow motor.
+
+# Lumina Képtár - Commit-ok
+
+| Verzió | Commit | Magyarázat |
+| :--- | :--- | :--- |
+| V15.8.1 | `7f21ee5` | Szortírozásra áthelyezés thumbnail-jeinek kezelése javítva; Lomtár ürítés szinkronizáció |
+| V15.8.1 | `31c576a` | Univerzális Fejléc bevezetése és SPA architektúra előkészítése |
+| V15.0 | `d0c9785` | Teljesítmény optimalizálás thumbnail alapú betöltéssel (Stabil V15 bázis) |
