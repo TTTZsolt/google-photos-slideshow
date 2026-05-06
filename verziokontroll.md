@@ -2,6 +2,17 @@
 
 Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szakaszait.
 
+## [V15.8.1] - Univerzális Fejléc és Robusztus Lomtár (2026-05-04)
+- **Navigáció**: SPA architektúra előkészítése központosított fejléc motorral.
+- **Thumbnail Kezelés**: Kijavítva a Bulk Reverse hiba, ahol a thumbnail-ek nem mozogtak vissza a forrás vödörbe.
+- **Lomtár Optimalizálás**: Azonnali adatbázis-szintű ürítés a reszponzívabb élményért; szinkronizált UI frissítés.
+- **Stabilitás**: Javított hibatűrés az előnézeti képek betöltésekor.
+
+## [V15.0] - Teljesítmény Optimalizálás (Thumbnail alapú betöltés) (2026-05-03)
+- **Sebesség**: Drasztikusan gyorsabb Szortírozó és Lomtár a párhuzamos thumbnail vödrök használatával.
+- **Adatkezelés**: Automatikus thumbnail mozgatás és törlés az eredeti fájlokkal összhangban.
+- **UI**: Finomított betöltési indikátorok és áttűnések az előnézeti képeknél.
+
 ## [V14.3] - Verzió Egységesítés és Polírozás (2026-05-02)
 - **Standardizálás**: A verziószámok egységesítése minden modulban V14.3-ra.
 - **Dokumentáció**: README és verziótörténet frissítése.
