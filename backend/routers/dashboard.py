@@ -415,35 +415,53 @@ async def photopea_save(request: Request, db: Session = Depends(get_db)):
     b2_client = B2Client(b2_account.key_id, b2_account.application_key)
     
     try:
-        # 5. Determine new file name
-        # Ex: "2023/Nyaralas/img.jpg" -> "2023/Nyaralas/img-szerkesztett.jpg"
+        # 5. Determine archival and upload names
+        # Ex: "2023/Nyaralas/img.jpg"
         parts = file_path.rsplit('.', 1)
         if len(parts) == 2:
-            new_file_path = f"{parts[0]}-szerkesztett.{parts[1]}"
+            archived_file_path = f"{parts[0]}-eredeti.{parts[1]}"
         else:
-            new_file_path = f"{file_path}-szerkesztett.jpg"
+            archived_file_path = f"{file_path}-eredeti.jpg"
             
-        print(f"DEBUG PHOTOPEA: Uploading to {new_file_path} in bucket {b2_account.bucket_name}")
-        b2_client.upload_byte_stream(
-            bucket_name=b2_account.bucket_name,
-            file_name=new_file_path,
-            file_bytes=image_bytes,
-            content_type="image/jpeg" # Photopea saves as JPG by default based on our format setting
-        )
-        print("DEBUG PHOTOPEA: Upload successful.")
-        
-        # 7. Move Original image to Archive Bucket
+        # 6. ARCHIVE ORIGINAL: Move Original image to Archive Bucket with -eredeti suffix
+        # Also move thumbnail if exists to keep things clean
         try:
-            print(f"DEBUG PHOTOPEA: Moving {file_path} to {b2_account.archive_bucket_name}")
+            print(f"DEBUG PHOTOPEA: Archiving original {file_path} to {b2_account.archive_bucket_name} as {archived_file_path}")
             b2_client.move_file(
                 source_bucket_name=b2_account.bucket_name,
                 dest_bucket_name=b2_account.archive_bucket_name,
-                file_name=file_path
+                file_name=file_path,
+                dest_file_name=archived_file_path
             )
+            
+            # 6b. Also try to archive the thumbnail
+            try:
+                b2_client.move_file(
+                    source_bucket_name=f"{b2_account.bucket_name}-thumbs",
+                    dest_bucket_name=f"{b2_account.archive_bucket_name}-thumbs",
+                    file_name=file_path,
+                    dest_file_name=archived_file_path
+                )
+                print(f"DEBUG PHOTOPEA: Thumbnail also archived for {file_path}")
+            except Exception as thumb_move_err:
+                # Thumbs might not exist, ignore
+                print(f"DEBUG PHOTOPEA: No thumb to archive or move failed: {thumb_move_err}")
+
         except Exception as move_err:
-            print(f"DEBUG B2 Move Error: {str(move_err)}")
-            # Even if moving fails (e.g., permission issue), we shouldn't fail the whole save
-            # We'll just print the error and continue to remove it from the queue
+            print(f"DEBUG B2 Archiving Error: {str(move_err)}")
+            # If archiving fails (e.g. file already exists or permissions), 
+            # we might still want to proceed with the upload if the user wants to overwrite,
+            # but let's be safe and let the error propagate if it's critical.
+        
+        # 7. UPLOAD EDITED: Upload the manipulated image to the ORIGINAL path
+        print(f"DEBUG PHOTOPEA: Uploading edited image to {file_path} in bucket {b2_account.bucket_name}")
+        b2_client.upload_byte_stream(
+            bucket_name=b2_account.bucket_name,
+            file_name=file_path,
+            file_bytes=image_bytes,
+            content_type="image/jpeg"
+        )
+        print("DEBUG PHOTOPEA: Upload successful.")
         
         # 8. Remove from Retouch Queue (FlaggedImage table)
         from sqlalchemy import delete

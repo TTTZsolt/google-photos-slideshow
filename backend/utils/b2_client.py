@@ -106,12 +106,14 @@ class B2Client:
         )
         return file_version
 
-    def move_file(self, source_bucket_name: str, dest_bucket_name: str, file_name: str, file_info: dict = None):
+    def move_file(self, source_bucket_name: str, dest_bucket_name: str, file_name: str, file_info: dict = None, dest_file_name: str = None):
         """
         Natív B2 másolás a szerveren (letöltés nélkül!), majd az eredeti törlése.
         Ha a célvödör nem létezik, vagy nincs megadva, hibát dob.
+        Támogatja az átnevezést a 'dest_file_name' paraméterrel.
         """
-        logger.info(f"Moving {file_name} from {source_bucket_name} to {dest_bucket_name} with info: {file_info}")
+        final_dest_name = dest_file_name or file_name
+        logger.info(f"Moving {file_name} from {source_bucket_name} to {dest_bucket_name} as {final_dest_name} with info: {file_info}")
         
         source_bucket = self.b2_api.get_bucket_by_name(source_bucket_name)
         dest_bucket = self.b2_api.get_bucket_by_name(dest_bucket_name)
@@ -119,13 +121,10 @@ class B2Client:
         # 1. Keresd meg a forrásfájlt pontos ID alapján (a másoláshoz kell)
         file_version = source_bucket.get_file_info_by_name(file_name)
         
-        # 2. Másold át a cél vödörbe (ugyanazzal a névvel)
-        # B2SDK handles metadata replacement internally if file_info is passed.
-        # However, passing file_info=None copies existing metadata. 
-        # If we explicitly want to clear metadata, we must pass file_info={}.
+        # 2. Másold át a cél vödörbe
         kwargs = {
             "file_id": file_version.id_,
-            "new_file_name": file_name
+            "new_file_name": final_dest_name
         }
         if file_info is not None:
              kwargs["file_info"] = file_info
@@ -135,7 +134,7 @@ class B2Client:
         
         # 3. Töröld az eredetit a forrás vödörből
         source_bucket.delete_file_version(file_version.id_, file_name)
-        logger.info(f"Successfully moved and cleaned up {file_name}")
+        logger.info(f"Successfully moved and cleaned up {file_name} to {final_dest_name}")
         return new_version
 
     def delete_file_version(self, bucket_name: str, file_name: str, file_id: str):
