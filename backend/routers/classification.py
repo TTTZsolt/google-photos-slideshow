@@ -15,6 +15,8 @@ import threading
 logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory="backend/templates")
+templates.env.globals.update(version=VERSION)
+
 
 def get_db():
     db = SessionLocal()

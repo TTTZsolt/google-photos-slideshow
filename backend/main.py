@@ -112,6 +112,8 @@ app.include_router(trash.router, tags=["trash"])
 app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 templates = Jinja2Templates(directory="backend/templates")
+templates.env.globals.update(version=VERSION)
+
 
 @app.get("/")
 def read_root(request: Request):

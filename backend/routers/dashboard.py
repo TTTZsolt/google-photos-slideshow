@@ -9,6 +9,8 @@ from ..version import VERSION
 
 router = APIRouter()
 templates = Jinja2Templates(directory="backend/templates")
+templates.env.globals.update(version=VERSION)
+
 
 class B2ConnectRequest(BaseModel):
     key_id: str
