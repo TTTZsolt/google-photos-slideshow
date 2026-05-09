@@ -1,4 +1,4 @@
-# Lumina Képtár - Rendszer Dokumentáció (V14.0)
+# Lumina Képtár - Rendszer Dokumentáció (V15.8.2)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
