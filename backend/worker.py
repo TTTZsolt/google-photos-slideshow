@@ -22,15 +22,19 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
 
         # If target_bucket is not specified, sync main, source and trash
         buckets_to_sync = []
+        unique_buckets = set()
+        
         if target_bucket:
-            buckets_to_sync = [target_bucket]
+            unique_buckets.add(target_bucket)
         else:
             if b2_account.bucket_name:
-                buckets_to_sync.append(b2_account.bucket_name)
+                unique_buckets.add(b2_account.bucket_name)
             if b2_account.source_bucket_name:
-                buckets_to_sync.append(b2_account.source_bucket_name)
+                unique_buckets.add(b2_account.source_bucket_name)
             if b2_account.trash_bucket_name:
-                buckets_to_sync.append(b2_account.trash_bucket_name)
+                unique_buckets.add(b2_account.trash_bucket_name)
+        
+        buckets_to_sync = list(unique_buckets)
 
         logger.info(f"Starting B2 sync for account {b2_account_id}, buckets: {buckets_to_sync}")
         b2_account.sync_status = "Syncing"

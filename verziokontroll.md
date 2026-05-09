@@ -7,6 +7,12 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet   
 
+## [V16.0.0] - Zero-Move apró hibáinak javítása (2026-05-09)
+- **Szortírozó**: Kijavítva a duplikált képek megjelenése (Concurrency Lock a pre-fetchingnél).
+- **Szortírozó**: Új "Pánik gomb" a szortírozási várólista azonnali ürítéséhez.
+- **Lomtár**: Fixálva a visszaállítási logika; a képek most már azonnal megjelennek a szortírozóban és a bélyegképeik is visszakerülnek a helyükre.
+- **Stabilitás**: A háttérben futó "szellem-szerverek" okozta 404-es hibák elhárítva.
+
 ## [V15.8.4] - Zero-Move Mover és Párhuzamosítás (2026-05-09)
 - **Architektúra**: Új "Zero-Move" logika bevezetése: a válogatás előkészítése (Bulk Reverse) immár azonnali, mert nem mozgatunk fizikai fájlokat, csak adatbázis állapotokat kezelünk.
 - **Rendezés**: A Szortírozóban a képek könyvtárankénti és ABC sorrendben jelennek meg.
@@ -90,6 +96,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
+| V16.0.0 | `V16` | Zero-Move apró hibáinak javítása (Szortírozó duplikáció, Lomtár visszaállítás fix, Pánik gomb) |
 | V15.8.4 | `3245dd5` | Rendszer dokumentáció frissítése az új Zero-Move és Single-Bucket munkafolyamathoz |
 | V15.8.4 | `e89dacb` | Zero-Move Sorter architektúra és párhuzamosított B2 műveletek implementálása |
 | V15.8.3 | `645e544` | Szortírozó HD Zoom támogatás nagyításkor |

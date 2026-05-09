@@ -331,6 +331,16 @@
         <i data-lucide="minimize" class="w-6 h-6"></i>
     </button>
 
+    <!-- Top Navigation -->
+    <div class="fixed top-4 right-4 z-[200] flex items-center gap-2">
+        <button onclick="resetSorter()" class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-rose-500 transition-all active:scale-90 shadow-lg" title="Szortírozó ürítése">
+            <i data-lucide="refresh-ccw" class="w-6 h-6"></i>
+        </button>
+        <a href="/" class="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all active:scale-90 shadow-lg" title="Vissza a főoldalra">
+            <i data-lucide="home" class="w-6 h-6"></i>
+        </a>
+    </div>
+
     <!-- Controls (Bottom Row) -->
     <div id="controlsContainer" class="fixed bottom-4 left-0 w-full px-4 hidden">
         <div id="categoryGrid" class="grid grid-cols-4 gap-2 max-w-md mx-auto">
@@ -340,6 +350,22 @@
 
     <script>
         lucide.createIcons();
+
+        async function resetSorter() {
+            if (!confirm("Biztosan kiüríted a szortírozó várólistáját? (A képek megmaradnak, csak a jelölés törlődik)")) return;
+            try {
+                const res = await fetch('/api/classification/sorter/reset', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert("Hiba a reset során");
+                }
+            } catch (e) {
+                alert("Hálózati hiba");
+            }
+        }
 
         const deck = document.getElementById('deck');
         const emptyMessage = document.getElementById('emptyMessage');
@@ -434,14 +460,24 @@
             }
         }
 
+        let isReplenishing = false;
         async function replenishQueue() {
-            if (cardQueue.length < 3) {
+            if (isReplenishing || cardQueue.length >= 3) return;
+            
+            isReplenishing = true;
+            try {
                 const data = await fetchNextData();
                 if (data && !data.error && !data.done && data.file_name) {
                     cardQueue.push(data);
+                    // Preload image
                     const img = new Image();
                     img.src = data.thumb_url || data.url;
-                    return data;
+                }
+            } finally {
+                isReplenishing = false;
+                // If we still need more, trigger another one
+                if (cardQueue.length < 3) {
+                    replenishQueue();
                 }
             }
         }
@@ -497,7 +533,6 @@
             if (d1 && !d1.done) deck.appendChild(createCardElement(d1, false));
             if (d2 && !d2.done) deck.appendChild(createCardElement(d2, true));
             
-            replenishQueue();
             replenishQueue();
         }
 

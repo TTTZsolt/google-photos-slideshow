@@ -23,7 +23,7 @@ def get_trash_items(limit: int = 50, offset: int = 0, db: Session = Depends(get_
     # Using outerjoin to ensure we see items even if MediaItem record is missing
     query = db.query(MediaClassification, MediaItem).outerjoin(
         MediaItem, MediaClassification.file_name == MediaItem.file_name
-    ).filter(MediaClassification.is_deleted == True)
+    ).filter(MediaClassification.is_deleted == True).group_by(MediaClassification.file_name)
     
     # Sort by date descending (assuming mc.updated_at is a good indicator)
     from sqlalchemy import desc
@@ -83,15 +83,17 @@ def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
         mi = db.query(MediaItem).filter(MediaItem.id == file_id).first()
 
     if not mi:
-        # If it's pure virtual (no MediaItem at all), we might need to find it by name in Classification
-        # and create a temporary B2 move if possible, but let's assume MediaItem usually exists
-        # or we just update the classification and wait for next sync.
-        # But for now, let's try to restore by file_name if mi is missing
         file_name_search = file_id.replace("virtual-", "", 1) if file_id.startswith("virtual-") else None
         mc = db.query(MediaClassification).filter(MediaClassification.file_name == file_name_search).first()
         if mc:
             mc.is_deleted = False
             mc.category = None
+            
+            # Also try to flag the actual MediaItem if it exists
+            mi_real = db.query(MediaItem).filter(MediaItem.file_name == mc.file_name).first()
+            if mi_real:
+                mi_real.is_in_sorter = True
+                
             db.commit()
             return {"status": "ok", "message": f"{mc.file_name} visszaállítva (adatbázis szinten)."}
         
@@ -104,12 +106,17 @@ def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
     try:
         client = B2Client(b2_acc.key_id, b2_acc.application_key)
         
-        # 1. Move physically in B2
+        # 1. Move physically in B2 (Original + Thumb)
         new_version = client.move_file(mi.bucket_name, b2_acc.source_bucket_name, mi.file_name)
+        try:
+            client.move_file(f"{mi.bucket_name}-thumbs", f"{b2_acc.source_bucket_name}-thumbs", mi.file_name)
+        except Exception as th_err:
+            logger.warning(f"Could not restore thumbnail for {mi.file_name}: {th_err}")
         
         # 2. Update MediaItem entry
         mi.bucket_name = b2_acc.source_bucket_name
         mi.id = new_version.id_
+        mi.is_in_sorter = True
         
         # 3. Update Classification
         mc = db.query(MediaClassification).filter(MediaClassification.file_name == mi.file_name).first()

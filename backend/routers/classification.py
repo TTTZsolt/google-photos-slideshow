@@ -64,18 +64,16 @@ def classify_page(request: Request):
 def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):
     """ Returns the next image for classification. Looks in both source bucket and items marked with is_in_sorter. """
     try:
+        logger.info("DEBUG: get_next_for_classification CALLED")
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
         if not b2_account:
             raise HTTPException(status_code=400, detail="Nincs aktív B2 fiók konfigurálva.")
         
-        # Query for the next item: either in source bucket OR explicitly marked for sorting
+        # ZERO-MOVE Logic: ONLY items explicitly marked for sorting
         query = db.query(MediaItem).outerjoin(
             MediaClassification, MediaItem.file_name == MediaClassification.file_name
         ).filter(
-            or_(
-                MediaItem.is_in_sorter == True,
-                MediaItem.bucket_name == b2_account.source_bucket_name
-            )
+            MediaItem.is_in_sorter == True
         ).filter(
             or_(
                 MediaClassification.file_name == None,
@@ -107,10 +105,7 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         total_remaining = db.query(MediaItem).outerjoin(
             MediaClassification, MediaItem.file_name == MediaClassification.file_name
         ).filter(
-            or_(
-                MediaItem.is_in_sorter == True,
-                MediaItem.bucket_name == b2_account.source_bucket_name
-            )
+            MediaItem.is_in_sorter == True
         ).filter(
             or_(
                 MediaClassification.file_name == None,
@@ -407,3 +402,14 @@ def delete_category(cat_id: int, db: Session = Depends(get_db)):
     db.delete(cat)
     db.commit()
     return {"status": "ok"}
+@router.post("/api/classification/sorter/reset")
+def reset_sorter(db: Session = Depends(get_db)):
+    """ Resets the is_in_sorter flag for all items. """
+    try:
+        count = db.query(MediaItem).filter(MediaItem.is_in_sorter == True).update({"is_in_sorter": False})
+        db.commit()
+        return {"message": f"Szortírozó alaphelyzetbe állítva. {count} elem eltávolítva."}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Sorter reset failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
