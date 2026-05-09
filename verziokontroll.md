@@ -7,6 +7,12 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet   
 
+## [V15.8.4] - Zero-Move Mover és Párhuzamosítás (2026-05-09)
+- **Architektúra**: Új "Zero-Move" logika bevezetése: a válogatás előkészítése (Bulk Reverse) immár azonnali, mert nem mozgatunk fizikai fájlokat, csak adatbázis állapotokat kezelünk.
+- **Rendezés**: A Szortírozóban a képek könyvtárankénti és ABC sorrendben jelennek meg.
+- **Sebesség**: Minden háttérben maradó B2 művelet (törlés, metaadat frissítés) párhuzamosított szálakon fut a reszponzivitás érdekében.
+- **Egyszerűsítés**: A rendszer támogatja a közvetlenül a `kepek02` vödörbe történő feltöltést, a `forras` vödör használata már nem kötelező.
+
 ## [V15.8.3] - Szortírozó HD Zoom (2026-05-09)
 - **Szortírozó**: Automatikus váltás az eredeti nagyfelbontású képre nagyításkor (pinch-to-zoom), így a részletek jobban láthatóak.
 
@@ -84,6 +90,8 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
+| V15.8.4 | `8d2c4a1` | Rendszer dokumentáció frissítése az új Zero-Move és Single-Bucket munkafolyamathoz |
+| V15.8.4 | `e9f2a41` | Zero-Move Sorter architektúra és párhuzamosított B2 műveletek implementálása |
 | V15.8.3 | `645e544` | Szortírozó HD Zoom támogatás nagyításkor |
 | V15.8.2 | `bb26c90` | Verziószám emelése V15.8.2-re a kódban és a dokumentációban |
 | V15.8.2 | `b75b1be` | Mover funkció részletes dokumentálása és szerver stabilitási javítás |

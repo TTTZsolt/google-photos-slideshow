@@ -1,4 +1,4 @@
-# Lumina Képtár (V15.8.3)
+# Lumina Képtár (V15.8.4)
 
 **Cél**: Fényképek szortírozása nyomógombokkal
 
@@ -55,14 +55,14 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click "Start" on the Dashboard.
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
-## Mover Funkció (B2 Fájlmozgatás)
+## Mover Funkció - Zero-Move Architektúra (V15.8.4)
 
-A rendszer a klasszifikáció során fizikai fájlmozgatást végez a Backblaze B2 vödrök között, hogy a képek állapota a felhőben is tükröződjön:
+A rendszer a válogatási folyamat gyorsítása érdekében immár **Zero-Move** logikát használ:
 
-*   **Klasszifikáció (Család, Utazás stb.)**: A kép átkerül a `forras` vödörből a `kepek02` (aktív) vödörbe. A kategória metaadatként rögzítésre kerül a fájlon.
-*   **Törlés (Trash)**: A kép átkerül a `forras` vödörből a `torles-elott` (lomtár) vödörbe.
-*   **Visszavonás (Undo / Bulk Reverse)**: A kép visszakerül a `kepek02` vagy `torles-elott` vödörből a `forras` vödörbe (várólista).
-*   **Thumbnail kezelés**: A mozgást a bélyegképek is automatikusan követik a megfelelő `-thumbs` végződésű vödrökben (pl. `forras-thumbs` -> `kepek02-thumbs`).
+*   **Válogatás előkészítése (Bulk Reverse)**: A képek **nem mozognak fizikailag** a vödrök között. A rendszer csak megjelöli őket válogatásra az adatbázisban. Ez 1300+ kép esetén is azonnali eredményt ad.
+*   **Klasszifikáció**: Ha a kép már a `kepek02` (aktív) vödörben van, a mentéskor nem történik fájlmozgatás, csak a metaadatok frissülnek a felhőben.
+*   **Törlés (Trash)**: Fizikai mozgatás csak törléskor történik (`kepek02` -> `torles-elott`), amit párhuzamosított szálakon végzünk a maximális sebességért.
+*   **Egyszerűsített struktúra**: Minden kép a `kepek02` vödörben lakik, a `forras` vödör használata már nem kötelező.
 
 
 ## Versions

@@ -1,4 +1,4 @@
-# Lumina Képtár - Rendszer Dokumentáció (V15.8.3)
+# Lumina Képtár - Rendszer Dokumentáció (V15.8.4)
 
 Ez a dokumentáció részletesen összefoglalja a Google Photos Slideshow rendszer működését, felépítését és használatát, amely a feltöltött Backblaze B2 képeidet vetíti ki egyedileg konfigurálható kijelzőkre.
 
@@ -197,26 +197,25 @@ A képek feltöltésekor az `upload_with_thumbs.py` scriptet kell használni. Ez
 
 ---
 
-## 7. Mover Funkció Részletes Működése
+## 7. Mover Funkció - Zero-Move Architektúra (V15.8.4)
 
-A rendszer egyik legfontosabb eleme a "Mover" logika, amely biztosítja, hogy a lokális (adatbázis szintű) döntések szinkronba kerüljenek a Backblaze B2 felhőtárhely fizikai tartalmával.
+A V15.8.4-es verziótól kezdődően a rendszer egy radikálisan gyorsabb, **Zero-Move** logikát alkalmaz a válogatási folyamat során. Ez kiküszöböli a felesleges nagyfájl-mozgatásokat a Backblaze B2 felhőben.
 
-### Fizikai Fájlmozgatás a Vödrök Között
-Amikor a felületen műveletet végzel, a backend nem csak az adatbázist frissíti, hanem aszinkron háttérfolyamatokon keresztül elvégzi a B2-n belüli fájlmozgatást is:
+### Virtuális Válogatás (Azonnali Előkészítés)
+Amikor a Dashboardon a "Mover" (Bulk Reverse) eszközzel kijelölsz egy mappát vagy kategóriát újraválogatásra:
+*   **Nincs fizikai fájlmozgatás**: Az 1300+ kép elmozdítása korábban órákba telt; mostantól ez **azonnali**, mert csak az adatbázisban jelöljük meg a képeket (`is_in_sorter = True`).
+*   **Bélyegképek**: Még a bélyegképeket sem kell mozgatni, a rendszer onnan olvassa be őket, ahol éppen vannak.
 
+### Klasszifikáció és Mentés
+A szortírozó felületen végzett munka során a rendszer intelligensen dönt a fizikai mozgásról:
 1.  **Klasszifikáció (Család, Utazás, stb.)**:
-    *   **Folyamat**: A fájl átkerül a `forras` vödörből a `kepek02` (aktív) vödörbe.
-    *   **Metaadat**: A mozgatással egyidőben a fájlra rákerül a kategória neve metaadatként (`X-Bz-Info-category`).
+    *   Ha a kép már a `kepek02` (aktív) vödörben van, **nincs fájlmozgatás**. Csak a kategória metaadata frissül a felhőben és az adatbázisban.
+    *   Fizikai mozgatás csak akkor történik, ha a kép eredetileg egy másik vödörben (pl. `forras`) volt.
 2.  **Törlés (Trash)**:
-    *   **Folyamat**: A fájl átkerül a `forras` vödörből a `torles-elott` (lomtár) vödörbe.
-    *   **Jelölés**: Az adatbázisban a kép `is_deleted = True` állapotot kap.
-3.  **Visszavonás (Undo / Bulk Reverse)**:
-    *   **Folyamat**: A fájl visszakerül a `kepek02` vagy `torles-elott` vödörből a `forras` vödörbe.
-    *   **Tisztítás**: A kategória metaadat és az adatbázis bejegyzés törlődik, így a kép újra megjelenik a várakozási listán.
+    *   A fájl átkerül a `kepek02` vödörből a `torles-elott` (lomtár) vödörbe.
+    *   Ezt a műveletet **párhuzamosított szálakon** végezzük, így több fájl egyidejű törlése is rendkívül gyors.
 
-### Bélyegképek (Thumbnails) Szinkronizációja
-A Mover funkció kritikus tulajdonsága, hogy **automatikusan kezeli a bélyegképeket is**. Minden mozgatási műveletnél a rendszer megpróbálja megkeresni és átmozgatni a fájlt a megfelelő `-thumbs` végződésű vödörben is:
-*   Például: Ha a `nyaralas.jpg` átkerül `forras` $\rightarrow$ `kepek02`, akkor a háttérben a `forras-thumbs` $\rightarrow$ `kepek02-thumbs` mozgatás is lefut.
-*   Ha a bélyegkép nem létezik, a folyamat csendben átugorja, nem okozva hibát a fő műveletben.
-
-Ez a megoldás garantálja, hogy a rendszer sebessége (a kicsi képek használata miatt) megmaradjon, függetlenül attól, hogy a kép éppen melyik fázisban van a munkafolyamatban.
+### Előnyök
+*   **Azonnaliság**: A válogatás előkészítése nem igényel várakozást.
+*   **Biztonság**: Kevesebb fájlművelet a felhőben kisebb hibaforrást jelent.
+*   **Rendezettség**: A rendszer támogatja az **egyvödrös (Single-Bucket)** felépítést, ahol minden kép a `kepek02`-ben lakik, és csak a lomtár különül el.
