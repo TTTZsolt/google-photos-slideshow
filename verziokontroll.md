@@ -7,6 +7,9 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet   
 
+## [V15.8.3] - Szortírozó HD Zoom (2026-05-09)
+- **Szortírozó**: Automatikus váltás az eredeti nagyfelbontású képre nagyításkor (pinch-to-zoom), így a részletek jobban láthatóak.
+
 ## [V15.8.2] - Mover Dokumentáció és Stabilitás (2026-05-09)
 - **Dokumentáció**: Mover funkció (B2 fájlmozgatás és thumbnail szinkronizáció) részletes leírása a README-ben és a Dokumentációban.
 - **Stabilitás**: Backend szerver "Internal Server Error" (zombi folyamat) elhárítása és újraindítása.
