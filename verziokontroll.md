@@ -90,8 +90,8 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
-| V15.8.4 | `8d2c4a1` | Rendszer dokumentáció frissítése az új Zero-Move és Single-Bucket munkafolyamathoz |
-| V15.8.4 | `e9f2a41` | Zero-Move Sorter architektúra és párhuzamosított B2 műveletek implementálása |
+| V15.8.4 | `3245dd5` | Rendszer dokumentáció frissítése az új Zero-Move és Single-Bucket munkafolyamathoz |
+| V15.8.4 | `e89dacb` | Zero-Move Sorter architektúra és párhuzamosított B2 műveletek implementálása |
 | V15.8.3 | `645e544` | Szortírozó HD Zoom támogatás nagyításkor |
 | V15.8.2 | `bb26c90` | Verziószám emelése V15.8.2-re a kódban és a dokumentációban |
 | V15.8.2 | `b75b1be` | Mover funkció részletes dokumentálása és szerver stabilitási javítás |
