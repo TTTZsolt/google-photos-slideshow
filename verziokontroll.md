@@ -7,6 +7,10 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet   
 
+## [V15.8.2] - Mover Dokumentáció és Stabilitás (2026-05-09)
+- **Dokumentáció**: Mover funkció (B2 fájlmozgatás és thumbnail szinkronizáció) részletes leírása a README-ben és a Dokumentációban.
+- **Stabilitás**: Backend szerver "Internal Server Error" (zombi folyamat) elhárítása és újraindítása.
+
 ## [V15.8.1] - Univerzális Fejléc és Robusztus Lomtár (2026-05-04)
 - **Navigáció**: SPA architektúra előkészítése központosított fejléc motorral.
 - **Thumbnail Kezelés**: Kijavítva a Bulk Reverse hiba, ahol a thumbnail-ek nem mozogtak vissza a forrás vödörbe.
@@ -77,6 +81,10 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
+| V15.8.2 | `[hash]` | Mover funkció részletes dokumentálása és szerver stabilitási javítás |
+| V15.8.1 | `d6274f6` | Digitális Labor: Új retusálási mentési logika és fájlnév konvenció bevezetése |
 | V15.8.1 | `7f21ee5` | Szortírozásra áthelyezés thumbnail-jeinek kezelése javítva; Lomtár ürítés szinkronizáció |
 | V15.8.1 | `31c576a` | Univerzális Fejléc bevezetése és SPA architektúra előkészítése |
 | V15.0 | `d0c9785` | Teljesítmény optimalizálás thumbnail alapú betöltéssel (Stabil V15 bázis) |
+| V15.0 | `51d330e` | Dokumentáció: Verziótörténet frissítése a V15-ös mérföldkövekkel |
+| V14.3 | `873c77c` | Dokumentáció: Új verziókövetési struktúra és commit táblázat bevezetése |

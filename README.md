@@ -55,6 +55,16 @@ This project is a high-performance, web-based random photo slideshow that pulls 
     - Click "Start" on the Dashboard.
     - Click the "Open Slideshow Receiver" link or open `http://<your-ip>:8080/receiver` on any device.
 
+## Mover Funkció (B2 Fájlmozgatás)
+
+A rendszer a klasszifikáció során fizikai fájlmozgatást végez a Backblaze B2 vödrök között, hogy a képek állapota a felhőben is tükröződjön:
+
+*   **Klasszifikáció (Család, Utazás stb.)**: A kép átkerül a `forras` vödörből a `kepek02` (aktív) vödörbe. A kategória metaadatként rögzítésre kerül a fájlon.
+*   **Törlés (Trash)**: A kép átkerül a `forras` vödörből a `torles-elott` (lomtár) vödörbe.
+*   **Visszavonás (Undo / Bulk Reverse)**: A kép visszakerül a `kepek02` vagy `torles-elott` vödörből a `forras` vödörbe (várólista).
+*   **Thumbnail kezelés**: A mozgást a bélyegképek is automatikusan követik a megfelelő `-thumbs` végződésű vödrökben (pl. `forras-thumbs` -> `kepek02-thumbs`).
+
+
 ## Versions
 - **V14.3**: Teljes verzió egységesítés és elmaradt dokumentációs javítások.
 - **V14.2**: 2026-05-02-i stabil verzió (Robusztus szinkronizáció + ékezet-érzéketlen keresés).

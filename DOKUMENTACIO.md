@@ -194,3 +194,29 @@ A képek feltöltésekor az `upload_with_thumbs.py` scriptet kell használni. Ez
 *   **A Photopea nem tölti be a képet**: Ha a Digitális Laborban a Photopea felülete elindul, de a kép nem jelenik meg (üres vászon), az általában a **Cloudflare Proxy hiánya vagy hibás beállítása** miatt van. A közvetlen B2 letöltésnél a böngészők biztonsági szabályai (CORS) megakadályozhatják a kép betöltését. A megoldás a **Cloudflare Proxy beállítása és használata**, mivel ez biztosítja a szükséges engedélyeket a Photopea számára, miközben az adatforgalmi költségeket is minimalizálja.
 *   **Nem frissül a mappalista**: Nyomj a **[Resync]** gombra az adott B2 fióknál.
 *   **Hiányzó előnézet a Lomtárban**: Előfordulhat, hogy a szinkronizáció még nem fejeződött be, vagy a fájl metaadatai sérültek. A törlés/visszaállítás ilyenkor is működik a fájlnév alapján.
+
+---
+
+## 7. Mover Funkció Részletes Működése
+
+A rendszer egyik legfontosabb eleme a "Mover" logika, amely biztosítja, hogy a lokális (adatbázis szintű) döntések szinkronba kerüljenek a Backblaze B2 felhőtárhely fizikai tartalmával.
+
+### Fizikai Fájlmozgatás a Vödrök Között
+Amikor a felületen műveletet végzel, a backend nem csak az adatbázist frissíti, hanem aszinkron háttérfolyamatokon keresztül elvégzi a B2-n belüli fájlmozgatást is:
+
+1.  **Klasszifikáció (Család, Utazás, stb.)**:
+    *   **Folyamat**: A fájl átkerül a `forras` vödörből a `kepek02` (aktív) vödörbe.
+    *   **Metaadat**: A mozgatással egyidőben a fájlra rákerül a kategória neve metaadatként (`X-Bz-Info-category`).
+2.  **Törlés (Trash)**:
+    *   **Folyamat**: A fájl átkerül a `forras` vödörből a `torles-elott` (lomtár) vödörbe.
+    *   **Jelölés**: Az adatbázisban a kép `is_deleted = True` állapotot kap.
+3.  **Visszavonás (Undo / Bulk Reverse)**:
+    *   **Folyamat**: A fájl visszakerül a `kepek02` vagy `torles-elott` vödörből a `forras` vödörbe.
+    *   **Tisztítás**: A kategória metaadat és az adatbázis bejegyzés törlődik, így a kép újra megjelenik a várakozási listán.
+
+### Bélyegképek (Thumbnails) Szinkronizációja
+A Mover funkció kritikus tulajdonsága, hogy **automatikusan kezeli a bélyegképeket is**. Minden mozgatási műveletnél a rendszer megpróbálja megkeresni és átmozgatni a fájlt a megfelelő `-thumbs` végződésű vödörben is:
+*   Például: Ha a `nyaralas.jpg` átkerül `forras` $\rightarrow$ `kepek02`, akkor a háttérben a `forras-thumbs` $\rightarrow$ `kepek02-thumbs` mozgatás is lefut.
+*   Ha a bélyegkép nem létezik, a folyamat csendben átugorja, nem okozva hibát a fő műveletben.
+
+Ez a megoldás garantálja, hogy a rendszer sebessége (a kicsi képek használata miatt) megmaradjon, függetlenül attól, hogy a kép éppen melyik fázisban van a munkafolyamatban.
