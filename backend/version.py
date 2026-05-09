@@ -1,3 +1,3 @@
-VERSION = "15.8.3"
+VERSION = "15.8.4"
 PROJECT_NAME = "Lumina - Control Center"
 STABLE_RELEASE_DATE = "2026-05-09"

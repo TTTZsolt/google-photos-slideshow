@@ -31,6 +31,7 @@ class MediaItem(Base):
     size = Column(Integer, nullable=True)
     creation_time = Column(DateTime(timezone=True), nullable=True)
     indexed_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_in_sorter = Column(Boolean, default=False, index=True)
 
 class MediaClassification(Base):
     __tablename__ = "media_classifications"

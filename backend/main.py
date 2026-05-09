@@ -47,6 +47,12 @@ def auto_migrate():
             except sqlite3.OperationalError:
                 pass
             
+            try:
+                cursor.execute("ALTER TABLE media_items ADD COLUMN is_in_sorter BOOLEAN DEFAULT 0;")
+                cursor.execute("CREATE INDEX IF NOT EXISTS ix_media_items_is_in_sorter ON media_items (is_in_sorter);")
+            except sqlite3.OperationalError:
+                pass
+            
             # Ensure index exists on file_name
             try:
                 cursor.execute("CREATE INDEX IF NOT EXISTS ix_media_items_file_name ON media_items (file_name);")

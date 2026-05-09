@@ -9,6 +9,8 @@ from typing import Optional, Dict, Any, List
 import logging
 from ..utils.b2_client import B2Client
 from sqlalchemy import delete, and_, or_
+import concurrent.futures
+import threading
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -60,26 +62,26 @@ def classify_page(request: Request):
 
 @router.get("/api/classify/next")
 def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):
-    """ Returns the next unclassified image from the source bucket, excluding specified files. """
+    """ Returns the next image for classification. Looks in both source bucket and items marked with is_in_sorter. """
     try:
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
         if not b2_account:
             raise HTTPException(status_code=400, detail="Nincs aktív B2 fiók konfigurálva.")
         
-        if not b2_account.source_bucket_name:
-            raise HTTPException(status_code=400, detail="A 'forras' vödör neve nincs megadva a beállításoknál.")
-
-        # Query for the next item
+        # Query for the next item: either in source bucket OR explicitly marked for sorting
         query = db.query(MediaItem).outerjoin(
             MediaClassification, MediaItem.file_name == MediaClassification.file_name
         ).filter(
-            MediaItem.bucket_name == b2_account.source_bucket_name
+            or_(
+                MediaItem.is_in_sorter == True,
+                MediaItem.bucket_name == b2_account.source_bucket_name
+            )
         ).filter(
             or_(
                 MediaClassification.file_name == None,
                 and_(MediaClassification.category == None, MediaClassification.is_deleted == False)
             )
-        )
+        ).order_by(MediaItem.file_name.asc()) # Alphabetical/Folder order
 
         if exclude:
             query = query.filter(~MediaItem.file_name.in_(exclude))
@@ -87,13 +89,13 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         media_item = query.first()
 
         if not media_item:
-            return {"done": True, "message": "Nincs több kép a várólistán (forras vödör üres vagy minden kész)."}
+            return {"done": True, "message": "Nincs több kép a várólistán."}
 
         # Generate Authorized URL
         try:
             client = B2Client(b2_account.key_id, b2_account.application_key)
             url = client.get_download_url(
-                b2_account.source_bucket_name,
+                media_item.bucket_name,
                 media_item.file_name,
                 b2_account.cloudflare_proxy_url
             )
@@ -101,11 +103,14 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
             logger.error(f"B2 URL generation failed for {media_item.file_name}: {b2_err}")
             raise HTTPException(status_code=500, detail=f"B2 hiba: {str(b2_err)}")
 
-        # Count ALL remaining items (unclassified) in this bucket
+        # Count ALL remaining items for the UI
         total_remaining = db.query(MediaItem).outerjoin(
             MediaClassification, MediaItem.file_name == MediaClassification.file_name
         ).filter(
-            MediaItem.bucket_name == b2_account.source_bucket_name
+            or_(
+                MediaItem.is_in_sorter == True,
+                MediaItem.bucket_name == b2_account.source_bucket_name
+            )
         ).filter(
             or_(
                 MediaClassification.file_name == None,
@@ -135,97 +140,81 @@ def b2_move_background_task(key_id: str, app_key: str, source_bucket: str, dest_
     except Exception as e:
         logger.error(f"Background B2 move failed for {file_name}: {e}")
 
-import threading
-
 @router.post("/api/classify")
 def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
     b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
     if not b2_account:
         raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
 
+    media_item = db.query(MediaItem).filter(MediaItem.file_name == req.file_name).first()
+    if not media_item:
+        raise HTTPException(status_code=404, detail="Kép nem található az adatbázisban.")
+
     try:
+        source_bucket = media_item.bucket_name
+        
         if req.action == "delete":
-            if not b2_account.trash_bucket_name:
-                raise HTTPException(status_code=400, detail="Lomtár vödör (torles-elott) nincs beállítva.")
+            target_bucket = b2_account.trash_bucket_name
+            if not target_bucket:
+                raise HTTPException(status_code=400, detail="Lomtár vödör nincs beállítva.")
             
-            # 1. Start pure background thread for B2 move (Original)
+            # Start background moves (Original + Thumb)
             threading.Thread(target=b2_move_background_task, args=(
-                b2_account.key_id, 
-                b2_account.application_key, 
-                b2_account.source_bucket_name, 
-                b2_account.trash_bucket_name, 
-                req.file_name
+                b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, req.file_name
+            )).start()
+            threading.Thread(target=b2_move_background_task, args=(
+                b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", req.file_name
             )).start()
             
-            # 1b. Start background thread for Thumbnail move (Silent fail if doesn't exist)
-            threading.Thread(target=b2_move_background_task, args=(
-                b2_account.key_id, 
-                b2_account.application_key, 
-                f"{b2_account.source_bucket_name}-thumbs", 
-                f"{b2_account.trash_bucket_name}-thumbs", 
-                req.file_name
-            )).start()
+            # Update DB
+            media_item.bucket_name = target_bucket
+            media_item.is_in_sorter = False
             
-            # 2. Update DB Immediately
             classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
             if not classification:
                 classification = MediaClassification(file_name=req.file_name)
                 db.add(classification)
-            
             classification.is_deleted = True
             classification.category = None
             
-            # 3. Update MediaItem list instantly (move to trash in DB)
-            db.query(MediaItem).filter(
-                MediaItem.file_name == req.file_name, 
-                MediaItem.bucket_name == b2_account.source_bucket_name
-            ).update({"bucket_name": b2_account.trash_bucket_name})
-            
         else:
             # Classification (család, utazás, etc)
-            if not b2_account.bucket_name:
-                raise HTTPException(status_code=400, detail="Cél vödör (kepek02) nincs beállítva.")
-            
-            # 1. Start pure background thread for B2 move (Original)
+            target_bucket = b2_account.bucket_name
             file_info = {"category": req.action}
-            threading.Thread(target=b2_move_background_task, args=(
-                b2_account.key_id, 
-                b2_account.application_key, 
-                b2_account.source_bucket_name, 
-                b2_account.bucket_name, 
-                req.file_name,
-                file_info
-            )).start()
-
-            # 1b. Start background thread for Thumbnail move (Silent fail)
-            threading.Thread(target=b2_move_background_task, args=(
-                b2_account.key_id, 
-                b2_account.application_key, 
-                f"{b2_account.source_bucket_name}-thumbs", 
-                f"{b2_account.bucket_name}-thumbs", 
-                req.file_name,
-                file_info
-            )).start()
             
-            # 2. Update DB Immediately
+            if source_bucket != target_bucket:
+                # Need to move physically
+                threading.Thread(target=b2_move_background_task, args=(
+                    b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, req.file_name, file_info
+                )).start()
+                threading.Thread(target=b2_move_background_task, args=(
+                    b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", req.file_name, file_info
+                )).start()
+                media_item.bucket_name = target_bucket
+            else:
+                # Already in target bucket! Just update metadata in background
+                def update_metadata_task(key_id, app_key, bucket, file_name, info):
+                    try:
+                        client = B2Client(key_id, app_key)
+                        client.update_file_info(bucket, file_name, info)
+                    except Exception as e:
+                        logger.error(f"Metadata update failed for {file_name}: {e}")
+
+                threading.Thread(target=update_metadata_task, args=(
+                    b2_account.key_id, b2_account.application_key, target_bucket, req.file_name, file_info
+                )).start()
+
+            # Update DB
+            media_item.is_in_sorter = False
             classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
             if not classification:
                 classification = MediaClassification(file_name=req.file_name)
                 db.add(classification)
-            
             classification.category = req.action
             classification.is_deleted = False
-            
-            # 3. Update MediaItem list instantly (move to main bucket in DB)
-            db.query(MediaItem).filter(
-                MediaItem.file_name == req.file_name, 
-                MediaItem.bucket_name == b2_account.source_bucket_name
-            ).update({"bucket_name": b2_account.bucket_name})
-            
 
         db.commit()
         return {"status": "ok"}
-
     except Exception as e:
         logger.exception(f"Classification error: {e}")
         db.rollback()
@@ -233,39 +222,19 @@ def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):
 
 @router.post("/api/classify/undo")
 def undo_classification(req: ClassificationRequest, db: Session = Depends(get_db)):
-    """ Reverts the last classification: moves file back to source and clears category. """
-    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
-    if not b2_account:
-        raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
-
-    # If action was "delete", it's in trash_bucket. Otherwise in main bucket.
-    current_bucket = b2_account.trash_bucket_name if req.action == "delete" else b2_account.bucket_name
-    
-    if not current_bucket:
-        raise HTTPException(status_code=400, detail="Cél vödör nem található a visszavonáshoz.")
-
+    """ Reverts the last classification in the UI. Sets is_in_sorter=True and clears category. """
     try:
-        # 1. Start background move back to source
-        threading.Thread(target=b2_move_background_task, args=(
-            b2_account.key_id, 
-            b2_account.application_key, 
-            current_bucket, 
-            b2_account.source_bucket_name, 
-            req.file_name,
-            {} # strip metadata
-        )).start()
+        media_item = db.query(MediaItem).filter(MediaItem.file_name == req.file_name).first()
+        if not media_item:
+             raise HTTPException(status_code=404, detail="Kép nem található.")
 
-        # 2. Revert DB classification
+        # Revert DB state
+        media_item.is_in_sorter = True
+        
         classification = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
         if classification:
             classification.category = None
             classification.is_deleted = False
-
-        # 3. Revert MediaItem bucket
-        db.query(MediaItem).filter(
-            MediaItem.file_name == req.file_name, 
-            MediaItem.bucket_name == current_bucket
-        ).update({"bucket_name": b2_account.source_bucket_name})
 
         db.commit()
         return {"status": "ok"}
@@ -327,73 +296,46 @@ def get_bulk_reverse_filenames(folder_path: Optional[str], category_filter: Opti
     return filenames
 
 def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[str], db: Session):
+    """ ZERO-MOVE Mover: Just marks items in DB for re-classification. """
     global bulk_reverse_status
     try:
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
-        if not b2_account or not b2_account.bucket_name or not b2_account.source_bucket_name:
-            bulk_reverse_status = {"is_running": False, "total": 0, "current": 0, "message": "Hiányzó B2 konfiguráció"}
+        if not b2_account:
+            bulk_reverse_status = {"is_running": False, "total": 0, "current": 0, "message": "Nincs aktív B2 fiók"}
             return
         
-        # Use helper
+        # Use existing helper to get filenames matching criteria
         filenames = get_bulk_reverse_filenames(
             folder_path, category_filter, db, 
             b2_account.source_bucket_name, b2_account.bucket_name
         )
 
-        items_to_move = sorted(list(filenames))
-        total = len(items_to_move)
+        items_to_mark = sorted(list(filenames))
+        total = len(items_to_mark)
 
-        bulk_reverse_status = {"is_running": True, "total": total, "current": 0, "message": f"{total} kép mozgatása folyamatban..."}
+        bulk_reverse_status = {"is_running": True, "total": total, "current": 0, "message": f"{total} kép előkészítése..."}
         
         if total == 0:
             bulk_reverse_status["is_running"] = False
-            bulk_reverse_status["message"] = "Nincs mozgatható kép a kiválasztott feltételekkel."
+            bulk_reverse_status["message"] = "Nincs ilyen kép a kiválasztott feltételekkel."
             return
 
-        client = B2Client(b2_account.key_id, b2_account.application_key)
-        
-        for i, file_name in enumerate(items_to_move):
-            bulk_reverse_status["current"] = i + 1
-            try:
-                # Attempt to find MediaItem to get details, but fallback if missing
-                item = db.query(MediaItem).filter(MediaItem.file_name == file_name).first()
-                mime = item.mime_type if item else "image/jpeg"
-                current_bucket = item.bucket_name if item else b2_account.bucket_name
-
-                # 1. Move file in B2: from target bucket back to source
-                # Passing empty dict to strip existing category metadata
-                new_version = client.move_file(current_bucket, b2_account.source_bucket_name, file_name, file_info={})
-                
-                # 1b. Move thumbnail if possible (silent fail if doesn't exist)
-                try:
-                    client.move_file(f"{current_bucket}-thumbs", f"{b2_account.source_bucket_name}-thumbs", file_name, file_info={})
-                    logger.info(f"Thumbnail also moved back for {file_name}")
-                except Exception as thumb_err:
-                    # Not an error if thumb doesn't exist, just log it
-                    logger.debug(f"No thumbnail found to move back for {file_name}: {thumb_err}")
-
-                # 2. Delete old MediaItem records for this file (across all buckets to be safe)
-                db.execute(delete(MediaItem).where(MediaItem.file_name == file_name))
-                
-                # 3. Add to source bucket index
-                new_item = MediaItem(
-                    id=new_version.id_,
-                    b2_account_id=b2_account.id,
-                    bucket_name=b2_account.source_bucket_name,
-                    file_name=file_name,
-                    mime_type=mime,
-                )
-                db.merge(new_item)
-                
-                # 4. Delete classification record
-                db.execute(delete(MediaClassification).where(MediaClassification.file_name == file_name))
-                db.commit()
-            except Exception as e:
-                logger.error(f"Error moving {file_name}: {e}")
-                db.rollback()
+        # Parallelize DB updates
+        batch_size = 100
+        for i in range(0, total, batch_size):
+            batch = items_to_mark[i:i+batch_size]
+            bulk_reverse_status["current"] = i + len(batch)
+            
+            # 1. Clear classification
+            db.execute(delete(MediaClassification).where(MediaClassification.file_name.in_(batch)))
+            
+            # 2. Mark as in sorter
+            db.query(MediaItem).filter(MediaItem.file_name.in_(batch)).update({"is_in_sorter": True}, synchronize_session=False)
+            
+            db.commit()
 
         bulk_reverse_status["is_running"] = False
-        bulk_reverse_status["message"] = f"Kész! {total} kép sikeresen visszamozgatva a forrás vödörbe."
+        bulk_reverse_status["message"] = f"Kész! {total} kép azonnal válogatható a Szortírozóban."
         
     except Exception as e:
         logger.exception("Bulk reverse move error")
