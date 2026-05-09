@@ -84,6 +84,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
+| V15.8.3 | `645e544` | Szortírozó HD Zoom támogatás nagyításkor |
 | V15.8.2 | `bb26c90` | Verziószám emelése V15.8.2-re a kódban és a dokumentációban |
 | V15.8.2 | `b75b1be` | Mover funkció részletes dokumentálása és szerver stabilitási javítás |
 | V15.8.1 | `d6274f6` | Digitális Labor: Új retusálási mentési logika és fájlnév konvenció bevezetése |
