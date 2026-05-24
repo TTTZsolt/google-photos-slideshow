@@ -99,7 +99,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
-| V16.1.0 | `Pending` | Képválogatás AI segítségével fejlesztése |
+| V16.1.0 | `2e34e51` | Képválogatás AI segítségével fejlesztése |
 | V16.0.0 | `V16` | Zero-Move apró hibáinak javítása (Szortírozó duplikáció, Lomtár visszaállítás fix, Pánik gomb) |
 | V15.8.4 | `3245dd5` | Rendszer dokumentáció frissítése az új Zero-Move és Single-Bucket munkafolyamathoz |
 | V15.8.4 | `e89dacb` | Zero-Move Sorter architektúra és párhuzamosított B2 műveletek implementálása |
