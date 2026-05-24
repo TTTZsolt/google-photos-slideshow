@@ -7,6 +7,9 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet   
 
+## [V16.1.0] - Fénykép válogatás AI segítségével (Fejlesztés alatt)
+- **AI integráció**: Előkészítés a fényképek automatikus válogatására és elemzésére AI segítségével.
+
 ## [V16.0.0] - Zero-Move apró hibáinak javítása (2026-05-09)
 - **Szortírozó**: Kijavítva a duplikált képek megjelenése (Concurrency Lock a pre-fetchingnél).
 - **Szortírozó**: Új "Pánik gomb" a szortírozási várólista azonnali ürítéséhez.
@@ -96,6 +99,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió | Commit | Magyarázat |
 | :--- | :--- | :--- |
+| V16.1.0 | `Pending` | Képválogatás AI segítségével fejlesztése |
 | V16.0.0 | `V16` | Zero-Move apró hibáinak javítása (Szortírozó duplikáció, Lomtár visszaállítás fix, Pánik gomb) |
 | V15.8.4 | `3245dd5` | Rendszer dokumentáció frissítése az új Zero-Move és Single-Bucket munkafolyamathoz |
 | V15.8.4 | `e89dacb` | Zero-Move Sorter architektúra és párhuzamosított B2 műveletek implementálása |

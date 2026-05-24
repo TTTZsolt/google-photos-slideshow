@@ -1,3 +1,3 @@
-VERSION = "16.0.0"
+VERSION = "16.1.0"
 PROJECT_NAME = "Lumina - Control Center"
-STABLE_RELEASE_DATE = "2026-05-09"
+STABLE_RELEASE_DATE = "Fejlesztés alatt"
