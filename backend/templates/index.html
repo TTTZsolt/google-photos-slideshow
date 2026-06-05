@@ -1298,13 +1298,24 @@
                         if (wasBulkReverseRunning && data.total > 0 && data.current >= data.total) {
                             wasBulkReverseRunning = false; // Reset
                             
-                            // Success Notification
+                            // Success/Failure Notification
                             const aiMode = document.querySelector('input[name="aiMode"]:checked').value;
                             if (aiMode !== 'manual') {
+                                const failed = data.failed_count || 0;
+                                const successful = data.total - failed;
+                                
+                                let alertMsg = `Az AI befejezte a feldolgozást.<br><br>`;
+                                alertMsg += `✅ <b>${successful}</b> kép sikeresen osztályozva.<br>`;
+                                
+                                if (failed > 0) {
+                                    alertMsg += `⚠️ <b>${failed}</b> képnél hiba történt (ezek automatikusan visszakerültek a Szortírozóba manuális válogatásra).<br><br>`;
+                                    alertMsg += `<p class="text-[10px] text-rose-500 italic bg-rose-50 p-2 rounded-lg border border-rose-100">Utolsó hiba: ${data.example_error || "Ismeretlen hiba"}</p>`;
+                                }
+                                
                                 showCustomModal({
-                                    title: "AI válogatás elindítva!",
-                                    message: "A képek előkészítése kész, és az AI elemzés elkezdődött a háttérben. Szeretnél átmenni az AI Jóváhagyás oldalra ellenőrizni a részeredményeket?",
-                                    icon: "sparkles",
+                                    title: failed > 0 ? "AI válogatás részben sikeres!" : "AI válogatás sikeresen kész!",
+                                    message: alertMsg,
+                                    icon: failed > 0 ? "alert-triangle" : "sparkles",
                                     confirmText: "Irány az AI Jóváhagyás!",
                                     cancelText: "Később",
                                     onConfirm: () => {

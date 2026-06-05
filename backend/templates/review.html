@@ -75,6 +75,22 @@
         </div>
     </div>
 
+    <!-- AI Unclassified / Failed Warning Banner -->
+    <div id="aiUnclassifiedBanner" class="hidden mb-8 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-amber-100 rounded-xl text-amber-600">
+                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="text-sm font-bold">Nem minden képet sikerült az AI-nak besorolnia</p>
+                <p class="text-xs text-amber-600 font-medium mt-0.5"><b id="unclassifiedCount">0</b> kép elemzése sikertelen volt (pl. letöltési hiba miatt). Ezeket a rendszer automatikusan visszarakta a kézi szortírozóba.</p>
+            </div>
+        </div>
+        <a href="/classify" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm whitespace-nowrap ml-4">
+            Kézi Szortírozás indítása
+        </a>
+    </div>
+
     <!-- Empty State -->
     <div id="emptyState" class="hidden glass-card p-20 text-center flex flex-col items-center justify-center">
         <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 mb-6">
@@ -426,6 +442,8 @@
             const data = await res.json();
             
             const banner = document.getElementById('aiProgressBanner');
+            const unclassBanner = document.getElementById('aiUnclassifiedBanner');
+            
             if (data.is_running) {
                 banner.classList.remove('hidden');
                 document.getElementById('aiProgressMessage').textContent = data.message || "Folyamatban...";
@@ -440,6 +458,16 @@
                 if (wasAiRunning) {
                     wasAiRunning = false;
                     banner.classList.add('hidden');
+                    
+                    // Show a warning banner if there were failed items in the completed run
+                    const failed = data.failed_count || 0;
+                    if (failed > 0 && unclassBanner) {
+                        document.getElementById('unclassifiedCount').textContent = failed;
+                        unclassBanner.classList.remove('hidden');
+                    } else if (unclassBanner) {
+                        unclassBanner.classList.add('hidden');
+                    }
+                    
                     // Reload data to show newly processed images
                     loadData();
                 }

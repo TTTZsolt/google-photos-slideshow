@@ -350,6 +350,18 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                 mc.ai_error = str(item_err)
                 db.commit()
                 
+        # Clean up failed images: reset is_in_sorter = False and clear failed state 
+        # so they immediately return to the manual sorter instead of hanging in limbo.
+        failed_items = db.query(MediaClassification.file_name).filter(MediaClassification.ai_status == "failed").all()
+        if failed_items:
+            failed_fnames = [f[0] for f in failed_items]
+            db.query(MediaItem).filter(MediaItem.file_name.in_(failed_fnames)).update({"is_in_sorter": False}, synchronize_session=False)
+            db.query(MediaClassification).filter(MediaClassification.file_name.in_(failed_fnames)).update({
+                "ai_status": None,
+                "ai_error": None
+            }, synchronize_session=False)
+            db.commit()
+            
         bulk_reverse_status["message"] = f"Kész! {total_imgs} kép sikeresen szortírozva az AI által."
     except Exception as e:
         logger.error(f"AI Classification background task failed: {e}")
@@ -389,8 +401,6 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
             batch = items_to_mark[i:i+batch_size]
             bulk_reverse_status["current"] = i + len(batch)
             
-            # 1. Clear classification
-            
             # Mark as in sorter and clear AI statuses
             for item in batch:
                 mc = db.query(MediaClassification).filter(MediaClassification.file_name == item).first()
@@ -404,6 +414,13 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
                 
             db.query(MediaItem).filter(MediaItem.file_name.in_(batch)).update({"is_in_sorter": True}, synchronize_session=False)
             db.commit()
+
+        # Clean up any residual 'failed' status entries to avoid stale warnings
+        db.query(MediaClassification).filter(MediaClassification.ai_status == "failed").update({
+            "ai_status": None,
+            "ai_error": None
+        })
+        db.commit()
 
         if ai_mode != "manual":
             bulk_reverse_status["message"] = f"Kész! {total} kép hozzáadva. AI elemzés a háttérben indítva..."
@@ -498,10 +515,21 @@ def get_bulk_reverse_status(db: Session = Depends(get_db)):
     global bulk_reverse_status
     status_copy = bulk_reverse_status.copy()
     
-    # Check if there are any failed AI items in the db
+    # Calculate actual pending (successful AI suggestions awaiting review)
+    pending_count = db.query(MediaClassification).join(
+        MediaItem, MediaClassification.file_name == MediaItem.file_name
+    ).filter(
+        MediaClassification.ai_status == "pending",
+        MediaItem.is_in_sorter == True
+    ).count()
+    
+    # Calculate failed items in database
     failed_count = db.query(MediaClassification).filter(MediaClassification.ai_status == "failed").count()
+    
+    status_copy["pending_count"] = pending_count
+    status_copy["failed_count"] = failed_count
+    
     if failed_count > 0:
-        status_copy["failed_count"] = failed_count
         example_err = db.query(MediaClassification.ai_error).filter(MediaClassification.ai_status == "failed").first()
         if example_err:
             status_copy["example_error"] = example_err[0]

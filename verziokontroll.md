@@ -130,6 +130,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.1.0 | `7237488` | Fix: AI hibaértesítő banner a jóváhagyó oldalon, és adatbázis tisztítás sikertelen AI után     |
 | V16.1.0 | `2ec3db1` | Feature: AI progress bar, reject all és kategória leírások a Gemini prompt finomhangolásához   |
 | V16.1.0 | `617791a` | Feature: AI modell védelmi rendszer (Fallback modellek, és hiba rögzítése)                    |
 | V16.1.0 | `5233fd2` | Fix: AI modell frissítés Gemini 2.5-re és képnagyítás modal hozzáadása a jóváhagyó felülethez   |
