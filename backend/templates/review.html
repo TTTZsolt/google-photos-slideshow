@@ -173,6 +173,21 @@
 
             setupBoard();
             renderItems();
+            
+            // Check status to see if there were failed items in the last run
+            const statusRes = await fetch('/api/classification/bulk-reverse/status');
+            const statusData = await statusRes.json();
+            const unclassBanner = document.getElementById('aiUnclassifiedBanner');
+            
+            if (unclassBanner) {
+                const failed = statusData.failed_count || 0;
+                if (failed > 0 && !statusData.is_running) {
+                    document.getElementById('unclassifiedCount').textContent = failed;
+                    unclassBanner.classList.remove('hidden');
+                } else {
+                    unclassBanner.classList.add('hidden');
+                }
+            }
         } catch (e) {
             console.error(e);
             showToast("Hiba a betöltés során.");
