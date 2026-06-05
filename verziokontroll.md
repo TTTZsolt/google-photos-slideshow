@@ -15,6 +15,8 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 - **Tesztelés**: `teszt_terv.md` ellenőrző lista létrehozása a manuális ellenőrzéshez.
 - **Modell frissítés**: A nem támogatott Gemini 1.5 modellek lecserélése és automatikus fordítása `gemini-2.5-flash` és `gemini-2.5-pro` modellekre.
 - **Jóváhagyó felület**: Képnagyítás (modal popup) funkció hozzáadása a szortírozandó képekhez a részletesebb ellenőrzéshez.
+- **Modell védelem (Fallback)**: Modell hiba esetén automatikus próbálkozás a fallback listáról (2.5, 2.0, flash-latest) a leállások elkerülésére.
+- **Hibakezelés**: AI hibák rögzítése és mentése az adatbázis `ai_error` oszlopába a csendes "Bizonytalan" kategóriába bukás helyett.
 
 ## [V16.0.0] - Zero-Move apró hibáinak javítása (2026-05-09)
 
@@ -125,6 +127,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.1.0 | `617791a` | Feature: AI modell védelmi rendszer (Fallback modellek, és hiba rögzítése)                    |
 | V16.1.0 | `5233fd2` | Fix: AI modell frissítés Gemini 2.5-re és képnagyítás modal hozzáadása a jóváhagyó felülethez   |
 | V16.1.0 | `c3eedf4` | Fix: Google Gemini API és Pillow függőségek pótlása, teszt terv létrehozása                    |
 | V16.1.0 | `2e34e51` | Képválogatás AI segítségével fejlesztése                                                       |
