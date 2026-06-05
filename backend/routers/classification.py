@@ -50,6 +50,9 @@ class CategoryResponse(BaseModel):
 class BulkReverseRequest(BaseModel):
     folder_path: Optional[str] = None
     category_filter: Optional[str] = None
+    ai_mode: Optional[str] = "manual" # "manual", "ai-delete-only", "ai-full"
+    ai_model: Optional[str] = "gemini-2.5-flash"
+    ai_custom_rules: Optional[str] = ""
 
 bulk_reverse_status: Dict[str, Any] = {
     "is_running": False,
@@ -292,8 +295,48 @@ def get_bulk_reverse_filenames(folder_path: Optional[str], category_filter: Opti
     filenames.update([row[0] for row in q_mi.all()])
     return filenames
 
-def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[str], db: Session):
-    """ ZERO-MOVE Mover: Just marks items in DB for re-classification. """
+def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str, custom_rules: str, db: Session):
+    try:
+        from ..utils.ai_service import analyze_image_for_sorting
+        from ..utils.b2_client import B2Client
+        b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+        if not b2_account: return
+        client = B2Client(b2_account.key_id, b2_account.application_key)
+        
+        categories = db.query(CategoryDefinition).all()
+        cat_names = [c.name for c in categories]
+        
+        for fname in filenames:
+            mi = db.query(MediaItem).filter(MediaItem.file_name == fname, MediaItem.is_in_sorter == True).first()
+            if not mi: continue
+            
+            try:
+                thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
+                suggested = analyze_image_for_sorting(thumb_url, cat_names, custom_rules, ai_model)
+                
+                if ai_mode == "ai-delete-only" and suggested != "delete":
+                    suggested = None
+                    
+                mc = db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
+                if not mc:
+                    mc = MediaClassification(file_name=fname)
+                    db.add(mc)
+                
+                if suggested:
+                    mc.ai_suggested_category = suggested
+                    mc.ai_status = "pending"
+                
+                db.commit()
+            except Exception as item_err:
+                logger.error(f"Failed AI classification for {fname}: {item_err}")
+                
+    except Exception as e:
+        logger.error(f"AI Classification background task failed: {e}")
+    finally:
+        db.close()
+
+def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[str], ai_mode: str, ai_model: str, ai_custom_rules: str, db: Session):
+    """ ZERO-MOVE Mover: Just marks items in DB for re-classification. Starts AI if requested. """
     global bulk_reverse_status
     try:
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
@@ -324,15 +367,29 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
             bulk_reverse_status["current"] = i + len(batch)
             
             # 1. Clear classification
-            db.execute(delete(MediaClassification).where(MediaClassification.file_name.in_(batch)))
             
-            # 2. Mark as in sorter
+            # Mark as in sorter and clear AI statuses
+            for item in batch:
+                mc = db.query(MediaClassification).filter(MediaClassification.file_name == item).first()
+                if not mc:
+                    mc = MediaClassification(file_name=item)
+                    db.add(mc)
+                mc.category = None
+                mc.ai_suggested_category = None
+                mc.ai_status = None
+                
             db.query(MediaItem).filter(MediaItem.file_name.in_(batch)).update({"is_in_sorter": True}, synchronize_session=False)
-            
             db.commit()
 
+        if ai_mode != "manual":
+            bulk_reverse_status["message"] = f"Kész! {total} kép hozzáadva. AI elemzés a háttérben indítva..."
+            # Launch AI thread
+            ai_db = SessionLocal()
+            threading.Thread(target=process_ai_classification, args=(items_to_mark, ai_mode, ai_model, ai_custom_rules, ai_db)).start()
+        else:
+            bulk_reverse_status["message"] = f"Kész! {total} kép azonnal válogatható a Szortírozóban."
+            
         bulk_reverse_status["is_running"] = False
-        bulk_reverse_status["message"] = f"Kész! {total} kép azonnal válogatható a Szortírozóban."
         
     except Exception as e:
         logger.exception("Bulk reverse move error")
@@ -347,9 +404,36 @@ def start_bulk_reverse(req: BulkReverseRequest, background_tasks: BackgroundTask
     if bulk_reverse_status.get("is_running"):
         raise HTTPException(status_code=400, detail="Már fut egy visszamozgatás.")
     
-    # Create an independent session for the background task
     db = SessionLocal()
-    background_tasks.add_task(perform_bulk_reverse, req.folder_path, req.category_filter, db)
+    try:
+        # Prevent starting if there are pending AI classifications
+        q_pending = db.query(MediaClassification.file_name).join(
+            MediaItem, MediaClassification.file_name == MediaItem.file_name
+        ).filter(
+            MediaClassification.ai_status == "pending",
+            MediaItem.is_in_sorter == True
+        )
+        if req.folder_path:
+            q_pending = q_pending.filter(MediaClassification.file_name.startswith(req.folder_path))
+            
+        if req.category_filter == "all":
+            pass
+        elif req.category_filter:
+            q_pending = q_pending.filter(MediaClassification.category == req.category_filter)
+        else:
+            q_pending = q_pending.filter(MediaClassification.category == None)
+            
+        if q_pending.count() > 0:
+            raise HTTPException(status_code=400, detail="Már vannak folyamatban lévő AI javaslatok ebben a mappában.")
+            
+    except HTTPException:
+        db.close()
+        raise
+    except Exception as e:
+        db.close()
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    background_tasks.add_task(perform_bulk_reverse, req.folder_path, req.category_filter, req.ai_mode, req.ai_model, req.ai_custom_rules, db)
     return {"status": "started"}
 
 @router.get("/api/classification/bulk-reverse/count")
@@ -363,7 +447,28 @@ def get_bulk_reverse_count(folder_path: Optional[str] = Query(None), category_fi
         folder_path, category_filter, db, 
         b2_account.source_bucket_name, b2_account.bucket_name
     )
-    return {"count": len(filenames)}
+    
+    # Count pending AI items
+    q_pending = db.query(MediaClassification.file_name).join(
+        MediaItem, MediaClassification.file_name == MediaItem.file_name
+    ).filter(
+        MediaClassification.ai_status == "pending",
+        MediaItem.is_in_sorter == True
+    )
+    if folder_path:
+        q_pending = q_pending.filter(MediaClassification.file_name.startswith(folder_path))
+        
+    if category_filter == "all":
+        pass
+    elif category_filter:
+        q_pending = q_pending.filter(MediaClassification.category == category_filter)
+    else:
+        q_pending = q_pending.filter(MediaClassification.category == None)
+        
+    return {
+        "count": len(filenames),
+        "pending_ai_count": q_pending.count()
+    }
 
 @router.get("/api/classification/bulk-reverse/status")
 def get_bulk_reverse_status():
@@ -414,4 +519,197 @@ def reset_sorter(db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         logger.error(f"Sorter reset failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ApproveItemRequest(BaseModel):
+    file_name: str
+    action: str # "approve", "delete", "change_category"
+    category: Optional[str] = None
+
+@router.get("/api/classification/review-items")
+def get_review_items(db: Session = Depends(get_db)):
+    """ Returns a list of items analyzed by AI that are pending approval. """
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        return []
+        
+    client = B2Client(b2_account.key_id, b2_account.application_key)
+    
+    results = db.query(MediaClassification, MediaItem).join(
+        MediaItem, MediaClassification.file_name == MediaItem.file_name
+    ).filter(MediaClassification.ai_status == "pending", MediaItem.is_in_sorter == True).all()
+    
+    items = []
+    for mc, mi in results:
+        try:
+            url = client.get_download_url(mi.bucket_name, mi.file_name, b2_account.cloudflare_proxy_url)
+            thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", mi.file_name, b2_account.cloudflare_proxy_url)
+            
+            items.append({
+                "file_name": mc.file_name,
+                "ai_suggested_category": mc.ai_suggested_category,
+                "url": url,
+                "thumb_url": thumb_url
+            })
+        except Exception as e:
+            logger.warning(f"Could not generate URLs for review item {mc.file_name}: {e}")
+            
+    return items
+
+@router.post("/api/classification/approve-item")
+def approve_item(req: ApproveItemRequest, db: Session = Depends(get_db)):
+    """ Approves, overrides or deletes a single AI suggestion. """
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
+        
+    mc = db.query(MediaClassification).filter(MediaClassification.file_name == req.file_name).first()
+    mi = db.query(MediaItem).filter(MediaItem.file_name == req.file_name).first()
+    
+    if not mc or not mi:
+        raise HTTPException(status_code=404, detail="Kép nem található.")
+        
+    source_bucket = mi.bucket_name
+    
+    target_action = None
+    if req.action == "approve":
+        target_action = mc.ai_suggested_category
+    elif req.action == "delete":
+        target_action = "delete"
+    elif req.action == "change_category":
+        target_action = req.category
+        
+    if not target_action:
+        raise HTTPException(status_code=400, detail="Nem meghatározható célművelet.")
+        
+    try:
+        if target_action == "delete":
+            target_bucket = b2_account.trash_bucket_name
+            if not target_bucket:
+                 raise HTTPException(status_code=400, detail="Lomtár vödör nincs beállítva.")
+                 
+            threading.Thread(target=b2_move_background_task, args=(
+                b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, req.file_name
+            )).start()
+            threading.Thread(target=b2_move_background_task, args=(
+                b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", req.file_name
+            )).start()
+            
+            mi.bucket_name = target_bucket
+            mi.is_in_sorter = False
+            mc.is_deleted = True
+            mc.category = None
+        else:
+            target_bucket = b2_account.bucket_name
+            if target_action == "uncategorized":
+                mc.category = None
+                mc.is_deleted = False
+                mi.is_in_sorter = False
+            else:
+                file_info = {"category": target_action}
+                if source_bucket != target_bucket:
+                    threading.Thread(target=b2_move_background_task, args=(
+                        b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, req.file_name, file_info
+                    )).start()
+                    threading.Thread(target=b2_move_background_task, args=(
+                        b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", req.file_name, file_info
+                    )).start()
+                    mi.bucket_name = target_bucket
+                else:
+                    def update_metadata_task(key_id, app_key, bucket, file_name, info):
+                        try:
+                            client = B2Client(key_id, app_key)
+                            client.update_file_info(bucket, file_name, info)
+                        except Exception as e:
+                            logger.error(f"Metadata update failed for {file_name}: {e}")
+
+                    threading.Thread(target=update_metadata_task, args=(
+                        b2_account.key_id, b2_account.application_key, target_bucket, req.file_name, file_info
+                    )).start()
+                    
+                mc.category = target_action
+                mc.is_deleted = False
+                mi.is_in_sorter = False
+                
+        mc.ai_status = "approved"
+        db.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        db.rollback()
+        logger.exception("Approve single item error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/classification/approve-all")
+def approve_all_suggestions(db: Session = Depends(get_db)):
+    """ Approves all pending AI suggestions at once. """
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
+        
+    results = db.query(MediaClassification, MediaItem).join(
+        MediaItem, MediaClassification.file_name == MediaItem.file_name
+    ).filter(MediaClassification.ai_status == "pending", MediaItem.is_in_sorter == True).all()
+    
+    count = 0
+    try:
+        for mc, mi in results:
+            source_bucket = mi.bucket_name
+            target_action = mc.ai_suggested_category
+            
+            if not target_action:
+                continue
+                
+            if target_action == "delete":
+                target_bucket = b2_account.trash_bucket_name
+                if target_bucket:
+                    threading.Thread(target=b2_move_background_task, args=(
+                        b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, mi.file_name
+                    )).start()
+                    threading.Thread(target=b2_move_background_task, args=(
+                        b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", mi.file_name
+                    )).start()
+                    mi.bucket_name = target_bucket
+                    mi.is_in_sorter = False
+                    mc.is_deleted = True
+                    mc.category = None
+            else:
+                target_bucket = b2_account.bucket_name
+                if target_action == "uncategorized":
+                    mc.category = None
+                    mc.is_deleted = False
+                    mi.is_in_sorter = False
+                else:
+                    file_info = {"category": target_action}
+                    if source_bucket != target_bucket:
+                        threading.Thread(target=b2_move_background_task, args=(
+                            b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, mi.file_name, file_info
+                        )).start()
+                        threading.Thread(target=b2_move_background_task, args=(
+                            b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", mi.file_name, file_info
+                        )).start()
+                        mi.bucket_name = target_bucket
+                    else:
+                        def update_metadata_task(key_id, app_key, bucket, file_name, info):
+                            try:
+                                client = B2Client(key_id, app_key)
+                                client.update_file_info(bucket, file_name, info)
+                            except Exception as e:
+                                logger.error(f"Metadata update failed for {file_name}: {e}")
+
+                        threading.Thread(target=update_metadata_task, args=(
+                            b2_account.key_id, b2_account.application_key, target_bucket, mi.file_name, file_info
+                        )).start()
+                        
+                    mc.category = target_action
+                    mc.is_deleted = False
+                    mi.is_in_sorter = False
+                    
+            mc.ai_status = "approved"
+            count += 1
+            
+        db.commit()
+        return {"status": "ok", "count": count}
+    except Exception as e:
+        db.rollback()
+        logger.exception("Approve all error")
         raise HTTPException(status_code=500, detail=str(e))

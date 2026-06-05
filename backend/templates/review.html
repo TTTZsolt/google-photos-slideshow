@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}AI Jóváhagyás - V{{ version }}{% endblock %}
+{% block subtitle %}AI Jóváhagyás{% endblock %}
+
+{% block extra_head %}
+<style>
+    .kanban-col {
+        min-height: 400px;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .kanban-col.drag-over {
+        background-color: rgba(99, 102, 241, 0.05);
+        border-color: #6366f1;
+    }
+    .image-card {
+        cursor: grab;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .image-card:active {
+        cursor: grabbing;
+    }
+    .image-card.dragging {
+        opacity: 0.5;
+        transform: scale(0.95);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-all duration-500">
+        <div class="relative mb-8">
+            <div class="w-20 h-20 rounded-full border-4 border-slate-100 border-t-indigo-500 animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="check-square" class="w-7 h-7 text-indigo-500"></i>
+            </div>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800 mb-2">AI javaslatok betöltése</h2>
+        <p class="text-slate-400 font-medium text-sm">Elemzett képek szortírozása...</p>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">AI Jóváhagyó Nézet</h1>
+            <p class="text-slate-500 font-medium">Tekintsd át és húzd a képeket a megfelelő csoportba a mentéshez.</p>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="approveAll()" id="approveAllBtn" disabled
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                Összes Elfogadása
+            </button>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden glass-card p-20 text-center flex flex-col items-center justify-center">
+        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 mb-6">
+            <i data-lucide="sparkles" class="w-8 h-8 text-indigo-500"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-700">Nincs ellenőrzésre váró kép</h2>
+        <p class="text-slate-400 mt-2 font-medium">Az AI elvégezte a munkát, vagy még nem indítottál AI képválogatást a Visszamozgatóban.</p>
+    </div>
+
+    <!-- Kanban Board Grid -->
+    <div id="kanbanBoard" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <!-- Trash Column -->
+        <div class="flex flex-col bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-4">
+            <div class="flex items-center justify-between mb-4 px-2">
+                <div class="flex items-center gap-2">
+                    <span class="p-2 bg-rose-50 text-rose-500 rounded-xl border border-rose-100">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-slate-800 text-sm">Törlendő</h3>
+                </div>
+                <span id="count-delete" class="text-xs font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">0</span>
+            </div>
+            <div id="col-delete" class="kanban-col flex-1 space-y-3 rounded-2xl p-1" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 'delete')">
+                <!-- Cards -->
+            </div>
+        </div>
+
+        <!-- Uncategorized Column -->
+        <div class="flex flex-col bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-4">
+            <div class="flex items-center justify-between mb-4 px-2">
+                <div class="flex items-center gap-2">
+                    <span class="p-2 bg-slate-100 text-slate-500 rounded-xl border border-slate-200">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-slate-800 text-sm">Bizonytalan</h3>
+                </div>
+                <span id="count-uncategorized" class="text-xs font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">0</span>
+            </div>
+            <div id="col-uncategorized" class="kanban-col flex-1 space-y-3 rounded-2xl p-1" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 'uncategorized')">
+                <!-- Cards -->
+            </div>
+        </div>
+
+        <!-- Dynamic Category Columns will be inserted here -->
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="fixed inset-0 z-[200] hidden bg-black/90 flex items-center justify-center p-4 transition-all duration-300" onclick="closeImageModal()">
+        <div class="relative max-w-4xl max-h-full" onclick="event.stopPropagation()">
+            <img id="modalImage" src="" class="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl">
+            <button class="absolute -top-10 right-0 text-white/80 hover:text-white flex items-center gap-1 font-bold text-sm bg-black/40 px-3 py-1.5 rounded-xl transition" onclick="closeImageModal()">
+                <i data-lucide="x" class="w-5 h-5"></i> Bezárás
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-slate-900 text-white rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 pointer-events-none translate-y-4 z-[500]">
+        Üzenet
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let reviewItems = [];
+    let categories = [];
+
+    async function loadData() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        
+        try {
+            // Load Categories
+            const catRes = await fetch('/api/categories');
+            categories = await catRes.json();
+
+            // Load Items
+            const itemsRes = await fetch('/api/classification/review-items');
+            reviewItems = await itemsRes.json();
+
+            setupBoard();
+            renderItems();
+        } catch (e) {
+            console.error(e);
+            showToast("Hiba a betöltés során.");
+        } finally {
+            setTimeout(() => {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
+        }
+    }
+
+    function setupBoard() {
+        const board = document.getElementById('kanbanBoard');
+        
+        // Remove dynamically created columns from previous setup
+        const dynamicCols = board.querySelectorAll('.dynamic-col');
+        dynamicCols.forEach(col => col.remove());
+
+        // Create column for each category
+        categories.forEach(cat => {
+            const col = document.createElement('div');
+            col.className = "dynamic-col flex flex-col bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-4";
+            col.innerHTML = `
+                <div class="flex items-center justify-between mb-4 px-2">
+                    <div class="flex items-center gap-2">
+                        <span class="p-2 rounded-xl border flex items-center justify-center" style="background-color: ${cat.color}15; color: ${cat.color}; border-color: ${cat.color}30;">
+                            <i data-lucide="${cat.icon || 'tag'}" class="w-4 h-4"></i>
+                        </span>
+                        <h3 class="font-bold text-slate-800 text-sm">${cat.display_name}</h3>
+                    </div>
+                    <span id="count-${cat.name}" class="text-xs font-black px-2 py-0.5 rounded-md border" style="background-color: ${cat.color}15; color: ${cat.color}; border-color: ${cat.color}30;">0</span>
+                </div>
+                <div id="col-${cat.name}" class="kanban-col flex-1 space-y-3 rounded-2xl p-1" 
+                     ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, '${cat.name}')">
+                </div>
+            `;
+            board.appendChild(col);
+        });
+
+        lucide.createIcons();
+    }
+
+    function renderItems() {
+        // Clear all columns
+        document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
+        
+        const counts = { 'delete': 0, 'uncategorized': 0 };
+        categories.forEach(cat => counts[cat.name] = 0);
+
+        const emptyState = document.getElementById('emptyState');
+        const board = document.getElementById('kanbanBoard');
+        const approveAllBtn = document.getElementById('approveAllBtn');
+
+        if (reviewItems.length === 0) {
+            emptyState.classList.remove('hidden');
+            board.classList.add('hidden');
+            approveAllBtn.disabled = true;
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        board.classList.remove('hidden');
+        approveAllBtn.disabled = false;
+
+        reviewItems.forEach(item => {
+            const suggested = item.ai_suggested_category || 'uncategorized';
+            const col = document.getElementById(`col-${suggested}`) || document.getElementById('col-uncategorized');
+            if (!col) return;
+
+            counts[suggested] = (counts[suggested] || 0) + 1;
+
+            const card = document.createElement('div');
+            card.className = "image-card bg-white p-2 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md";
+            card.draggable = true;
+            card.id = `card-${btoa(item.file_name)}`;
+            card.dataset.filename = item.file_name;
+            
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', item.file_name);
+                card.classList.add('dragging');
+            });
+            
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+
+            const displayUrl = item.thumb_url || item.url;
+            card.innerHTML = `
+                <div class="relative rounded-xl overflow-hidden aspect-video bg-slate-100 mb-2 group">
+                    <img src="${displayUrl}" class="w-full h-full object-cover select-none cursor-zoom-in hover:scale-105 transition-all duration-200" onclick="openImageModal('${item.url}')">
+                    <button onclick="approveItemDirect('${item.file_name}')" title="Jóváhagyás" 
+                        class="absolute bottom-2 right-2 bg-indigo-500 hover:bg-indigo-600 text-white p-2 rounded-xl shadow-lg transition active:scale-90 z-10">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="px-1 flex flex-col">
+                    <span class="text-[9px] font-black text-slate-800 truncate" title="${item.file_name}">${item.file_name.split('/').pop()}</span>
+                </div>
+            `;
+            col.appendChild(card);
+        });
+
+        // Update counts
+        for (const [colName, count] of Object.entries(counts)) {
+            const badge = document.getElementById(`count-${colName}`);
+            if (badge) badge.textContent = count;
+        }
+
+        lucide.createIcons();
+    }
+
+    // Drag & Drop Handlers
+    function allowDrop(e) {
+        e.preventDefault();
+    }
+
+    function dragEnter(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function dragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    async function handleDrop(e, targetCol) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        
+        const fileName = e.dataTransfer.getData('text/plain');
+        if (!fileName) return;
+
+        // Visual update immediately
+        const cardId = `card-${btoa(fileName)}`;
+        const card = document.getElementById(cardId);
+        if (card) {
+            e.currentTarget.appendChild(card);
+        }
+
+        // Call API in backend to apply classification change
+        try {
+            let action = "change_category";
+            if (targetCol === "delete") {
+                action = "delete";
+            }
+            
+            const res = await fetch('/api/classification/approve-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_name: fileName,
+                    action: action,
+                    category: targetCol !== "delete" ? targetCol : null
+                })
+            });
+
+            if (res.ok) {
+                showToast("Módosítás sikeresen mentve.");
+                // Remove item from local array
+                reviewItems = reviewItems.filter(i => i.file_name !== fileName);
+                renderItems();
+            } else {
+                showToast("Hiba a mentés során.");
+                loadData(); // Reload to fix DOM state
+            }
+        } catch (err) {
+            showToast("Hálózati hiba.");
+            loadData();
+        }
+    }
+
+    async function approveItemDirect(fileName) {
+        try {
+            const res = await fetch('/api/classification/approve-item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file_name: fileName,
+                    action: 'approve'
+                })
+            });
+
+            if (res.ok) {
+                showToast("Javaslat elfogadva.");
+                reviewItems = reviewItems.filter(i => i.file_name !== fileName);
+                renderItems();
+            } else {
+                showToast("Hiba történt.");
+            }
+        } catch (err) {
+            showToast("Hálózati hiba.");
+        }
+    }
+
+    async function approveAll() {
+        if (!confirm("Biztosan elfogadod az összes jelenleg javasolt besorolást?")) return;
+
+        const btn = document.getElementById('approveAllBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Feldolgozás...';
+        lucide.createIcons();
+
+        try {
+            const res = await fetch('/api/classification/approve-all', { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                showToast(`${data.count} AI javaslat jóváhagyva.`);
+                reviewItems = [];
+                renderItems();
+            } else {
+                showToast("Hiba történt az összes elfogadásakor.");
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Összes Elfogadása';
+                lucide.createIcons();
+            }
+        } catch (e) {
+            showToast("Hálózati hiba.");
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Összes Elfogadása';
+            lucide.createIcons();
+        }
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-4');
+            toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 3000);
+    }
+
+    function openImageModal(url) {
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        modalImg.src = url;
+        modal.classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+        const modal = document.getElementById('imageModal');
+        modal.classList.add('hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+</script>
+{% endblock %}
