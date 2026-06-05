@@ -325,10 +325,21 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                 if suggested:
                     mc.ai_suggested_category = suggested
                     mc.ai_status = "pending"
+                    mc.ai_error = None
+                else:
+                    mc.ai_status = None
+                    mc.ai_error = None
                 
                 db.commit()
             except Exception as item_err:
                 logger.error(f"Failed AI classification for {fname}: {item_err}")
+                mc = db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
+                if not mc:
+                    mc = MediaClassification(file_name=fname)
+                    db.add(mc)
+                mc.ai_status = "failed"
+                mc.ai_error = str(item_err)
+                db.commit()
                 
     except Exception as e:
         logger.error(f"AI Classification background task failed: {e}")
@@ -377,6 +388,7 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
                 mc.category = None
                 mc.ai_suggested_category = None
                 mc.ai_status = None
+                mc.ai_error = None
                 
             db.query(MediaItem).filter(MediaItem.file_name.in_(batch)).update({"is_in_sorter": True}, synchronize_session=False)
             db.commit()
@@ -471,9 +483,19 @@ def get_bulk_reverse_count(folder_path: Optional[str] = Query(None), category_fi
     }
 
 @router.get("/api/classification/bulk-reverse/status")
-def get_bulk_reverse_status():
+def get_bulk_reverse_status(db: Session = Depends(get_db)):
     global bulk_reverse_status
-    return bulk_reverse_status
+    status_copy = bulk_reverse_status.copy()
+    
+    # Check if there are any failed AI items in the db
+    failed_count = db.query(MediaClassification).filter(MediaClassification.ai_status == "failed").count()
+    if failed_count > 0:
+        status_copy["failed_count"] = failed_count
+        example_err = db.query(MediaClassification.ai_error).filter(MediaClassification.ai_status == "failed").first()
+        if example_err:
+            status_copy["example_error"] = example_err[0]
+            
+    return status_copy
 
 # --- Category Management ---
 

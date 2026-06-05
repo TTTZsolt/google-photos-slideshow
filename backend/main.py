@@ -2,6 +2,9 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from dotenv import load_dotenv
+
+load_dotenv()
 from .routers import dashboard, music, classification, trash
 from .database import engine, Base
 from .version import VERSION, PROJECT_NAME
@@ -65,9 +68,18 @@ def auto_migrate():
                     file_name TEXT PRIMARY KEY,
                     category TEXT,
                     is_deleted BOOLEAN DEFAULT 0,
+                    ai_suggested_category TEXT,
+                    ai_status TEXT,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+
+            # Add AI columns if table already existed but without them
+            for col in ["ai_suggested_category", "ai_status", "ai_error"]:
+                try:
+                    cursor.execute(f"ALTER TABLE media_classifications ADD COLUMN {col} TEXT;")
+                except sqlite3.OperationalError:
+                    pass
 
             # Ensure category_definitions exists
             cursor.execute("""
@@ -129,11 +141,9 @@ if __name__ == "__main__":
         },
         "handlers": {
             "file": {
-                "class": "logging.handlers.RotatingFileHandler",
+                "class": "logging.FileHandler",
                 "formatter": "default",
                 "filename": "log.txt",
-                "maxBytes": 5 * 1024 * 1024, # 5 MB maximum
-                "backupCount": 1,
             },
         },
         "loggers": {

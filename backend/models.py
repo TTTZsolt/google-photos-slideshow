@@ -39,6 +39,9 @@ class MediaClassification(Base):
     file_name = Column(Text, primary_key=True, index=True) # B2 File Path (Key)
     category = Column(String, nullable=True) # család, utazás, állatok, stb.
     is_deleted = Column(Boolean, default=False)
+    ai_suggested_category = Column(String, nullable=True) # Javasolt kategória, vagy 'delete'
+    ai_status = Column(String, nullable=True) # "pending", "approved", "failed"
+    ai_error = Column(Text, nullable=True) # AI error message if status is failed
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class MusicConfig(Base):
