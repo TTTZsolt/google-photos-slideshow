@@ -354,12 +354,12 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                 mc.ai_error = str(item_err)
                 db.commit()
                 
-        # Clean up failed images: reset is_in_sorter = False and clear failed state 
-        # so they immediately return to the manual sorter instead of hanging in limbo.
+        # Clean up failed images: keep them in sorter (is_in_sorter = True) and clear failed AI state
+        # so they immediately return to the manual sorter.
         failed_items = db.query(MediaClassification.file_name).filter(MediaClassification.ai_status == "failed").all()
         if failed_items:
             failed_fnames = [f[0] for f in failed_items]
-            db.query(MediaItem).filter(MediaItem.file_name.in_(failed_fnames)).update({"is_in_sorter": False}, synchronize_session=False)
+            db.query(MediaItem).filter(MediaItem.file_name.in_(failed_fnames)).update({"is_in_sorter": True}, synchronize_session=False)
             db.query(MediaClassification).filter(MediaClassification.file_name.in_(failed_fnames)).update({
                 "ai_status": None,
                 "ai_error": None
