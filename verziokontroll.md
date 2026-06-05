@@ -13,6 +13,8 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 - **AI integráció**: Előkészítés a fényképek automatikus válogatására és elemzésére AI segítségével.
 - **Függőségek**: A `google-generativeai` és `pillow` könyvtárak hozzáadása a háttérben futó AI elemzés javítására.
 - **Tesztelés**: `teszt_terv.md` ellenőrző lista létrehozása a manuális ellenőrzéshez.
+- **Modell frissítés**: A nem támogatott Gemini 1.5 modellek lecserélése és automatikus fordítása `gemini-2.5-flash` és `gemini-2.5-pro` modellekre.
+- **Jóváhagyó felület**: Képnagyítás (modal popup) funkció hozzáadása a szortírozandó képekhez a részletesebb ellenőrzéshez.
 
 ## [V16.0.0] - Zero-Move apró hibáinak javítása (2026-05-09)
 
@@ -123,6 +125,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.1.0 | `5233fd2` | Fix: AI modell frissítés Gemini 2.5-re és képnagyítás modal hozzáadása a jóváhagyó felülethez   |
 | V16.1.0 | `c3eedf4` | Fix: Google Gemini API és Pillow függőségek pótlása, teszt terv létrehozása                    |
 | V16.1.0 | `2e34e51` | Képválogatás AI segítségével fejlesztése                                                       |
 | V16.0.0 | `V16`     | Zero-Move apró hibáinak javítása (Szortírozó duplikáció, Lomtár visszaállítás fix, Pánik gomb) |
