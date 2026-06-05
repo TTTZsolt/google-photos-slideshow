@@ -9,4 +9,6 @@ pychromecast
 python-dotenv
 aiofiles
 b2sdk
+google-generativeai
+pillow
 
