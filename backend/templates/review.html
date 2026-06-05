@@ -541,9 +541,16 @@
         modal.classList.add('hidden');
     }
 
+    async function runAiStatusPoll() {
+        if (!document.hidden) {
+            await checkAiStatus();
+        }
+        setTimeout(runAiStatusPoll, 3000);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         loadData();
-        setInterval(checkAiStatus, 3000);
+        runAiStatusPoll();
     });
 </script>
 {% endblock %}

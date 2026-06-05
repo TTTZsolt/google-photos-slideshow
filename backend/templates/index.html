@@ -962,8 +962,6 @@
             } catch (e) { }
         }
 
-        setInterval(updateB2Status, 3000);
-
         async function deleteB2Account(id) {
             if (confirm('Biztosan megszakítod ezt a B2 kapcsolatot?')) {
                 try {
@@ -1693,11 +1691,45 @@
             return `${d.getMonth() + 1}.${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
         }
 
-        setInterval(fetchSystemStatus, 3000);
-        fetchSystemStatus();
+        async function runSystemStatusPoll() {
+            if (!document.hidden) {
+                const isActivityActive = document.getElementById('activityModule')?.classList.contains('active');
+                const isLaborActive = document.getElementById('laborModule')?.classList.contains('active');
+                if (isActivityActive || isLaborActive) {
+                    await fetchSystemStatus();
+                }
+            }
+            setTimeout(runSystemStatusPoll, 3000);
+        }
 
-        setInterval(fetchBulkReverseStatus, 2000);
+        async function runBulkReverseStatusPoll() {
+            if (!document.hidden) {
+                const isMoverActive = document.getElementById('moverModule')?.classList.contains('active');
+                if (isMoverActive || wasBulkReverseRunning) {
+                    await fetchBulkReverseStatus();
+                }
+            }
+            const interval = wasBulkReverseRunning ? 2000 : 4000;
+            setTimeout(runBulkReverseStatusPoll, interval);
+        }
+
+        async function runB2StatusPoll() {
+            if (!document.hidden) {
+                const isConnectionActive = document.getElementById('connectionModule')?.classList.contains('active');
+                if (isConnectionActive) {
+                    await updateB2Status();
+                }
+            }
+            setTimeout(runB2StatusPoll, 3000);
+        }
+
+        // Run initial fetches and start polling loops
+        fetchSystemStatus();
         fetchBulkReverseStatus();
+        
+        runSystemStatusPoll();
+        runBulkReverseStatusPoll();
+        runB2StatusPoll();
 
         // --- V13.0 NAVIGATION ENGINE ---
         function showModule(id) {
