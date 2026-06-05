@@ -130,6 +130,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.1.0 | `966333c` | Fix: Infinite loop hiba javítása a jóváhagyó felület aszinkron betöltésekor                    |
 | V16.1.0 | `ff79293` | Fix: Sikertelen AI képek megtartása a Szortírozóban (is_in_sorter = 1)                         |
 | V16.1.0 | `a48c85d` | Fix: AI hibaértesítő banner azonnali megjelenítése a jóváhagyó oldal betöltésekor              |
 | V16.1.0 | `9510bb0` | Fix: AI jóváhagyásra váró képek kizárása a manuális Szortírozóból                              |

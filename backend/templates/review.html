@@ -483,8 +483,15 @@
                         unclassBanner.classList.add('hidden');
                     }
                     
-                    // Reload data to show newly processed images
-                    loadData();
+                    // Reload data only once after AI stops, bypass the duplicate status checks inside loadData to prevent infinite loop
+                    try {
+                        const itemsRes = await fetch('/api/classification/review-items');
+                        reviewItems = await itemsRes.json();
+                        setupBoard();
+                        renderItems();
+                    } catch (loadErr) {
+                        console.error(loadErr);
+                    }
                 }
             }
         } catch (e) {
