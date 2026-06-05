@@ -130,6 +130,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.1.0 | `ee048f3` | Fix: Böngésző lefagyások megszüntetése visibility- és modul-érzékeny setTimeout alapú lekérdezéssel |
 | V16.1.0 | `2cdac25` | Feature: Felhasználó értesítése, ha az AI korlát miatt régebbi modellre váltott vissza         |
 | V16.1.0 | `966333c` | Fix: Infinite loop hiba javítása a jóváhagyó felület aszinkron betöltésekor                    |
 | V16.1.0 | `ff79293` | Fix: Sikertelen AI képek megtartása a Szortírozóban (is_in_sorter = 1)                         |
