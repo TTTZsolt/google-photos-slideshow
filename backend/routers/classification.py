@@ -35,6 +35,7 @@ class CategoryCreate(BaseModel):
     icon: str = "tag"
     color: str = "#6366f1"
     order: int = 0
+    description: Optional[str] = None
 
 class CategoryResponse(BaseModel):
     id: int
@@ -43,6 +44,7 @@ class CategoryResponse(BaseModel):
     icon: str
     color: str
     order: int
+    description: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -296,23 +298,30 @@ def get_bulk_reverse_filenames(folder_path: Optional[str], category_filter: Opti
     return filenames
 
 def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str, custom_rules: str, db: Session):
+    global bulk_reverse_status
     try:
         from ..utils.ai_service import analyze_image_for_sorting
         from ..utils.b2_client import B2Client
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
-        if not b2_account: return
+        if not b2_account: 
+            bulk_reverse_status["is_running"] = False
+            return
         client = B2Client(b2_account.key_id, b2_account.application_key)
         
         categories = db.query(CategoryDefinition).all()
-        cat_names = [c.name for c in categories]
+        cat_details = {c.name: c.description or "" for c in categories}
         
-        for fname in filenames:
+        total_imgs = len(filenames)
+        for idx, fname in enumerate(filenames):
             mi = db.query(MediaItem).filter(MediaItem.file_name == fname, MediaItem.is_in_sorter == True).first()
             if not mi: continue
             
+            bulk_reverse_status["current"] = idx + 1
+            bulk_reverse_status["message"] = f"AI elemzés folyamatban: {idx+1}/{total_imgs} kép..."
+            
             try:
                 thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
-                suggested = analyze_image_for_sorting(thumb_url, cat_names, custom_rules, ai_model)
+                suggested = analyze_image_for_sorting(thumb_url, cat_details, custom_rules, ai_model)
                 
                 if ai_mode == "ai-delete-only" and suggested != "delete":
                     suggested = None
@@ -341,9 +350,12 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                 mc.ai_error = str(item_err)
                 db.commit()
                 
+        bulk_reverse_status["message"] = f"Kész! {total_imgs} kép sikeresen szortírozva az AI által."
     except Exception as e:
         logger.error(f"AI Classification background task failed: {e}")
+        bulk_reverse_status["message"] = f"AI elemzés hiba: {str(e)}"
     finally:
+        bulk_reverse_status["is_running"] = False
         db.close()
 
 def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[str], ai_mode: str, ai_model: str, ai_custom_rules: str, db: Session):
@@ -400,8 +412,7 @@ def perform_bulk_reverse(folder_path: Optional[str], category_filter: Optional[s
             threading.Thread(target=process_ai_classification, args=(items_to_mark, ai_mode, ai_model, ai_custom_rules, ai_db)).start()
         else:
             bulk_reverse_status["message"] = f"Kész! {total} kép azonnal válogatható a Szortírozóban."
-            
-        bulk_reverse_status["is_running"] = False
+            bulk_reverse_status["is_running"] = False
         
     except Exception as e:
         logger.exception("Bulk reverse move error")
@@ -515,7 +526,8 @@ def create_category(cat: CategoryCreate, db: Session = Depends(get_db)):
         display_name=cat.display_name,
         icon=cat.icon,
         color=cat.color,
-        order=cat.order
+        order=cat.order,
+        description=cat.description
     )
     db.add(new_cat)
     db.commit()
@@ -734,4 +746,27 @@ def approve_all_suggestions(db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         logger.exception("Approve all error")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/classification/reject-all")
+def reject_all_suggestions(db: Session = Depends(get_db)):
+    """ Resets is_in_sorter=False and clears ai_status for all pending items. """
+    try:
+        results = db.query(MediaClassification, MediaItem).join(
+            MediaItem, MediaClassification.file_name == MediaItem.file_name
+        ).filter(MediaClassification.ai_status == "pending", MediaItem.is_in_sorter == True).all()
+        
+        count = 0
+        for mc, mi in results:
+            mc.ai_status = None
+            mc.ai_suggested_category = None
+            mc.ai_error = None
+            mi.is_in_sorter = False
+            count += 1
+            
+        db.commit()
+        return {"status": "ok", "count": count}
+    except Exception as e:
+        db.rollback()
+        logger.exception("Reject all error")
         raise HTTPException(status_code=500, detail=str(e))

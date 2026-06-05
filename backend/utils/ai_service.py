@@ -56,10 +56,11 @@ def analyze_image_for_sorting(
     last_error = None
     for m_name in models_to_try:
         try:
-            cats_str = ", ".join(available_categories)
+            cats_list = [f"- {name}: {desc}" if desc else f"- {name}" for name, desc in available_categories.items()]
+            cats_str = "\n".join(cats_list)
             system_instruction = (
                 "You are an expert photo sorter assistant. Your task is to analyze the provided image and decide which category it belongs to, or if it should be deleted. "
-                f"Available categories: {cats_str}.\n"
+                f"Available categories:\n{cats_str}\n\n"
                 "If the photo is very blurry, completely dark, an accidental pocket shot, or generally bad, reply ONLY with 'delete'. "
                 "Otherwise, reply ONLY with the EXACT name of the best matching category from the list above. "
                 "If it does not fit any category clearly, but is a good photo, reply with 'uncategorized'. "
@@ -74,7 +75,7 @@ def analyze_image_for_sorting(
             text = result.text.strip().lower()
             
             # Validate output
-            valid_outputs = [c.lower() for c in available_categories] + ["delete", "uncategorized"]
+            valid_outputs = [c.lower() for c in available_categories.keys()] + ["delete", "uncategorized"]
             text = text.replace('.', '').replace('\'', '').replace('"', '')
             
             if text not in valid_outputs:

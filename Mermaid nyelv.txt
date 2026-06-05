@@ -1,0 +1,1 @@
+Mermaid nyelv, amely html-ben meg lehet jeleníteni.

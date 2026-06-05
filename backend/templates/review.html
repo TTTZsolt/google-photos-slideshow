@@ -48,11 +48,30 @@
         </div>
         
         <div class="flex gap-3">
+            <button onclick="rejectAll()" id="rejectAllBtn" disabled
+                class="bg-rose-600 hover:bg-rose-700 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+                <i data-lucide="x-circle" class="w-5 h-5"></i>
+                Összes Elvetése
+            </button>
             <button onclick="approveAll()" id="approveAllBtn" disabled
                 class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
                 <i data-lucide="check-circle" class="w-5 h-5"></i>
                 Összes Elfogadása
             </button>
+        </div>
+    </div>
+
+    <!-- AI Running Status Banner -->
+    <div id="aiProgressBanner" class="hidden mb-8 p-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-3xl shadow-xl space-y-4">
+        <div class="flex justify-between items-center text-sm font-black">
+            <span class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-full bg-green-300 animate-pulse"></div>
+                Az AI dolgozik a háttérben... <span id="aiProgressMessage" class="font-normal opacity-90 ml-2">Képek osztályozása...</span>
+            </span>
+            <span id="aiProgressPercent">0%</span>
+        </div>
+        <div class="w-full bg-white/20 rounded-full h-2.5 overflow-hidden">
+            <div id="aiProgressBar" class="bg-white h-full transition-all duration-300" style="width: 0%"></div>
         </div>
     </div>
 
@@ -189,17 +208,20 @@
         const emptyState = document.getElementById('emptyState');
         const board = document.getElementById('kanbanBoard');
         const approveAllBtn = document.getElementById('approveAllBtn');
+        const rejectAllBtn = document.getElementById('rejectAllBtn');
 
         if (reviewItems.length === 0) {
             emptyState.classList.remove('hidden');
             board.classList.add('hidden');
             approveAllBtn.disabled = true;
+            rejectAllBtn.disabled = true;
             return;
         }
 
         emptyState.classList.add('hidden');
         board.classList.remove('hidden');
         approveAllBtn.disabled = false;
+        rejectAllBtn.disabled = false;
 
         reviewItems.forEach(item => {
             const suggested = item.ai_suggested_category || 'uncategorized';
@@ -335,7 +357,9 @@
         if (!confirm("Biztosan elfogadod az összes jelenleg javasolt besorolást?")) return;
 
         const btn = document.getElementById('approveAllBtn');
+        const rejectBtn = document.getElementById('rejectAllBtn');
         btn.disabled = true;
+        rejectBtn.disabled = true;
         btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Feldolgozás...';
         lucide.createIcons();
 
@@ -349,14 +373,79 @@
             } else {
                 showToast("Hiba történt az összes elfogadásakor.");
                 btn.disabled = false;
+                rejectBtn.disabled = false;
                 btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Összes Elfogadása';
                 lucide.createIcons();
             }
         } catch (e) {
             showToast("Hálózati hiba.");
             btn.disabled = false;
+            rejectBtn.disabled = false;
             btn.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i> Összes Elfogadása';
             lucide.createIcons();
+        }
+    }
+
+    async function rejectAll() {
+        if (!confirm("Biztosan elveted az összes eddigi AI besorolást? Ekkor a képek besorolatlanok maradnak és eltűnnek erről a nézetről.")) return;
+
+        const btn = document.getElementById('approveAllBtn');
+        const rejectBtn = document.getElementById('rejectAllBtn');
+        btn.disabled = true;
+        rejectBtn.disabled = true;
+        rejectBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Elvetés...';
+        lucide.createIcons();
+
+        try {
+            const res = await fetch('/api/classification/reject-all', { method: 'POST' });
+            if (res.ok) {
+                const data = await res.json();
+                showToast(`${data.count} AI javaslat elvetve.`);
+                reviewItems = [];
+                renderItems();
+            } else {
+                showToast("Hiba történt az elvetéskor.");
+                btn.disabled = false;
+                rejectBtn.disabled = false;
+                rejectBtn.innerHTML = '<i data-lucide="x-circle" class="w-5 h-5"></i> Összes Elvetése';
+                lucide.createIcons();
+            }
+        } catch (e) {
+            showToast("Hálózati hiba.");
+            btn.disabled = false;
+            rejectBtn.disabled = false;
+            rejectBtn.innerHTML = '<i data-lucide="x-circle" class="w-5 h-5"></i> Összes Elvetése';
+            lucide.createIcons();
+        }
+    }
+
+    let wasAiRunning = false;
+    async function checkAiStatus() {
+        try {
+            const res = await fetch('/api/classification/bulk-reverse/status');
+            const data = await res.json();
+            
+            const banner = document.getElementById('aiProgressBanner');
+            if (data.is_running) {
+                banner.classList.remove('hidden');
+                document.getElementById('aiProgressMessage').textContent = data.message || "Folyamatban...";
+                
+                if (data.total > 0) {
+                    const percent = Math.min(100, Math.round((data.current / data.total) * 100));
+                    document.getElementById('aiProgressPercent').textContent = percent + '%';
+                    document.getElementById('aiProgressBar').style.width = percent + '%';
+                }
+                wasAiRunning = true;
+            } else {
+                if (wasAiRunning) {
+                    wasAiRunning = false;
+                    banner.classList.add('hidden');
+                    // Reload data to show newly processed images
+                    loadData();
+                }
+            }
+        } catch (e) {
+            console.error("Error checking AI status", e);
         }
     }
 
@@ -383,6 +472,9 @@
         modal.classList.add('hidden');
     }
 
-    document.addEventListener('DOMContentLoaded', loadData);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        setInterval(checkAiStatus, 3000);
+    });
 </script>
 {% endblock %}

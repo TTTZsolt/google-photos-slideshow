@@ -207,4 +207,74 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
     background_tasks.add_task(perform_physical_delete, key_id, app_key, items_to_delete)
     return {"status": "ok", "message": f"{len(items_to_delete)} elem törlése megkezdődött."}
 
+@router.post("/api/trash/restore-all")
+def restore_all_from_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Restores all items from the trash back to the source bucket."""
+    b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_acc or not b2_acc.source_bucket_name:
+        raise HTTPException(status_code=500, detail="Hiányzó forrás vödör konfiguráció.")
+
+    # 1. Identify items to restore
+    query = db.query(MediaClassification, MediaItem).outerjoin(
+        MediaItem, MediaItem.file_name == MediaClassification.file_name
+    ).filter(MediaClassification.is_deleted == True)
+    
+    results = query.all()
+    if not results:
+        return {"status": "ok", "message": "A lomtár üres."}
+
+    items_to_restore = []
+    for mc, mi in results:
+        items_to_restore.append({
+            "file_name": mc.file_name,
+            "mi_id": mi.id if mi else None,
+            "current_bucket": mi.bucket_name if mi else b2_acc.trash_bucket_name
+        })
+
+        # DB updates immediately
+        mc.is_deleted = False
+        mc.category = None
+        if mi:
+            mi.is_in_sorter = True
+    
+    db.commit()
+
+    key_id = b2_acc.key_id
+    app_key = b2_acc.application_key
+    target_bucket = b2_acc.source_bucket_name
+
+    def perform_physical_restore(b2_key, b2_secret, items, target_bucket_name):
+        client = B2Client(b2_key, b2_secret)
+        # We need a new session in background thread
+        local_db = SessionLocal()
+        try:
+            for item in items:
+                file_name = item["file_name"]
+                mi_id = item["mi_id"]
+                current_bucket = item["current_bucket"]
+                
+                try:
+                    # Move in B2
+                    new_version = client.move_file(current_bucket, target_bucket_name, file_name)
+                    try:
+                        client.move_file(f"{current_bucket}-thumbs", f"{target_bucket_name}-thumbs", file_name)
+                    except Exception as th_err:
+                        pass
+                    
+                    # Update new ID in DB if it was an active MediaItem
+                    if mi_id:
+                        db_mi = local_db.query(MediaItem).filter(MediaItem.id == mi_id).first()
+                        if db_mi:
+                            db_mi.bucket_name = target_bucket_name
+                            db_mi.id = new_version.id_
+                            local_db.commit()
+                except Exception as b2_err:
+                    logger.error(f"Failed to restore {file_name}: {b2_err}")
+        finally:
+            local_db.close()
+
+    background_tasks.add_task(perform_physical_restore, key_id, app_key, items_to_restore, target_bucket)
+    return {"status": "ok", "message": f"{len(items_to_restore)} elem visszaállítása megkezdődött."}
+
+
 

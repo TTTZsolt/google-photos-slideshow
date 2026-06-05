@@ -54,6 +54,10 @@ def get_receiver(request: Request):
 def get_trash_page(request: Request):
     return templates.TemplateResponse("trash.html", {"request": request, "version": VERSION})
 
+@router.get("/review")
+def get_review_page(request: Request):
+    return templates.TemplateResponse("review.html", {"request": request, "version": VERSION})
+
 @router.post("/b2/connect")
 def connect_b2(req: B2ConnectRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Simple check if already exists

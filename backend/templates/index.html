@@ -521,6 +521,9 @@
                             <input type="color" id="newCatColor" value="#6366f1" class="flex-1 h-10 p-0 border-none bg-transparent cursor-pointer rounded">
                         </div>
                     </div>
+                    <div class="w-full">
+                        <textarea id="newCatDescription" placeholder="Leírás az AI számára... (Milyen jellegű képek kerüljenek ide? Pl: családi fotók, gyerekek, közös utazások, portrék a családtagokról.)" class="w-full bg-white p-4 rounded-2xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500 resize-none" rows="2"></textarea>
+                    </div>
                     <button onclick="addCategory()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-lg active:scale-95">
                         Létrehozás és Mentés
                     </button>
@@ -1719,17 +1722,20 @@
                     list.innerHTML = '';
                     categories.forEach(cat => {
                         const el = document.createElement('div');
-                        el.className = "p-3 bg-white/60 border border-slate-100 rounded-2xl flex items-center justify-between group transition-all hover:bg-white/80";
+                        el.className = "p-4 bg-white/60 border border-slate-100 rounded-2xl flex flex-col justify-between group transition-all hover:bg-white/80 shadow-sm gap-2";
                         el.innerHTML = `
-                            <div class="flex items-center gap-3 min-w-0">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm" style="background-color: ${cat.color}20; color: ${cat.color}; border: 1px solid ${cat.color}40">
-                                    <i data-lucide="${cat.icon || 'tag'}" class="w-4 h-4"></i>
+                            <div class="flex items-center justify-between w-full">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm" style="background-color: ${cat.color}20; color: ${cat.color}; border: 1px solid ${cat.color}40">
+                                        <i data-lucide="${cat.icon || 'tag'}" class="w-4 h-4"></i>
+                                    </div>
+                                    <span class="font-bold text-slate-700 text-xs truncate">${cat.display_name}</span>
                                 </div>
-                                <span class="font-bold text-slate-700 text-xs truncate">${cat.display_name}</span>
+                                <button onclick="deleteCategory(${cat.id})" class="opacity-0 group-hover:opacity-100 bg-rose-50 text-rose-500 p-1.5 rounded-lg hover:bg-rose-500 hover:text-white transition duration-200">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
                             </div>
-                            <button onclick="deleteCategory(${cat.id})" class="opacity-0 group-hover:opacity-100 bg-rose-50 text-rose-500 p-1.5 rounded-lg hover:bg-rose-500 hover:text-white transition duration-200">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
+                            ${cat.description ? `<p class="text-[10px] text-slate-400 font-medium italic mt-1 leading-relaxed border-t border-slate-100 pt-1.5">${cat.description}</p>` : ''}
                         `;
                         list.appendChild(el);
                     });
@@ -1774,6 +1780,7 @@
             const displayName = document.getElementById('newCatDisplayName').value;
             const icon = document.getElementById('newCatIcon').value;
             const color = document.getElementById('newCatColor').value;
+            const description = document.getElementById('newCatDescription').value;
             
             if (!displayName) return;
             
@@ -1789,12 +1796,14 @@
                         display_name: displayName,
                         icon: icon,
                         color: color,
+                        description: description || null,
                         order: 10
                     })
                 });
                 
                 if (res.ok) {
                     document.getElementById('newCatDisplayName').value = '';
+                    document.getElementById('newCatDescription').value = '';
                     document.getElementById('addCategoryForm').classList.add('hidden');
                     fetchCategoriesDashboard();
                 } else {

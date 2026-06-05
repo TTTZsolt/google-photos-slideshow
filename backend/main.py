@@ -93,6 +93,11 @@ def auto_migrate():
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+            # Add description column if it does not exist
+            try:
+                cursor.execute("ALTER TABLE category_definitions ADD COLUMN description TEXT;")
+            except sqlite3.OperationalError:
+                pass
 
             # Seed default categories if empty
             cursor.execute("SELECT COUNT(*) FROM category_definitions;")

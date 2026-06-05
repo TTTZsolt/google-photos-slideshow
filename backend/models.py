@@ -69,4 +69,5 @@ class CategoryDefinition(Base):
     icon = Column(String, default="tag") # Lucide icon name
     color = Column(String, default="#6366f1") # CSS color
     order = Column(Integer, default=0)
+    description = Column(Text, nullable=True) # Description for AI classification rules
     created_at = Column(DateTime(timezone=True), server_default=func.now())

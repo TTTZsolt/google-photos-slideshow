@@ -17,6 +17,9 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 - **Jóváhagyó felület**: Képnagyítás (modal popup) funkció hozzáadása a szortírozandó képekhez a részletesebb ellenőrzéshez.
 - **Modell védelem (Fallback)**: Modell hiba esetén automatikus próbálkozás a fallback listáról (2.5, 2.0, flash-latest) a leállások elkerülésére.
 - **Hibakezelés**: AI hibák rögzítése és mentése az adatbázis `ai_error` oszlopába a csendes "Bizonytalan" kategóriába bukás helyett.
+- **Összes elvetése**: "Összes besorolás elvetése" gomb hozzáadása a jóváhagyó felülethez, ami visszaállítja a képeket besorolatlan állapotba, így a folyamat újraindítható.
+- **AI kategória leírások**: A kategóriákhoz leírás adható, amelyeket a rendszer betáplál a Gemini promptba a pontosság javítására és a "Bizonytalan" kategória csökkentésére.
+- **Progress Tracking**: Valós idejű haladási napló (progress bar) megjelenítése a Mover felületen és az AI Jóváhagyás felületen is, jelezve a háttérben futó AI szortírozás állapotát.
 
 ## [V16.0.0] - Zero-Move apró hibáinak javítása (2026-05-09)
 
@@ -127,6 +130,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.1.0 | `2ec3db1` | Feature: AI progress bar, reject all és kategória leírások a Gemini prompt finomhangolásához   |
 | V16.1.0 | `617791a` | Feature: AI modell védelmi rendszer (Fallback modellek, és hiba rögzítése)                    |
 | V16.1.0 | `5233fd2` | Fix: AI modell frissítés Gemini 2.5-re és képnagyítás modal hozzáadása a jóváhagyó felülethez   |
 | V16.1.0 | `c3eedf4` | Fix: Google Gemini API és Pillow függőségek pótlása, teszt terv létrehozása                    |

@@ -38,11 +38,18 @@
             <p class="text-slate-500 font-medium">Törlésre jelölt képek biztonsági tárolója</p>
         </div>
         
-        <button onclick="confirmEmptyTrash()" id="emptyBtn"
-            class="bg-rose-500 hover:bg-rose-600 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
-            <i data-lucide="trash-2" class="w-5 h-5"></i>
-            Lomtár Ürítése
-        </button>
+        <div class="flex gap-3">
+            <button onclick="confirmRestoreAll()" id="restoreAllBtn" disabled
+                class="bg-indigo-500 hover:bg-indigo-600 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+                <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                Összes visszaállítása
+            </button>
+            <button onclick="confirmEmptyTrash()" id="emptyBtn" disabled
+                class="bg-rose-500 hover:bg-rose-600 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+                Lomtár Ürítése
+            </button>
+        </div>
     </div>
 
     <!-- Empty State -->
@@ -85,6 +92,23 @@
             <div class="grid grid-cols-2 gap-3">
                 <button onclick="closeModal()" class="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-colors">Mégse</button>
                 <button onclick="executeEmptyTrash()" id="finalEmptyBtn" class="bg-rose-500 hover:bg-rose-600 text-white py-4 rounded-2xl font-bold shadow-lg transition-all">Igen, töröld mind</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Restore All Confirmation Modal -->
+    <div id="confirmRestoreAllModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm hidden p-4">
+        <div class="glass-card w-full max-w-md p-8 transform transition-transform duration-300 scale-95 opacity-0" id="restoreModalContent">
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-6">
+                <i data-lucide="rotate-ccw" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Összes kép visszaállítása?</h2>
+            <p class="text-slate-500 font-medium mb-8 leading-relaxed">
+                Biztosan vissza szeretnéd állítani az <span class="text-indigo-600 font-bold">összes képet</span> a Lomtárból? Újra a Szortírozóba kerülnek.
+            </p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeRestoreAllModal()" class="py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition-colors">Mégse</button>
+                <button onclick="executeRestoreAll()" id="finalRestoreAllBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg transition-all">Igen, állítsd vissza</button>
             </div>
         </div>
     </div>
@@ -157,11 +181,16 @@
         const grid = document.getElementById('trashGrid');
         const emptyState = document.getElementById('emptyState');
         const emptyBtn = document.getElementById('emptyBtn');
+        const restoreAllBtn = document.getElementById('restoreAllBtn');
         
         if (trashItems.length > 0) {
             grid.classList.remove('hidden');
             emptyState.classList.add('hidden');
-            emptyBtn.disabled = false;
+            if (emptyBtn) emptyBtn.disabled = false;
+            if (restoreAllBtn) restoreAllBtn.disabled = false;
+        } else {
+            if (emptyBtn) emptyBtn.disabled = true;
+            if (restoreAllBtn) restoreAllBtn.disabled = true;
         }
 
         items.forEach(item => {
@@ -261,6 +290,60 @@
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Igen, töröld mind';
+        }
+    }
+
+    function confirmRestoreAll() {
+        const modal = document.getElementById('confirmRestoreAllModal');
+        const content = document.getElementById('restoreModalContent');
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+            content.classList.remove('opacity-0', 'scale-95');
+        }, 10);
+    }
+
+    function closeRestoreAllModal() {
+        const modal = document.getElementById('confirmRestoreAllModal');
+        const content = document.getElementById('restoreModalContent');
+        content.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    async function executeRestoreAll() {
+        const btn = document.getElementById('finalRestoreAllBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin mr-2"></i> Visszaállítás...';
+        
+        try {
+            const res = await fetch('/api/trash/restore-all', { method: 'POST' });
+            if (res.ok) {
+                showToast("Visszaállítás megkezdődött a háttérben.");
+                closeRestoreAllModal();
+                // Force UI to empty state immediately
+                trashItems = [];
+                currentOffset = 0;
+                isLastPage = true;
+                document.getElementById('trashGrid').innerHTML = '';
+                document.getElementById('trashGrid').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+                
+                const emptyBtn = document.getElementById('emptyBtn');
+                const restoreAllBtn = document.getElementById('restoreAllBtn');
+                if (emptyBtn) emptyBtn.disabled = true;
+                if (restoreAllBtn) restoreAllBtn.disabled = true;
+                
+                const loadTotal = document.getElementById('loadTotal');
+                const loadCurrent = document.getElementById('loadCurrent');
+                if (loadTotal) loadTotal.textContent = "0";
+                if (loadCurrent) loadCurrent.textContent = "0";
+            } else {
+                showToast("Hiba a visszaállítás indításakor");
+            }
+        } catch (e) {
+            showToast("Hálózati hiba");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = 'Igen, állítsd vissza';
         }
     }
 
