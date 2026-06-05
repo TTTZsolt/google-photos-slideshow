@@ -76,7 +76,7 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         if not b2_account:
             raise HTTPException(status_code=400, detail="Nincs aktív B2 fiók konfigurálva.")
         
-        # ZERO-MOVE Logic: ONLY items explicitly marked for sorting
+        # ZERO-MOVE Logic: ONLY items explicitly marked for sorting, excluding those with pending AI suggestions
         query = db.query(MediaItem).outerjoin(
             MediaClassification, MediaItem.file_name == MediaClassification.file_name
         ).filter(
@@ -84,7 +84,11 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         ).filter(
             or_(
                 MediaClassification.file_name == None,
-                and_(MediaClassification.category == None, MediaClassification.is_deleted == False)
+                and_(
+                    MediaClassification.category == None, 
+                    MediaClassification.is_deleted == False,
+                    or_(MediaClassification.ai_status == None, MediaClassification.ai_status != "pending")
+                )
             )
         ).order_by(MediaItem.file_name.asc()) # Alphabetical/Folder order
 
