@@ -76,17 +76,18 @@
     </div>
 
     <!-- AI Unclassified / Failed Warning Banner -->
-    <div id="aiUnclassifiedBanner" class="hidden mb-8 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
-        <div class="flex items-center gap-3">
-            <div class="p-2 bg-amber-100 rounded-xl text-amber-600">
+    <div id="aiUnclassifiedBanner" class="hidden mb-8 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between shadow-sm animate-fade-in gap-4">
+        <div class="flex items-start gap-3">
+            <div class="p-2 bg-amber-100 rounded-xl text-amber-600 shrink-0">
                 <i data-lucide="alert-circle" class="w-5 h-5"></i>
             </div>
             <div>
                 <p class="text-sm font-bold">Nem minden képet sikerült az AI-nak besorolnia</p>
                 <p class="text-xs text-amber-600 font-medium mt-0.5"><b id="unclassifiedCount">0</b> kép elemzése sikertelen volt (pl. letöltési hiba miatt). Ezeket a rendszer automatikusan visszarakta a kézi szortírozóba.</p>
+                <p id="aiFallbackNotice" class="hidden text-[10px] text-amber-700 bg-amber-100/40 p-1.5 rounded border border-amber-200/40 mt-1.5 font-bold italic"></p>
             </div>
         </div>
-        <a href="/classify" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm whitespace-nowrap ml-4">
+        <a href="/classify" class="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-sm whitespace-nowrap md:ml-4 self-stretch md:self-auto text-center">
             Kézi Szortírozás indítása
         </a>
     </div>
@@ -181,6 +182,15 @@
             
             if (unclassBanner) {
                 const failed = statusData.failed_count || 0;
+                const fbNotice = document.getElementById('aiFallbackNotice');
+                
+                if (statusData.fallback_model_used && fbNotice) {
+                    fbNotice.textContent = `ℹ️ Megjegyzés: A kért modell napi ingyenes korlátja elfogyott, ezért a rendszer a(z) ${statusData.fallback_model_used} modellel végezte el a válogatást. A kategória-felismerés pontossága emiatt kis mértékben eltérhet a megszokottól.`;
+                    fbNotice.classList.remove('hidden');
+                } else if (fbNotice) {
+                    fbNotice.classList.add('hidden');
+                }
+                
                 if (failed > 0 && !statusData.is_running) {
                     document.getElementById('unclassifiedCount').textContent = failed;
                     unclassBanner.classList.remove('hidden');
@@ -476,6 +486,15 @@
                     
                     // Show a warning banner if there were failed items in the completed run
                     const failed = data.failed_count || 0;
+                    const fbNotice = document.getElementById('aiFallbackNotice');
+                    
+                    if (data.fallback_model_used && fbNotice) {
+                        fbNotice.textContent = `ℹ️ Megjegyzés: A kért modell napi ingyenes korlátja elfogyott, ezért a rendszer a(z) ${data.fallback_model_used} modellel végezte el a válogatást. A kategória-felismerés pontossága emiatt kis mértékben eltérhet a megszokottól.`;
+                        fbNotice.classList.remove('hidden');
+                    } else if (fbNotice) {
+                        fbNotice.classList.add('hidden');
+                    }
+                    
                     if (failed > 0 && unclassBanner) {
                         document.getElementById('unclassifiedCount').textContent = failed;
                         unclassBanner.classList.remove('hidden');

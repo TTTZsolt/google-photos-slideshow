@@ -322,10 +322,13 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
             
             bulk_reverse_status["current"] = idx + 1
             bulk_reverse_status["message"] = f"AI elemzés folyamatban: {idx+1}/{total_imgs} kép..."
-            
             try:
                 thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
-                suggested = analyze_image_for_sorting(thumb_url, cat_details, custom_rules, ai_model)
+                suggested, used_model = analyze_image_for_sorting(thumb_url, cat_details, custom_rules, ai_model)
+                
+                # If a fallback happened (the used model is different than requested), note it in status
+                if used_model != ai_model:
+                    bulk_reverse_status["fallback_model_used"] = used_model
                 
                 if ai_mode == "ai-delete-only" and suggested != "delete":
                     suggested = None

@@ -23,10 +23,10 @@ def analyze_image_for_sorting(
     available_categories: list[str], 
     custom_rules: str = "", 
     model_name: str = "gemini-2.5-flash"
-) -> str:
+) -> tuple[str, str]:
     """
     Downloads an image (thumbnail) and uses Gemini API to classify it or suggest deletion.
-    Returns the exact category name, or "delete".
+    Returns a tuple: (exact_category_name_or_delete, model_name_that_succeeded).
     Raises Exception if all models fail.
     """
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -80,9 +80,9 @@ def analyze_image_for_sorting(
             
             if text not in valid_outputs:
                 logger.warning(f"AI model {m_name} returned unexpected category: '{text}'. Falling back to uncategorized.")
-                return "uncategorized"
+                return "uncategorized", m_name
                 
-            return text
+            return text, m_name
         except Exception as e:
             logger.warning(f"AI model '{m_name}' failed: {e}. Trying next fallback...")
             last_error = e

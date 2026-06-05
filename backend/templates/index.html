@@ -1307,6 +1307,10 @@
                                 let alertMsg = `Az AI befejezte a feldolgozást.<br><br>`;
                                 alertMsg += `✅ <b>${successful}</b> kép sikeresen osztályozva.<br>`;
                                 
+                                if (data.fallback_model_used) {
+                                    alertMsg += `ℹ️ <b>Megjegyzés:</b> A kért modell ingyenes napi kerete elfogyott. A rendszer automatikusan átváltott a <b>${data.fallback_model_used}</b> modellre az elemzéshez.<br><br>`;
+                                }
+                                
                                 if (failed > 0) {
                                     alertMsg += `⚠️ <b>${failed}</b> képnél hiba történt (ezek automatikusan visszakerültek a Szortírozóba manuális válogatásra).<br><br>`;
                                     alertMsg += `<p class="text-[10px] text-rose-500 italic bg-rose-50 p-2 rounded-lg border border-rose-100">Utolsó hiba: ${data.example_error || "Ismeretlen hiba"}</p>`;
