@@ -6,10 +6,10 @@ echo Csatlakozas es inditas...
 :: Megprobaljuk a rendszer SSH-t
 where ssh >nul 2>nul
 if %errorlevel% equ 0 (
-    ssh -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && nohup python -m backend.main > /dev/null 2>&1 < /dev/null & exit"
+    ssh -p 8022 u0_a116@192.168.1.157 "termux-wake-lock && cd ~/swift-newton && nohup python -m backend.main > /dev/null 2>&1 < /dev/null & exit"
 ) else (
     echo A rendszer SSH nem talalhato, probalom a Git mappabol...
-    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "cd ~/swift-newton && nohup python -m backend.main > /dev/null 2>&1 < /dev/null & exit"
+    "C:\Program Files\Git\usr\bin\ssh.exe" -p 8022 u0_a116@192.168.1.157 "termux-wake-lock && cd ~/swift-newton && nohup python -m backend.main > /dev/null 2>&1 < /dev/null & exit"
 )
 
 echo.

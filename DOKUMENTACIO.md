@@ -219,3 +219,9 @@ A szortÃ­rozÃ³ felÃ¼leten vÃ©gzett munka sorÃ¡n a rendszer intelligensen dÃ¶nt a
 *   **AzonnalisÃ¡g**: A vÃ¡logatÃ¡s elÅ‘kÃ©szÃ­tÃ©se nem igÃ©nyel vÃ¡rakozÃ¡st.
 *   **BiztonsÃ¡g**: Kevesebb fÃ¡jlmÅ±velet a felhÅ‘ben kisebb hibaforrÃ¡st jelent.
 *   **RendezettsÃ©g**: A rendszer tÃ¡mogatja az **egyvÃ¶drÃ¶s (Single-Bucket)** felÃ©pÃ­tÃ©st, ahol minden kÃ©p a `kepek02`-ben lakik, Ã©s csak a lomtÃ¡r kÃ¼lÃ¶nÃ¼l el.
+
+## Android Phantom Process Killer és Termux Wake-Lock
+
+**Probléma:** Újabb Android rendszereken (pl. a törött kijelzõs headless szerverként mûködõ tableten) az agresszív memóriakezelõ (Phantom Process Killer) hajlamos kilõni a háttérben futó Termux folyamatokat, különösen akkor, ha több erõforrás-igényes script (pl. a WOL bot és a Képnézegetõ backend) fut egyszerre. Ez a Képnézegetõ váratlan leállását eredményezheti.
+
+**Megoldás:** A 	ablet_start_kepnezegeto.bat indítószkriptbe beépítésre került a 	ermux-wake-lock parancs. Ez a parancs egy úgynevezett wakelockot kér az Androidtól a Termux számára, amely megakadályozza, hogy a rendszer CPU-ja mélyalvásba menjen, és drasztikusan csökkenti annak az esélyét, hogy az Android kilõje a Képnézegetõ python backendjét háttérfolyamatként.
