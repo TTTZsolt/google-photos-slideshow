@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import requests
 from io import BytesIO
@@ -33,7 +34,7 @@ def analyze_image_for_sorting(
     if not api_key:
         raise Exception("GEMINI_API_KEY variable is missing in environment.")
     
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     try:
         response = requests.get(image_url, timeout=15)
@@ -70,8 +71,11 @@ def analyze_image_for_sorting(
             if custom_rules:
                 system_instruction += f"\n\nCRITICAL USER'S CUSTOM RULES:\n{custom_rules}"
                 
-            model = genai.GenerativeModel(model_name=m_name, system_instruction=system_instruction)
-            result = model.generate_content([img, "Please classify this image."])
+            result = client.models.generate_content(
+                model=m_name,
+                contents=[img, "Please classify this image."],
+                config=types.GenerateContentConfig(system_instruction=system_instruction),
+            )
             text = result.text.strip().lower()
             
             # Validate output
