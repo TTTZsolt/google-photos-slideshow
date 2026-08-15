@@ -31,14 +31,39 @@ A backend szerver jellemzően a helyi hálózati **Tableten** fut (Linux/Termux 
    - **Megjelölés**: Ha vetítés közben hibás fotót látsz, kattints a kijelző sarkában lévő **Zászló (Megjelölés)** ikonra. A kép piros keretet kap és bekerül a javítandó sorba.
    - **Javítás**: Ülj le a PC elé, nyisd meg a Dashboard alján lévő **Digitális Labor (Retouch Queue)** panelt. Kattints a kép melletti **Photopea** ikonra. Végezd el a forgatást/javítást a megnyíló képszerkesztőben, majd válaszd a **File -> Save** menüpontot. A javított kép visszakerül a felhőbe, a régi pedig archiválódik.
 
-6. **Fotók válogatása és szortírozása (Tinder-mód)**:
-   - Nyisd meg a Dashboardról (lehetőleg telefonon) a **Fotó Szortírozót**.
-   - Húzd el a megjelenő képet az alábbiak szerint:
-     - **Jobbra húzás**: Család kategória
-     - **Balra húzás**: Utazás kategória
-     - **Lefelé húzás**: Egyéb egyedi kategória
-     - **Felfelé húzás**: Törlés (a Lomtárba helyezi a képet)
-   - Bármikor visszavonhatod az utolsó mozdulatot az **Undo (Visszavonás)** gombbal.
+6. **Fotók válogatása (Szortírozó)**:
+   - Nyisd meg a Dashboardról (lehetőleg telefonon/tableten) a **Szortírozót**.
+   - Egyszerre egy kép jelenik meg nagyban; a jobb alsó sarokban egy kis előnézetben látszik az előzőleg besorolt kép.
+   - **Besorolás**: koppints a kép alatt megjelenő kategória-gombok egyikére (ezek a nálad definiált kategóriák, saját ikonnal és színnel) — a kép azonnal átkerül a megfelelő csoportba, és betöltődik a következő.
+   - **Törlés**: koppints a bal alsó **Törlés** gombra — a kép a Lomtárba kerül.
+   - **Visszavonás (Undo)**: koppints a jobb alsó sarokban látható kis előnézeti képre (ez mindig az utoljára besorolt kép) — ezzel visszavonod az utolsó döntést, és a kép újra a várólista elejére kerül.
+   - **Nagyítás**: két ujjal csippentve (pinch-to-zoom) nagyíthatod és mozgathatod az aktuális képet alaposabb megtekintéshez. Noteszgépen, érintőképernyő nélkül is elérhető: **Ctrl + görgetés** vagy trackpad-csippentés a nagyításhoz, bal egérgombbal húzva pedig mozgathatod a nagyított képet.
+   - **Teljes képernyő**: a jobb felső maximalizáló ikonnal válthatsz zavartalan, teljes képernyős módra.
+   - **Szortírozó ürítése**: a jobb felső körkörös nyíl ikonnal kiürítheted a várólistát (a képek megmaradnak, csak a "szortírozandó" jelölés törlődik).
 
-7. **Lomtár kezelése**:
+7. **Képek manuális "huzogatással" történő csoportosítása (Mappa Kanban)**:
+   - **Megnyitás**: A Dashboardon nyisd meg a **Visszamozgató (Mover)** modult, a jobb oldali Mappaböngészőben navigálj a kívánt mappához, majd kattints a mappa neve melletti kis mappa-ikonra ("Képek megnyitása a Kanban nézetben"). Ez megnyitja az adott mappa képeit a Kanban nézetben.
+   - **Oszlopok**: A tábla oszlopai balról jobbra: **Törlendő**, **Besorolatlan**, majd egy-egy oszlop minden nálad definiált kategóriának (pl. Család, Utazás, stb.).
+   - **Húzás**: Fogd meg egérrel (vagy érintéssel) egy kép kártyáját, és húzd át a kívánt oszlopba. A kép azonnal átkerül a felületen, de **még nincs elmentve** — a módosított képeken egy apró sárga pötty jelenik meg.
+   - **Több kép egyszerre**: Kattintással jelölj ki képeket (Ctrl+kattintás: hozzáadás a kijelöléshez; Shift+kattintás: tartomány kijelölése ugyanazon oszlopon belül), majd húzd el bármelyik kijelölt kártyát — az összes kijelölt kép együtt mozog át az új oszlopba.
+   - **Nagyítás**: Dupla kattintással megnyithatod a kép nagyméretű előnézetét.
+   - **Mentés**: Ha végeztél a rendezéssel, kattints a **Változások Mentése** gombra. Csak ekkor íródnak a módosítások az adatbázisba, és csak ekkor mozognak a fájlok ténylegesen a Backblaze B2-ben (a háttérben).
+   - **Korlát**: Egy mappában egyszerre legfeljebb 100 kép jelenik meg (teljesítmény miatt). Ha ennél több van, egy figyelmeztető sáv jelzi ezt, és mentés után automatikusan betöltődik a következő adag.
+
+8. **AI-alapú előszűrés és -előkészítés**:
+   - **Indítás**: Ugyanabban a **Visszamozgató (Mover)** modulban, a bal oldali panelen:
+     - **Szűrés kategóriára**: eldöntheted, hogy csak a még kategorizálatlan képeket vonja be a folyamat, vagy az adott mappa/kategória összes képét.
+     - **Válogatási Mód**:
+       - *Manuális válogatás*: nincs AI, a képek egyszerűen visszakerülnek a kézi szortírozáshoz (Kanban vagy Szortírozó oldal).
+       - *Csak AI Selejtezés*: az AI kizárólag a rossz (életlen, elsötétült, véletlen zsebfotó) képeket jelöli törlésre, a többi kategorizálatlan marad.
+       - *Teljes AI (Selejt + Csoportosítás)*: az AI minden képhez javasol egy kategóriát, vagy törlésre jelöli.
+     - AI mód választásakor megjelenik egy **AI Modell** választó, és egy **"Egyéni törlési szempontok"** szövegmező, ahova saját szabályokat írhatsz (pl. "töröld, ha ujj lóg a lencsébe, de ne töröld, ha kutya van rajta"). Ez a mező egy külső, szerkeszthető fájlba (`egyeni_torlesi_szempontok.txt`) mentődik, és onnan is töltődik be induláskor — kívülről is szerkesztheted, és ha itt kiürítöd, a fájl tartalma is törlődik.
+   - Válaszd ki a feldolgozandó mappát a jobb oldali böngészőben, majd kattints a **Folyamat Indítása** gombra.
+   - A rendszer megjelöli a képeket, majd (AI mód esetén) a háttérben elkezdi elemezni őket a Gemini API-n keresztül, egy beépített tempókorláttal (hogy az ingyenes API-kvótán belül maradjon). Egy folyamatjelző sáv mutatja az állást, és menet közben bármikor leállítható.
+   - **Jóváhagyás**: az AI javaslatai nem kerülnek automatikusan mentésre. A **"AI Jóváhagyás"** gombbal (vagy a `/review` oldalon) egy ugyanolyan Kanban-táblát látsz, csak itt az AI saját javaslata szerinti oszlopban jelenik meg minden kép. Itt:
+     - áthúzhatod bármelyik képet egy másik kategóriába, ha nem értesz egyet a javaslattal (egyesével vagy több kijelölt képpel együtt),
+     - egyesével elfogadhatod egy kép jobb alsó pipa gombjával,
+     - vagy egyszerre az **Összes Elfogadása** / **Összes Elvetése** gombbal döntheted el az összes függőben lévő javaslat sorsát (az elvetett képek besorolatlanként visszakerülnek a kézi szortírozóba).
+
+9. **Lomtár kezelése**:
    - A szortírozó kártyán látható a törlésre váró képek száma. A **Lomtár Átnézése** gombbal megnyithatod a listát, ahol a nem kívánt fotókat véglegesen törölheted a Backblaze B2 felhőtárhelyről.
