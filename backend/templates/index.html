@@ -493,14 +493,15 @@
                         <i data-lucide="tags" class="w-8 h-8"></i>
                         Kategóriák Kezelése
                     </h2>
-                    <button onclick="document.getElementById('addCategoryForm').classList.toggle('hidden')" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition active:scale-95 shadow-lg">
+                    <button onclick="openCreateCategoryForm()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition active:scale-95 shadow-lg">
                         <i data-lucide="plus" class="w-4 h-4"></i> Új Kategória
                     </button>
                 </div>
 
-                <!-- Add Category Form -->
+                <!-- Add/Edit Category Form -->
                 <div id="addCategoryForm" class="hidden bg-indigo-50/50 border border-indigo-100 p-6 rounded-3xl mb-8 space-y-4 shadow-inner">
-                    <h3 class="font-bold text-indigo-700 text-sm uppercase tracking-widest">Kategória Létrehozása</h3>
+                    <h3 id="categoryFormTitle" class="font-bold text-indigo-700 text-sm uppercase tracking-widest">Kategória Létrehozása</h3>
+                    <input type="hidden" id="editingCategoryId" value="">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input type="text" id="newCatDisplayName" placeholder="Megjelenített név (pl. Család)" class="w-full bg-white p-4 rounded-xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500">
                         <select id="newCatIcon" class="w-full bg-white p-4 rounded-xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500">
@@ -522,9 +523,9 @@
                         </div>
                     </div>
                     <div class="w-full">
-                        <textarea id="newCatDescription" placeholder="Leírás az AI számára... (Milyen jellegű képek kerüljenek ide? Pl: családi fotók, gyerekek, közös utazások, portrék a családtagokról.)" class="w-full bg-white p-4 rounded-2xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500 resize-none" rows="2"></textarea>
+                        <textarea id="newCatDescription" placeholder="Leírás az AI számára... (Milyen jellegű képek kerüljenek ide? Pl: családi fotók, gyerekek, közös utazások, portrék a családtagokról.)" class="w-full bg-white p-4 rounded-2xl text-sm border-slate-100 shadow-sm focus:ring-2 focus:ring-indigo-500 resize-y" rows="5"></textarea>
                     </div>
-                    <button onclick="addCategory()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-lg active:scale-95">
+                    <button id="categoryFormBtn" onclick="submitCategoryForm()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl hover:bg-indigo-700 transition shadow-lg active:scale-95">
                         Létrehozás és Mentés
                     </button>
                 </div>
@@ -704,6 +705,7 @@
                                 </button>
                              </div>
                         </div>
+                        <div id="folderStatsLegend" class="flex flex-wrap items-center gap-2 px-2 mt-2 mb-1 hidden"></div>
                         <div id="bulkReverseBreadcrumbs" class="flex items-center gap-2 overflow-x-auto p-4 bg-slate-100 rounded-2xl no-scrollbar font-bold text-sm">
                             <!-- JS populated -->
                         </div>
@@ -823,7 +825,11 @@
 
         let currentBulkReversePath = "";
 
-        async function loadBulkReverseFolders(path = "") {
+        async function loadBulkReverseFolders(path = null) {
+            if (path === null) {
+                path = sessionStorage.getItem('mover_path') || "";
+            }
+            sessionStorage.setItem('mover_path', path);
             currentBulkReversePath = path;
             const listContainer = document.getElementById('bulkReverseFolderList');
             const spinner = document.getElementById('bulkReverseLoading');
@@ -841,21 +847,66 @@
                 const data = await response.json();
                 spinner.classList.add('hidden');
 
+                let statsHtml = '';
+                if (data.current_folder_stats && data.current_folder_stats.total > 0) {
+                    const st = data.current_folder_stats;
+                    statsHtml = '<div class="mb-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100/50 flex flex-wrap items-center gap-2 justify-center lg:justify-start">';
+                    statsHtml += '<span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mr-1">Ide tartozó képek:</span>';
+                    if (st.unclassified > 0) {
+                        statsHtml += `<span class="bg-white text-slate-500 text-[10px] font-black px-2 py-0.5 rounded border border-slate-200 shadow-sm" title="Besorolatlan">${st.unclassified} besorolatlan</span>`;
+                    }
+                    if (st.categories && Object.keys(st.categories).length > 0) {
+                        for (const [cat, count] of Object.entries(st.categories)) {
+                            statsHtml += `<span class="bg-rose-50 text-rose-600 text-[10px] font-black px-2 py-0.5 rounded border border-rose-200 shadow-sm" title="${cat}">${count} ${cat}</span>`;
+                        }
+                    }
+                    statsHtml += '</div>';
+                }
+
                 if (!data.folders || data.folders.length === 0) {
-                    listContainer.innerHTML = `<div class="py-4 text-center text-slate-300 text-[10px] font-bold uppercase tracking-wider">Nincs több almappa</div>`;
+                    listContainer.innerHTML = `
+                        <div class="py-6 text-center">
+                            <div class="text-slate-300 text-[10px] font-bold uppercase tracking-wider mb-4">Nincs több almappa</div>
+                            ${statsHtml}
+                        </div>
+                    `;
                     return;
+                }
+                
+                if (statsHtml) {
+                    listContainer.innerHTML = statsHtml;
                 }
 
                 data.folders.forEach(f => {
                     const el = document.createElement('div');
                     el.className = "flex items-center justify-between p-2 rounded-lg hover:bg-rose-50 group cursor-pointer transition-colors border border-transparent hover:border-rose-100";
                     el.onclick = () => loadBulkReverseFolders(f.path + '/');
+                    
+                    let badgesHtml = '';
+                    if (f.stats) {
+                        badgesHtml += '<div class="flex items-center gap-1 flex-wrap mt-1 lg:mt-0">';
+                        if (f.stats.unclassified > 0) {
+                            badgesHtml += `<span class="bg-slate-100 text-slate-500 text-[10px] font-black px-1.5 py-0.5 rounded border border-slate-200" title="Besorolatlan">${f.stats.unclassified}</span>`;
+                        }
+                        if (f.stats.categories && Object.keys(f.stats.categories).length > 0) {
+                            for (const [cat, count] of Object.entries(f.stats.categories)) {
+                                badgesHtml += `<span class="bg-rose-100 text-rose-600 text-[10px] font-black px-1.5 py-0.5 rounded border border-rose-200" title="${cat}">${count} ${cat.charAt(0).toUpperCase()}</span>`;
+                            }
+                        }
+                        badgesHtml += '</div>';
+                    }
+
                     el.innerHTML = `
-                        <div class="flex items-center gap-2 min-w-0">
-                            <i data-lucide="folder" class="w-4 h-4 text-rose-300 group-hover:text-rose-500"></i>
-                            <span class="text-xs font-bold text-slate-600 truncate">${f.name}</span>
+                        <div class="flex flex-col lg:flex-row lg:items-center gap-2 min-w-0 flex-1">
+                            <div class="flex items-center gap-2 shrink-0">
+                                <div onclick="event.stopPropagation(); window.location.href='/folder-kanban?folder_path=' + encodeURIComponent('${f.path}')" class="p-1 rounded hover:bg-rose-100 transition-colors cursor-pointer text-rose-300 hover:text-rose-600" title="Képek megnyitása a Kanban nézetben">
+                                    <i data-lucide="folder" class="w-4 h-4"></i>
+                                </div>
+                                <span class="text-xs font-bold text-slate-600 truncate max-w-[150px] cursor-pointer hover:underline" onclick="event.stopPropagation(); loadBulkReverseFolders('${f.path}/')">${f.name}</span>
+                            </div>
+                            ${badgesHtml}
                         </div>
-                        <i data-lucide="chevron-right" class="w-3 h-3 text-slate-300 group-hover:text-rose-400"></i>
+                        <i data-lucide="chevron-right" class="w-3 h-3 shrink-0 text-slate-300 group-hover:text-rose-400"></i>
                     `;
                     listContainer.appendChild(el);
                 });
@@ -1770,6 +1821,8 @@
                     categories.forEach(cat => {
                         const el = document.createElement('div');
                         el.className = "p-4 bg-white/60 border border-slate-100 rounded-2xl flex flex-col justify-between group transition-all hover:bg-white/80 shadow-sm gap-2";
+                        // Escape quotes for HTML attribute passing
+                        const catJson = JSON.stringify(cat).replace(/"/g, '&quot;');
                         el.innerHTML = `
                             <div class="flex items-center justify-between w-full">
                                 <div class="flex items-center gap-3 min-w-0">
@@ -1778,11 +1831,18 @@
                                     </div>
                                     <span class="font-bold text-slate-700 text-xs truncate">${cat.display_name}</span>
                                 </div>
-                                <button onclick="deleteCategory(${cat.id})" class="opacity-0 group-hover:opacity-100 bg-rose-50 text-rose-500 p-1.5 rounded-lg hover:bg-rose-500 hover:text-white transition duration-200">
-                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                </button>
+                                <div class="flex gap-1 opacity-40 group-hover:opacity-100 transition duration-200">
+                                    <button onclick="editCategory(${catJson})" class="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-600 hover:text-white transition duration-200" title="Szerkesztés">
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    ${cat.name === 'delete' ? '' : `
+                                    <button onclick="deleteCategory(${cat.id})" class="bg-rose-50 text-rose-500 p-1.5 rounded-lg hover:bg-rose-500 hover:text-white transition duration-200" title="Törlés">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                    `}
+                                </div>
                             </div>
-                            ${cat.description ? `<p class="text-[10px] text-slate-400 font-medium italic mt-1 leading-relaxed border-t border-slate-100 pt-1.5">${cat.description}</p>` : ''}
+                            ${cat.description ? `<p class="text-[10px] text-slate-400 font-medium italic mt-1 leading-relaxed border-t border-slate-100 pt-1.5 line-clamp-5" title="${cat.description}">${cat.description}</p>` : ''}
                         `;
                         list.appendChild(el);
                     });
@@ -1809,6 +1869,7 @@
                     const currentValue = reverseSelect.value;
                     reverseSelect.innerHTML = '<option value="">Csak a kategorizálatlanok</option><option value="all">Minden kép 🔥</option>';
                     categories.forEach(cat => {
+                        if (cat.name === 'delete') return; // Skip system delete category
                         const opt = document.createElement('option');
                         opt.value = cat.name;
                         opt.innerText = cat.display_name;
@@ -1817,13 +1878,54 @@
                     reverseSelect.value = currentValue;
                 }
 
+                // 4. Update Folder Stats Legend
+                const legendContainer = document.getElementById('folderStatsLegend');
+                if (legendContainer) {
+                    let legendHtml = '<span class="text-[10px] font-bold text-slate-400 mr-1">Rövidítések:</span>';
+                    categories.forEach(cat => {
+                        if (cat.name === 'delete') return; // Skip system delete category
+                        const initial = cat.name.charAt(0).toUpperCase();
+                        legendHtml += `<span class="bg-rose-100 text-rose-600 text-[9px] font-black px-1.5 py-0.5 rounded border border-rose-200 shadow-sm">${initial} = ${cat.display_name}</span>`;
+                    });
+                    legendContainer.innerHTML = legendHtml;
+                    legendContainer.classList.remove('hidden');
+                }
+
                 lucide.createIcons();
             } catch (e) {
                 console.error("Failed to load categories dashboard", e);
             }
         }
 
-        async function addCategory() {
+        function openCreateCategoryForm() {
+            document.getElementById('editingCategoryId').value = '';
+            document.getElementById('newCatDisplayName').value = '';
+            document.getElementById('newCatIcon').value = 'tag';
+            document.getElementById('newCatColor').value = '#6366f1';
+            document.getElementById('newCatDescription').value = '';
+            
+            document.getElementById('categoryFormTitle').innerText = "Kategória Létrehozása";
+            document.getElementById('categoryFormBtn').innerText = "Létrehozás és Mentés";
+            
+            document.getElementById('addCategoryForm').classList.toggle('hidden');
+        }
+
+        function editCategory(cat) {
+            document.getElementById('editingCategoryId').value = cat.id;
+            document.getElementById('newCatDisplayName').value = cat.display_name;
+            document.getElementById('newCatIcon').value = cat.icon || 'tag';
+            document.getElementById('newCatColor').value = cat.color || '#6366f1';
+            document.getElementById('newCatDescription').value = cat.description || '';
+            
+            document.getElementById('categoryFormTitle').innerText = "Kategória Szerkesztése";
+            document.getElementById('categoryFormBtn').innerText = "Módosítás Mentése";
+            
+            document.getElementById('addCategoryForm').classList.remove('hidden');
+            document.getElementById('newCatDisplayName').focus();
+        }
+
+        async function submitCategoryForm() {
+            const id = document.getElementById('editingCategoryId').value;
             const displayName = document.getElementById('newCatDisplayName').value;
             const icon = document.getElementById('newCatIcon').value;
             const color = document.getElementById('newCatColor').value;
@@ -1831,24 +1933,29 @@
             
             if (!displayName) return;
             
-            // Generate internal name
-            const name = displayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+            const url = id ? `/api/categories/${id}` : '/api/categories';
+            const method = id ? 'PUT' : 'POST';
+            
+            const bodyObj = {
+                display_name: displayName,
+                icon: icon,
+                color: color,
+                description: description || null,
+                order: 10
+            };
+            if (!id) {
+                bodyObj.name = displayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+            }
             
             try {
-                const res = await fetch('/api/categories', {
-                    method: 'POST',
+                const res = await fetch(url, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: name,
-                        display_name: displayName,
-                        icon: icon,
-                        color: color,
-                        description: description || null,
-                        order: 10
-                    })
+                    body: JSON.stringify(bodyObj)
                 });
                 
                 if (res.ok) {
+                    document.getElementById('editingCategoryId').value = '';
                     document.getElementById('newCatDisplayName').value = '';
                     document.getElementById('newCatDescription').value = '';
                     document.getElementById('addCategoryForm').classList.add('hidden');
@@ -1880,6 +1987,17 @@
         updateB2Status();
         // AI Mode Toggle & Persistence Logic
         document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('module') === 'mover') {
+                showModule('moverModule');
+            } else {
+                // Restore last active module
+                const lastModule = localStorage.getItem('last_active_module');
+                if (lastModule) {
+                    showModule(lastModule);
+                }
+            }
+
             const aiRadios = document.querySelectorAll('input[name="aiMode"]');
             const aiPanel = document.getElementById('aiOptionsPanel');
             
@@ -1908,11 +2026,24 @@
 
             const aiCustomRulesInput = document.getElementById('aiCustomRules');
             if (aiCustomRulesInput) {
-                // Restore rules
-                aiCustomRulesInput.value = localStorage.getItem('ai_custom_rules') || '';
-                // Listen and save
+                // Restore rules from the externally-editable server-side file
+                fetch('/api/classification/custom-rules')
+                    .then(res => res.json())
+                    .then(data => { aiCustomRulesInput.value = data.text || ''; })
+                    .catch(e => console.error('Egyéni szempontok betöltése sikertelen:', e));
+
+                // Save to the file as the user types (debounced)
+                let customRulesSaveTimeout = null;
                 aiCustomRulesInput.addEventListener('input', (e) => {
-                    localStorage.setItem('ai_custom_rules', e.target.value);
+                    clearTimeout(customRulesSaveTimeout);
+                    const text = e.target.value;
+                    customRulesSaveTimeout = setTimeout(() => {
+                        fetch('/api/classification/custom-rules', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: text })
+                        }).catch(e => console.error('Egyéni szempontok mentése sikertelen:', e));
+                    }, 600);
                 });
             }
         });

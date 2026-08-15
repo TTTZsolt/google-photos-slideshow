@@ -6,6 +6,12 @@ __pycache__/
 venv/
 ENV/
 
+# Secrets
+.env
+
+# Local user preferences
+egyeni_torlesi_szempontok.txt
+
 # Databases
 *.db
 *.db-wal

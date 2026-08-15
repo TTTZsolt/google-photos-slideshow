@@ -420,6 +420,7 @@
         function renderCategoryButtons() {
             categoryGrid.innerHTML = '';
             categories.forEach(cat => {
+                if (cat.name === 'delete') return;
                 const btn = document.createElement('button');
                 btn.onclick = () => classify(cat.name);
                 btn.className = "flex flex-col items-center gap-1 p-2 glass-btn rounded-xl active:scale-95 transition-all text-white border border-white/5";
@@ -742,9 +743,24 @@
             }
         }, { passive: false });
 
+        // Applies the current zoomState (scale + translate) to the given image,
+        // and swaps in the HD source once zoomed in enough. Shared by touch, wheel and mouse input.
+        function applyZoomTransform(currentImg, currentCard) {
+            currentImg.style.transform = `translate(${zoomState.translateX}px, ${zoomState.translateY}px) scale(${zoomState.scale})`;
+            currentImg.style.zIndex = zoomState.scale > 1 ? "500" : "";
+
+            if (zoomState.scale > 1.05) {
+                if (currentCard && currentCard.dataset.url && !currentImg.dataset.hdLoaded) {
+                    currentImg.style.backgroundImage = `url('${currentCard.dataset.url}')`;
+                    currentImg.dataset.hdLoaded = "true";
+                }
+            }
+        }
+
         deck.addEventListener('touchmove', e => {
             const currentImg = deck.querySelector('.card.current .card-image');
             if (!currentImg) return;
+            const currentCard = currentImg.closest('.card');
 
             if (zoomState.isZooming && e.touches.length === 2) {
                 e.preventDefault();
@@ -752,28 +768,18 @@
                     e.touches[0].pageX - e.touches[1].pageX,
                     e.touches[0].pageY - e.touches[1].pageY
                 );
-                
-                zoomState.scale = Math.max(1, (currentDist / zoomState.initialDist) * zoomState.initialScale);
-                currentImg.style.transform = `translate(${zoomState.translateX}px, ${zoomState.translateY}px) scale(${zoomState.scale})`;
-                currentImg.style.zIndex = "500";
 
-                // Switch to HD image if zooming
-                if (zoomState.scale > 1.05) {
-                    const currentCard = currentImg.closest('.card');
-                    if (currentCard && currentCard.dataset.url && !currentImg.dataset.hdLoaded) {
-                        currentImg.style.backgroundImage = `url('${currentCard.dataset.url}')`;
-                        currentImg.dataset.hdLoaded = "true";
-                    }
-                }
+                zoomState.scale = Math.max(1, (currentDist / zoomState.initialDist) * zoomState.initialScale);
+                applyZoomTransform(currentImg, currentCard);
             } else if (zoomState.isPanning && e.touches.length === 1) {
                 e.preventDefault();
                 const deltaX = e.touches[0].pageX - zoomState.startX;
                 const deltaY = e.touches[0].pageY - zoomState.startY;
-                
+
                 zoomState.translateX = zoomState.initialTranslateX + deltaX;
                 zoomState.translateY = zoomState.initialTranslateY + deltaY;
-                
-                currentImg.style.transform = `translate(${zoomState.translateX}px, ${zoomState.translateY}px) scale(${zoomState.scale})`;
+
+                applyZoomTransform(currentImg, currentCard);
             }
         }, { passive: false });
 
@@ -781,6 +787,43 @@
             if (e.touches.length < 2) zoomState.isZooming = false;
             if (e.touches.length === 0) zoomState.isPanning = false;
         });
+
+        // --- TRACKPAD / MOUSE ZOOM & PAN (for laptops without a touchscreen) ---
+        // Trackpad pinch gestures are delivered by the browser as 'wheel' events with ctrlKey=true
+        // (the same signal a real Ctrl+scroll-wheel produces), so this one handler covers both.
+        deck.addEventListener('wheel', e => {
+            if (!e.ctrlKey) return; // Let normal page scrolling behave normally otherwise
+            const currentImg = deck.querySelector('.card.current .card-image');
+            if (!currentImg) return;
+            e.preventDefault();
+
+            const currentCard = currentImg.closest('.card');
+            const zoomFactor = 1 - (e.deltaY * 0.01);
+            zoomState.scale = Math.max(1, Math.min(4, zoomState.scale * zoomFactor));
+            applyZoomTransform(currentImg, currentCard);
+        }, { passive: false });
+
+        let isMousePanning = false;
+        deck.addEventListener('mousedown', e => {
+            if (zoomState.scale <= 1) return; // Only pan once zoomed in
+            isMousePanning = true;
+            zoomState.startX = e.pageX;
+            zoomState.startY = e.pageY;
+            zoomState.initialTranslateX = zoomState.translateX;
+            zoomState.initialTranslateY = zoomState.translateY;
+        });
+
+        deck.addEventListener('mousemove', e => {
+            if (!isMousePanning) return;
+            const currentImg = deck.querySelector('.card.current .card-image');
+            if (!currentImg) return;
+
+            zoomState.translateX = zoomState.initialTranslateX + (e.pageX - zoomState.startX);
+            zoomState.translateY = zoomState.initialTranslateY + (e.pageY - zoomState.startY);
+            applyZoomTransform(currentImg, currentImg.closest('.card'));
+        });
+
+        window.addEventListener('mouseup', () => { isMousePanning = false; });
 
         function toggleFullscreen(enable) {
             if (enable) {
