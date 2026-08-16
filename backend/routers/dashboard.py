@@ -189,10 +189,11 @@ def heartbeat(request: Request, session_id: str, device_name: str = None, folder
 
 @router.get("/api/folders")
 def get_folders(parent: str = None, db: Session = Depends(get_db)):
-    """Returns subdirectories under the given parent directory."""
+    """Returns subdirectories under the given parent directory, each with its own
+    category stats, plus the aggregate category stats for the parent directory itself."""
     try:
-        folders = controller.get_folders(db, parent_path=parent)
-        return {"folders": folders}
+        result = controller.get_folders(db, parent_path=parent)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

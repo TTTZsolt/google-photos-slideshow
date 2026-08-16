@@ -30,13 +30,47 @@ class SlideshowController:
         b2_acc = db.query(B2Account).filter(B2Account.id == account_id).first()
         return self._b2_clients[account_id], b2_acc
 
+    def get_folder_category_stats(self, db: Session, folder_path: str, bucket_name: str) -> dict:
+        """Egy mappa (es minden almappaja, rekurzivan) ala tartozo kepek
+        kategorianankenti bontasat adja vissza: {total, unclassified, categories: {cat: count}}."""
+        prefix = folder_path
+        if prefix and not prefix.endswith('/'):
+            prefix += '/'
+
+        query = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == bucket_name)
+        if prefix:
+            query = query.filter(MediaItem.file_name.like(f"{prefix}%"))
+        file_names = [row[0] for row in query.all()]
+
+        if not file_names:
+            return {"total": 0, "unclassified": 0, "categories": {}}
+
+        classifications = db.query(MediaClassification.file_name, MediaClassification.category).filter(
+            MediaClassification.file_name.in_(file_names),
+            MediaClassification.is_deleted == False
+        ).all()
+        class_map = {fn: cat for fn, cat in classifications}
+
+        categories = {}
+        unclassified = 0
+        for fn in file_names:
+            cat = class_map.get(fn)
+            if cat:
+                categories[cat] = categories.get(cat, 0) + 1
+            else:
+                unclassified += 1
+
+        return {"total": len(file_names), "unclassified": unclassified, "categories": categories}
+
     def get_folders(self, db: Session, parent_path: str = None):
-        """Returns direct subdirectories under the given parent_path. Looks in both synced items and recent classifications."""
+        """Returns direct subdirectories under the given parent_path (with per-folder
+        category stats), plus the aggregate category stats for parent_path itself.
+        Looks in both synced items and recent classifications."""
         # Get active account - Be less restrictive, pick any active account that has items
         b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
         if not b2_acc:
             logger.warning("get_folders: No active B2 account found.")
-            return []
+            return {"folders": [], "current_folder_stats": {"total": 0, "unclassified": 0, "categories": {}}}
 
         # 1. Folders from synced MediaItems
         query_mi = db.query(MediaItem.file_name).filter(MediaItem.bucket_name == b2_acc.bucket_name)
@@ -68,10 +102,20 @@ class SlideshowController:
 
         add_from_results(items_mi, parent_path)
         add_from_results(items_mc, parent_path)
-                
-        folders = [{"name": folder, "path": f"{parent_path}{folder}" if parent_path else folder} for folder in sorted(list(seen_folders))]
+
+        folders = []
+        for folder in sorted(list(seen_folders)):
+            folder_path = f"{parent_path}{folder}" if parent_path else folder
+            folders.append({
+                "name": folder,
+                "path": folder_path,
+                "stats": self.get_folder_category_stats(db, folder_path, b2_acc.bucket_name),
+            })
         logger.info(f"get_folders: identified {len(folders)} unique subfolders.")
-        return folders
+
+        current_folder_stats = self.get_folder_category_stats(db, parent_path, b2_acc.bucket_name)
+
+        return {"folders": folders, "current_folder_stats": current_folder_stats}
 
     def get_all_folders(self, db: Session, bucket_name: str) -> list:
         """Returns a flat list of all unique folder paths in the given bucket."""
