@@ -53,6 +53,25 @@ git tag -a v13.8 -m "Verzió 13.8: Több felhasználós működés javítása"
 git push origin main --tags
 ```
 
+## 5. Tesztelés a Tableten (feature branch, nem main)
+
+A `tablet_update_kepnezegeto.bat` mindig a `main` branch-et húzza le a
+Tabletre — fejlesztői ág teszteléséhez ezt **ne** használd, mert azzal
+csak a `main`-t frissítenéd.
+
+Helyette, ha egy még nem merge-ölt branch-et szeretnél kipróbálni élesben
+(a Tableten), használd:
+
+```cmd
+tablet_teszt_branch.bat <branch-nev>
+```
+
+Ez leállítja a futó szervert, átvált a megadott branch-re (push-olva kell
+legyen a GitHub-ra), migrálja az adatbázist, majd újraindítja a szervert —
+a Tablet éles állapota csak addig változik, amíg vissza nem váltasz
+`tablet_update_kepnezegeto.bat` + `tablet_start_kepnezegeto.bat` paranccsal
+a `main`-re.
+
 ---
 
 ### Miért jó ez a módszer?
