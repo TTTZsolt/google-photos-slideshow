@@ -102,6 +102,51 @@ def save_custom_rules(req: CustomRulesRequest):
 def classify_page(request: Request):
     return templates.TemplateResponse("classify.html", {"request": request, "version": VERSION})
 
+@router.get("/folder-kanban")
+def folder_kanban_page(request: Request):
+    return templates.TemplateResponse("folder_kanban.html", {"request": request, "version": VERSION})
+
+@router.get("/api/folders/items")
+def get_folder_items(folder_path: str = Query(""), limit: int = Query(100), db: Session = Depends(get_db)):
+    """Returns up to `limit` items (recursively) under folder_path, with download/thumb
+    URLs and their current category - a data feed for the Folder Kanban view."""
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
+
+    prefix = folder_path
+    if prefix and not prefix.endswith('/'):
+        prefix += '/'
+
+    query = db.query(MediaItem).filter(MediaItem.bucket_name == b2_account.bucket_name)
+    if prefix:
+        query = query.filter(MediaItem.file_name.like(f"{prefix}%"))
+    query = query.order_by(MediaItem.file_name.asc())
+
+    total_count = query.count()
+    media_items = query.limit(limit).all()
+
+    file_names = [mi.file_name for mi in media_items]
+    classifications = {}
+    if file_names:
+        rows = db.query(MediaClassification.file_name, MediaClassification.category).filter(
+            MediaClassification.file_name.in_(file_names),
+            MediaClassification.is_deleted == False
+        ).all()
+        classifications = {fn: cat for fn, cat in rows}
+
+    client = B2Client(b2_account.key_id, b2_account.application_key)
+    items = []
+    for mi in media_items:
+        items.append({
+            "file_name": mi.file_name,
+            "category": classifications.get(mi.file_name),
+            "url": client.get_download_url(mi.bucket_name, mi.file_name, b2_account.cloudflare_proxy_url),
+            "thumb_url": client.get_download_url(f"{mi.bucket_name}-thumbs", mi.file_name, b2_account.cloudflare_proxy_url),
+        })
+
+    return {"items": items, "has_more": total_count > limit}
+
 @router.get("/api/classify/next")
 def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):
     """ Returns the next image for classification. Looks in both source bucket and items marked with is_in_sorter. """
