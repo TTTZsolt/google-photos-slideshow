@@ -2,13 +2,29 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ..database import SessionLocal
-from ..models import MediaItem, MediaClassification, B2Account
+from ..models import MediaItem, MediaClassification, B2Account, DeletedContentHash
 from ..slideshow import controller
 from ..utils.b2_client import B2Client
 import logging
+import os
+import csv
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Megosztott CSV a Kepnezegeto projekt gyokereben - ezt olvassa be a kulon
+# "Fenykep elokeszites BlackBlaze-be masolas" projektben elo takeout feltolto
+# script, hogy ne toltsen fel ujra szandekosan torolt kepeket.
+DELETED_SHA1_CSV = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "deleted_sha1_list.csv")
+
+def append_deleted_sha1_csv(sha1: str, file_name: str, reason: str):
+    file_exists = os.path.exists(DELETED_SHA1_CSV)
+    with open(DELETED_SHA1_CSV, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["sha1", "last_known_file_name", "deleted_at", "reason"])
+        from datetime import datetime, timezone
+        writer.writerow([sha1, file_name, datetime.now(timezone.utc).isoformat(), reason])
 
 def get_db():
     db = SessionLocal()
@@ -154,7 +170,8 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
         items_to_delete.append({
             "file_name": mc.file_name,
             "file_id": mi.id if mi else None,
-            "bucket_name": mi.bucket_name if mi else b2_acc.trash_bucket_name
+            "bucket_name": mi.bucket_name if mi else b2_acc.trash_bucket_name,
+            "sha1": mi.sha1 if mi else None
         })
 
     # 2. IMMEDIATE DB CLEANUP (Main thread)
@@ -171,38 +188,59 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 
     def perform_physical_delete(b2_key: str, b2_secret: str, items: List[dict]):
         client = B2Client(b2_key, b2_secret)
-        for item in items:
-            file_name = item["file_name"]
-            file_id = item["file_id"]
-            current_bucket = item["bucket_name"]
+        tombstone_db = SessionLocal()
+        try:
+            for item in items:
+                file_name = item["file_name"]
+                file_id = item["file_id"]
+                current_bucket = item["bucket_name"]
+                sha1 = item.get("sha1")
 
-            try:
-                # Skip B2 if ID is virtual
-                if file_id and str(file_id).startswith('repair-'):
-                    continue
+                try:
+                    # Skip B2 if ID is virtual
+                    if file_id and str(file_id).startswith('repair-'):
+                        continue
 
-                # Fetch missing B2 ID if needed
-                if not file_id:
-                    try:
-                        trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
-                        file_info = trash_bucket.get_file_info_by_name(file_name)
-                        file_id = file_info.id_
-                    except:
-                        pass
-
-                # Delete B2 file
-                if file_id:
-                    try:
-                        client.delete_file_version(current_bucket, file_name, file_id)
-                        # Also try to delete thumbnail
+                    # Fetch missing B2 ID (and SHA1, if still missing) if needed
+                    if not file_id or not sha1:
                         try:
-                            client.delete_file_version(f"{current_bucket}-thumbs", file_name, "")
+                            trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
+                            file_info = trash_bucket.get_file_info_by_name(file_name)
+                            if not file_id:
+                                file_id = file_info.id_
+                            if not sha1:
+                                sha1 = getattr(file_info, "content_sha1", None)
                         except:
                             pass
-                    except Exception as b2_err:
-                        logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
-            except Exception as e:
-                logger.error(f"Failed background trash delete for {file_name}: {e}")
+
+                    # Record the tombstone BEFORE the physical delete, so a crash
+                    # mid-way still leaves the "don't re-upload this" record.
+                    if sha1:
+                        try:
+                            existing = tombstone_db.query(DeletedContentHash).filter(DeletedContentHash.sha1 == sha1).first()
+                            if not existing:
+                                tombstone_db.add(DeletedContentHash(sha1=sha1, last_known_file_name=file_name, reason="trash-empty"))
+                                tombstone_db.commit()
+                                append_deleted_sha1_csv(sha1, file_name, "trash-empty")
+                        except Exception as tomb_err:
+                            logger.error(f"Failed to record tombstone for {file_name}: {tomb_err}")
+                            tombstone_db.rollback()
+
+                    # Delete B2 file
+                    if file_id:
+                        try:
+                            client.delete_file_version(current_bucket, file_name, file_id)
+                            # Also try to delete thumbnail
+                            try:
+                                client.delete_file_version(f"{current_bucket}-thumbs", file_name, "")
+                            except:
+                                pass
+                        except Exception as b2_err:
+                            logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
+                except Exception as e:
+                    logger.error(f"Failed background trash delete for {file_name}: {e}")
+        finally:
+            tombstone_db.close()
 
     background_tasks.add_task(perform_physical_delete, key_id, app_key, items_to_delete)
     return {"status": "ok", "message": f"{len(items_to_delete)} elem törlése megkezdődött."}

@@ -91,7 +91,8 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                     file_name=file_name,
                     mime_type=mime if (mime and mime.startswith('image/')) else f"image/{ext}",
                     size=file_version.size,
-                    creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000)
+                    creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000),
+                    sha1=getattr(file_version, "content_sha1", None)
                 )
                 db.merge(media_item)
 

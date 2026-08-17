@@ -38,6 +38,12 @@ try:
     except sqlite3.OperationalError:
         print("Column 'bucket_name' already exists in media_items.")
 
+    try:
+        cursor.execute("ALTER TABLE media_items ADD COLUMN sha1 TEXT;")
+        print("Column 'sha1' added to media_items.")
+    except sqlite3.OperationalError:
+        print("Column 'sha1' already exists in media_items.")
+
     # 3. Create MediaClassification table
     try:
         cursor.execute("""
@@ -51,6 +57,20 @@ try:
         print("Table 'media_classifications' created.")
     except Exception as e:
         print(f"Error creating media_classifications: {e}")
+
+    # 4. Create DeletedContentHash table (tombstone for permanently emptied trash items)
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS deleted_content_hashes (
+                sha1 TEXT PRIMARY KEY,
+                last_known_file_name TEXT,
+                deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                reason TEXT
+            );
+        """)
+        print("Table 'deleted_content_hashes' created.")
+    except Exception as e:
+        print(f"Error creating deleted_content_hashes: {e}")
 
     conn.commit()
     try:

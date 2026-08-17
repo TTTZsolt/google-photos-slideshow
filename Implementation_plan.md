@@ -98,6 +98,44 @@ szükség a Lumina és a Takeout-feltöltő eszköz között — ezt tisztázni 
    (nem ürítesz), az nem kerül a tombstone táblába — ez helyes, csak
    megerősítésre vár.
 
+## Döntések (2026-08-17, jóváhagyva)
+
+1. **Visszamenőleges SHA1-backfill**: igen — ehhez nem kellett külön script,
+   mert a meglévő "Resync" funkció (`worker.py`) a B2-től úgyis lekéri az
+   összes fájlt, és a `db.merge()` a meglévő sorokat frissíti. Egyszer
+   lefuttatva (helyben tesztelve) mind a 4983 `MediaItem` sor megkapta a
+   SHA1-et.
+2. **Adatmegosztás**: B) exportált CSV (`deleted_sha1_list.csv`, a
+   Képnézegető gyökerében), amit a `takeout_to_b2_feltoltes.py` olvas be.
+   Az A) opciót (közös `photos_app.db` közvetlen olvasása) elvetettük, mert
+   a DB WAL-módban fut, a Tabletről folyamatosan íródik, és a Drive-szinkron
+   nem garantál konzisztens állapotot egy másik gépről olvasva.
+3. **Visszaállítás hatása**: nincs teendő — a tombstone tábla kizárólag az
+   `empty_trash` útvonalon íródik, a `restore` sosem éri el.
+
+## Megvalósítás (2026-08-17)
+
+- [x] `DeletedContentHash` modell hozzáadva (`backend/models.py`)
+- [x] `MediaItem.sha1` oszlop hozzáadva
+- [x] `worker.py`: a szinkron mostantól elmenti a B2-től kapott SHA1-et
+- [x] `migrate_db.py` kiegészítve (új oszlop + 2 új tábla)
+- [x] `trash.py` `empty_trash`: a végleges törlés előtt tombstone-t ír
+  (DB + `deleted_sha1_list.csv`), csak akkor, ha még nincs meg az adott SHA1
+- [x] `takeout_to_b2_feltoltes.py`: beolvassa a `deleted_sha1_list.csv`-t,
+  és kihagyja (külön "szandekosan-torolve" státusszal jelölve) az egyező
+  SHA1-ű fájlokat
+- [x] Helyi teszt: migráció lefutott, szerver hiba nélkül elindult, Resync
+  visszamenőleg feltöltötte mind a 4983 SHA1-et, a tombstone DB-írás és
+  CSV-írás logikáját kitalált (nem valódi fotóhoz tartozó) SHA1-gyel
+  leteszteltem és működik
+- [ ] **Még nem tesztelt**: a teljes `POST /api/trash/empty` folyamat
+  élesben, valódi (törlésre szánt) képpel — ezt óvatosságból nem futtattam
+  le, mert visszafordíthatatlan. Első alkalommal érdemes figyelemmel
+  kísérni (log.txt), amikor legközelebb ténylegesen kiürítesz egy Lomtárat.
+- [ ] `takeout_to_b2_feltoltes.py` frissített verziójának letesztelése a
+  Lenovo-n (ahol a `pillow_heif` és a Takeout-fájlok is megvannak)
+
 ## Állapot
 
-**Tervezési fázis — jóváhagyásra vár.** Fejlesztés nem kezdődött el.
+**Kódolás kész, helyi teszteléssel megerősítve.** Nincs még main-be
+mergelve, nincs push-olva.

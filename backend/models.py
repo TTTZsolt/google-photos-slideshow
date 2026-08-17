@@ -32,6 +32,7 @@ class MediaItem(Base):
     creation_time = Column(DateTime(timezone=True), nullable=True)
     indexed_at = Column(DateTime(timezone=True), server_default=func.now())
     is_in_sorter = Column(Boolean, default=False, index=True)
+    sha1 = Column(String, nullable=True, index=True) # B2 native content SHA1
 
 class MediaClassification(Base):
     __tablename__ = "media_classifications"
@@ -43,6 +44,19 @@ class MediaClassification(Base):
     ai_status = Column(String, nullable=True) # "pending", "approved", "failed"
     ai_error = Column(Text, nullable=True) # AI error message if status is failed
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class DeletedContentHash(Base):
+    """Tombstone: permanently records the content-SHA1 of every image that was
+    ever emptied from the Trash, so it survives the MediaItem/MediaClassification
+    row deletion and can be checked against future (re-)uploads (e.g. from a
+    fresh Google Photos Takeout export) to avoid accidentally restoring content
+    that was deliberately deleted."""
+    __tablename__ = "deleted_content_hashes"
+
+    sha1 = Column(String, primary_key=True, index=True)
+    last_known_file_name = Column(Text, nullable=True)
+    deleted_at = Column(DateTime(timezone=True), server_default=func.now())
+    reason = Column(String, nullable=True) # e.g. "trash-empty"
 
 class MusicConfig(Base):
     __tablename__ = "music_config"
