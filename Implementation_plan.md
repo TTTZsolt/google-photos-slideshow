@@ -128,10 +128,14 @@ szükség a Lumina és a Takeout-feltöltő eszköz között — ezt tisztázni 
   visszamenőleg feltöltötte mind a 4983 SHA1-et, a tombstone DB-írás és
   CSV-írás logikáját kitalált (nem valódi fotóhoz tartozó) SHA1-gyel
   leteszteltem és működik
-- [ ] **Még nem tesztelt**: a teljes `POST /api/trash/empty` folyamat
-  élesben, valódi (törlésre szánt) képpel — ezt óvatosságból nem futtattam
-  le, mert visszafordíthatatlan. Első alkalommal érdemes figyelemmel
-  kísérni (log.txt), amikor legközelebb ténylegesen kiürítesz egy Lomtárat.
+- [x] **Éles teszt (2026-08-17, Zsolt által, PC-n futó dev-verzión)**: 4 valódi
+  kép kiürítve a Lomtárból (`2011/09/25-kirandulas-etyek/p1160452.jpg`,
+  `...460.jpg`, `...463.jpg`, `...468.jpg`). Ellenőrizve és mind stimmel:
+  - mind a 4 SHA1 bekerült a `deleted_sha1_list.csv`-be
+  - mind a 4 bejegyzés bekerült a `deleted_content_hashes` táblába
+  - a `media_items`/`media_classifications` sorok ténylegesen törlődtek
+  - a `log.txt` igazolja a tényleges B2-törlést (eredeti + thumbnail is)
+  A funkció végponttól végpontig működik.
 - [ ] `takeout_to_b2_feltoltes.py` frissített verziójának letesztelése a
   Lenovo-n (ahol a `pillow_heif` és a Takeout-fájlok is megvannak)
 
