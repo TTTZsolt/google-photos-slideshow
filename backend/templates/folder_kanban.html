@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}Mappa Kanban - V{{ version }}{% endblock %}
+{% block subtitle %}Mappa Szortírozás{% endblock %}
+
+{% block extra_head %}
+<style>
+    .kanban-col {
+        min-height: 400px;
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+    .kanban-col.drag-over {
+        background-color: rgba(99, 102, 241, 0.05);
+        border-color: #6366f1;
+    }
+    .image-card {
+        cursor: grab;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .image-card:active {
+        cursor: grabbing;
+    }
+    .image-card.dragging {
+        opacity: 0.5;
+        transform: scale(0.95);
+    }
+    .image-card.selected {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+    }
+    .selection-check {
+        position: absolute;
+        bottom: 6px;
+        right: 6px;
+        width: 22px;
+        height: 22px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 2px solid #cbd5e1;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 10;
+        pointer-events: none;
+    }
+    .image-card.selected .selection-check {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+    }
+    .selection-check svg {
+        width: 14px;
+        height: 14px;
+        color: white;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .image-card.selected .selection-check svg {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center transition-all duration-500">
+        <div class="relative mb-8">
+            <div class="w-20 h-20 rounded-full border-4 border-slate-100 border-t-rose-500 animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="folder-open" class="w-7 h-7 text-rose-500"></i>
+            </div>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800 mb-2">Mappa tartalmának betöltése</h2>
+        <p class="text-slate-400 font-medium text-sm">Képek lekérése...</p>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <a href="/?module=mover" class="text-slate-400 hover:text-rose-500 transition"><i data-lucide="arrow-left" class="w-5 h-5"></i></a>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Mappa Kanban Nézet</h1>
+            </div>
+            <p class="text-slate-500 font-medium flex items-center gap-2">
+                <i data-lucide="folder" class="w-4 h-4"></i>
+                <span id="folderPathDisplay" class="font-bold text-slate-700">Betöltés...</span>
+            </p>
+        </div>
+        
+        <div class="flex gap-3">
+            <button onclick="saveChanges()" id="saveBtn" disabled
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+                <i data-lucide="save" class="w-5 h-5"></i>
+                Változások Mentése
+            </button>
+        </div>
+    </div>
+
+    <!-- Limit Warning Banner -->
+    <div id="limitBanner" class="hidden mb-8 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex flex-col md:flex-row items-start md:items-center gap-4 shadow-sm animate-fade-in">
+        <div class="p-2 bg-amber-100 rounded-xl text-amber-600 shrink-0">
+            <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div>
+            <p class="text-sm font-bold">Túl sok kép a mappában!</p>
+            <p class="text-xs text-amber-600 font-medium mt-0.5">A teljesítmény érdekében csak az első 100 képet jelenítjük meg ezen a felületen. Ha ezeket besoroltad, mentsd el, és a lista frissülni fog a következőkkel.</p>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden glass-card p-20 text-center flex flex-col items-center justify-center">
+        <div class="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 mb-6">
+            <i data-lucide="folder-check" class="w-8 h-8 text-rose-500"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-700">A mappa üres</h2>
+        <p class="text-slate-400 mt-2 font-medium">Nincsenek képek közvetlenül ebben a mappában.</p>
+    </div>
+
+    <!-- Kanban Board Grid -->
+    <div id="kanbanBoard" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <!-- Trash Column -->
+        <div class="flex flex-col bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-4">
+            <div class="flex items-center justify-between mb-4 px-2 sticky top-4 z-10 bg-slate-50/90 backdrop-blur pb-2">
+                <div class="flex items-center gap-2">
+                    <span class="p-2 bg-rose-50 text-rose-500 rounded-xl border border-rose-100">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-slate-800 text-sm">Törlendő</h3>
+                </div>
+                <span id="count-delete" class="text-xs font-black text-rose-500 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100">0</span>
+            </div>
+            <div id="col-delete" class="kanban-col flex-1 space-y-3 rounded-2xl p-1" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 'delete')">
+                <!-- Cards -->
+            </div>
+        </div>
+
+        <!-- Uncategorized Column -->
+        <div class="flex flex-col bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-4">
+            <div class="flex items-center justify-between mb-4 px-2 sticky top-4 z-10 bg-slate-50/90 backdrop-blur pb-2">
+                <div class="flex items-center gap-2">
+                    <span class="p-2 bg-slate-100 text-slate-500 rounded-xl border border-slate-200">
+                        <i data-lucide="help-circle" class="w-4 h-4"></i>
+                    </span>
+                    <h3 class="font-bold text-slate-800 text-sm">Besorolatlan</h3>
+                </div>
+                <span id="count-uncategorized" class="text-xs font-black text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">0</span>
+            </div>
+            <div id="col-uncategorized" class="kanban-col flex-1 space-y-3 rounded-2xl p-1" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 'uncategorized')">
+                <!-- Cards -->
+            </div>
+        </div>
+
+        <!-- Dynamic Category Columns will be inserted here -->
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="fixed inset-0 z-[200] hidden bg-black/90 flex items-center justify-center p-4 transition-all duration-300" onclick="closeImageModal()">
+        <div class="relative max-w-4xl max-h-full" onclick="event.stopPropagation()">
+            <img id="modalImage" src="" class="max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl">
+            <button class="absolute -top-10 right-0 text-white/80 hover:text-white flex items-center gap-1 font-bold text-sm bg-black/40 px-3 py-1.5 rounded-xl transition" onclick="closeImageModal()">
+                <i data-lucide="x" class="w-5 h-5"></i> Bezárás
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 px-6 py-3 bg-slate-900 text-white rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 pointer-events-none translate-y-4 z-[500]">
+        Üzenet
+    </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let kanbanItems = [];
+    let categories = [];
+    let selectedItems = new Set();
+    let lastClickedItem = null;
+    let draggingItems = [];
+    let folderPath = new URLSearchParams(window.location.search).get('folder_path') || "";
+
+    document.getElementById('folderPathDisplay').textContent = folderPath || "Gyökérkönyvtár";
+
+    async function loadData() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.classList.remove('opacity-0', 'pointer-events-none');
+        
+        try {
+            // Load Categories
+            const catRes = await fetch('/api/categories');
+            categories = await catRes.json();
+
+            // Load Items
+            const itemsRes = await fetch(`/api/folders/items?folder_path=${encodeURIComponent(folderPath)}&limit=100`);
+            const data = await itemsRes.json();
+            
+            // Map the data and store original categories
+            kanbanItems = data.items.map(i => ({
+                ...i,
+                original_category: i.category || 'uncategorized',
+                current_category: i.category || 'uncategorized'
+            }));
+
+            if (data.has_more) {
+                document.getElementById('limitBanner').classList.remove('hidden');
+            } else {
+                document.getElementById('limitBanner').classList.add('hidden');
+            }
+
+            setupBoard();
+            renderItems();
+        } catch (e) {
+            console.error(e);
+            showToast("Hiba a betöltés során.");
+        } finally {
+            setTimeout(() => {
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
+        }
+    }
+
+    function setupBoard() {
+        const board = document.getElementById('kanbanBoard');
+        
+        // Remove dynamically created columns from previous setup
+        const dynamicCols = board.querySelectorAll('.dynamic-col');
+        dynamicCols.forEach(col => col.remove());
+
+        // Create column for each category
+        categories.filter(c => c.name !== 'delete').forEach(cat => {
+            const col = document.createElement('div');
+            col.className = "dynamic-col flex flex-col bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-4";
+            col.innerHTML = `
+                <div class="flex items-center justify-between mb-4 px-2 sticky top-4 z-10 bg-slate-50/90 backdrop-blur pb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="p-2 rounded-xl border flex items-center justify-center" style="background-color: ${cat.color}15; color: ${cat.color}; border-color: ${cat.color}30;">
+                            <i data-lucide="${cat.icon || 'tag'}" class="w-4 h-4"></i>
+                        </span>
+                        <h3 class="font-bold text-slate-800 text-sm">${cat.display_name}</h3>
+                    </div>
+                    <span id="count-${cat.name}" class="text-xs font-black px-2 py-0.5 rounded-md border" style="background-color: ${cat.color}15; color: ${cat.color}; border-color: ${cat.color}30;">0</span>
+                </div>
+                <div id="col-${cat.name}" class="kanban-col flex-1 space-y-3 rounded-2xl p-1" 
+                     ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, '${cat.name}')">
+                </div>
+            `;
+            board.appendChild(col);
+        });
+
+        lucide.createIcons();
+    }
+
+    function renderItems() {
+        // Clear all columns
+        document.querySelectorAll('.kanban-col').forEach(col => col.innerHTML = '');
+        
+        const counts = { 'delete': 0, 'uncategorized': 0 };
+        categories.forEach(cat => counts[cat.name] = 0);
+
+        const emptyState = document.getElementById('emptyState');
+        const board = document.getElementById('kanbanBoard');
+        const saveBtn = document.getElementById('saveBtn');
+
+        if (kanbanItems.length === 0) {
+            emptyState.classList.remove('hidden');
+            board.classList.add('hidden');
+            saveBtn.disabled = true;
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        board.classList.remove('hidden');
+        saveBtn.disabled = false;
+
+        kanbanItems.forEach(item => {
+            const colName = item.current_category;
+            const col = document.getElementById(`col-${colName}`) || document.getElementById('col-uncategorized');
+            if (!col) return;
+
+            // Use counts[colName] specifically or fallback to uncategorized count
+            const actualColName = col.id.replace('col-', '');
+            counts[actualColName] = (counts[actualColName] || 0) + 1;
+
+            const card = document.createElement('div');
+            card.className = "image-card bg-white p-2 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md";
+            card.draggable = true;
+            card.id = `card-${btoa(item.file_name).replace(/=/g, '')}`;
+            card.dataset.filename = item.file_name;
+            
+            card.addEventListener('dragstart', (e) => {
+                if (!selectedItems.has(item.file_name)) {
+                    selectedItems.clear();
+                    selectedItems.add(item.file_name);
+                    lastClickedItem = { file_name: item.file_name, colName: colName };
+                    updateSelectionVisuals();
+                }
+                
+                draggingItems = Array.from(selectedItems);
+                e.dataTransfer.setData('text/plain', draggingItems.join('|||'));
+                
+                draggingItems.forEach(fname => {
+                    const c = document.getElementById(`card-${btoa(fname).replace(/=/g, '')}`);
+                    if (c) c.classList.add('dragging');
+                });
+            });
+            
+            card.addEventListener('dragend', () => {
+                document.querySelectorAll('.image-card.dragging').forEach(c => c.classList.remove('dragging'));
+                draggingItems = [];
+            });
+
+            // If the item has been modified, show a little indicator
+            const isModified = item.current_category !== item.original_category;
+            const modifiedBadge = isModified ? `<div class="absolute top-2 left-2 bg-amber-500 text-white w-3 h-3 rounded-full shadow-md animate-pulse"></div>` : '';
+
+            const displayUrl = item.thumb_url || item.url;
+            card.innerHTML = `
+                <div class="relative rounded-xl overflow-hidden aspect-video bg-slate-100 mb-2 group">
+                    <img src="${displayUrl}" class="w-full h-full object-cover select-none cursor-pointer hover:scale-105 transition-all duration-200">
+                    ${modifiedBadge}
+                    <div class="selection-check"><i data-lucide="check"></i></div>
+                </div>
+                <div class="px-1 flex flex-col">
+                    <span class="text-[9px] font-black text-slate-800 truncate" title="${item.file_name}">${item.file_name.split('/').pop()}</span>
+                </div>
+            `;
+            
+            if (selectedItems.has(item.file_name)) {
+                card.classList.add('selected');
+            }
+            
+            card.addEventListener('click', (e) => {
+                handleItemClick(e, item, colName);
+            });
+            
+            card.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                openImageModal(item.url);
+            });
+            
+            col.appendChild(card);
+        });
+
+        // Update counts
+        for (const [colName, count] of Object.entries(counts)) {
+            const badge = document.getElementById(`count-${colName}`);
+            if (badge) badge.textContent = count;
+        }
+
+        lucide.createIcons();
+    }
+
+    function allowDrop(e) {
+        e.preventDefault();
+    }
+
+    function dragEnter(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function dragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e, targetCol) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        
+        const data = e.dataTransfer.getData('text/plain');
+        if (!data) return;
+
+        const fileNames = data.split('|||');
+        
+        fileNames.forEach(fileName => {
+            const cardId = `card-${btoa(fileName).replace(/=/g, '')}`;
+            const card = document.getElementById(cardId);
+            if (card) {
+                e.currentTarget.appendChild(card);
+            }
+
+            const item = kanbanItems.find(i => i.file_name === fileName);
+            if (item) {
+                item.current_category = targetCol;
+            }
+        });
+        
+        renderItems();
+    }
+    
+    function handleItemClick(e, item, colName) {
+        if (e.shiftKey && lastClickedItem && lastClickedItem.colName === colName) {
+            const cardsInCol = Array.from(document.getElementById(`col-${colName}`).querySelectorAll('.image-card'));
+            const idx1 = cardsInCol.findIndex(c => c.dataset.filename === lastClickedItem.file_name);
+            const idx2 = cardsInCol.findIndex(c => c.dataset.filename === item.file_name);
+            
+            if (idx1 !== -1 && idx2 !== -1) {
+                const start = Math.min(idx1, idx2);
+                const end = Math.max(idx1, idx2);
+                
+                if (!e.ctrlKey) {
+                    selectedItems.clear();
+                }
+                
+                for(let i = start; i <= end; i++) {
+                    selectedItems.add(cardsInCol[i].dataset.filename);
+                }
+            }
+        } else if (e.ctrlKey) {
+            if (selectedItems.has(item.file_name)) {
+                selectedItems.delete(item.file_name);
+            } else {
+                selectedItems.add(item.file_name);
+            }
+            lastClickedItem = { file_name: item.file_name, colName: colName };
+        } else {
+            selectedItems.clear();
+            selectedItems.add(item.file_name);
+            lastClickedItem = { file_name: item.file_name, colName: colName };
+        }
+        updateSelectionVisuals();
+    }
+    
+    function updateSelectionVisuals() {
+        document.querySelectorAll('.image-card').forEach(card => {
+            const fname = card.dataset.filename;
+            if (selectedItems.has(fname)) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+
+    async function saveChanges() {
+        const changes = kanbanItems.filter(i => i.current_category !== i.original_category);
+        if (changes.length === 0) {
+            showToast("Nincsenek mentendő változások.");
+            return;
+        }
+
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Mentés folyamatban...';
+        lucide.createIcons();
+
+        try {
+            const payload = {
+                items: changes.map(i => ({
+                    file_name: i.file_name,
+                    category: i.current_category
+                }))
+            };
+
+            const res = await fetch('/api/classification/bulk-classify-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                showToast(`${data.count} kép besorolása frissítve.`);
+                // Reload data to reflect changes and potentially load next 100 images
+                loadData();
+            } else {
+                showToast("Hiba történt a mentés során.");
+            }
+        } catch (e) {
+            showToast("Hálózati hiba.");
+        } finally {
+            btn.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> Változások Mentése';
+            btn.disabled = false;
+            lucide.createIcons();
+        }
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-4');
+        toast.classList.add('opacity-100', 'translate-y-0');
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-4');
+            toast.classList.remove('opacity-100', 'translate-y-0');
+        }, 3000);
+    }
+
+    function openImageModal(url) {
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        modalImg.src = url;
+        modal.classList.remove('hidden');
+    }
+
+    function closeImageModal() {
+        const modal = document.getElementById('imageModal');
+        modal.classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('imageModal');
+            if (!modal.classList.contains('hidden')) {
+                closeImageModal();
+            }
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+    });
+</script>
+{% endblock %}
