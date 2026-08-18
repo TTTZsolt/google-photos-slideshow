@@ -72,20 +72,19 @@ bash ~/lumina_auto_feltoltes/status_auto_feltoltes.sh   # állapot + napló elle
 
 **Tipp**: ezekhez a Termux widgeten (Termux:Widget app) keresztül egy-egy ikont is létrehozhatsz a telefon kezdőképernyőjén, hogy ne kelljen a parancsokat begépelned.
 
-## 6. Kézi, kiválasztásos feltöltés (ha az automatikus ki volt kapcsolva)
+## 6. Kézi feltöltés régebbi/kihagyott képekhez
 
-Ha egy kép akkor készült, amikor az automatikus feltöltés ki volt kapcsolva, utólag is felküldheted:
+Ha egy kép akkor készült, amikor az automatikus feltöltés ki volt kapcsolva (vagy egy régebbi, korábbi képet szeretnél utólag felküldeni), a telefon **saját Galéria/Fotók appjának natív, bélyegképes, többes kijelöléses** felületét használjuk a kiválasztáshoz — nem kell hozzá semmilyen Termux-beli lista:
 
-1. Egyszeri telepítés: a **Termux:API** appot is telepítsd F-Droid-ról (**ugyanarról a forrásról, mint a fő Termux appot** — ha eltér, a párbeszédablak nem fog működni, ugyanaz a probléma, mint a Termux:Widget-nél), majd:
-   ```bash
-   pkg install termux-api jq
-   ```
-2. Futtatás:
-   ```bash
-   bash ~/lumina_auto_feltoltes/manual_upload.sh
-   ```
-   Ez megmutatja a kamera-mappa legutóbbi (max. 50) képét egy kipipálható listában — jelöld ki, amit fel szeretnél tölteni, és a script a többit elintézi (ugyanazzal a logikával, mint az automatikus figyelő: Év/Hónap mappa, bélyegkép, Lumina-értesítés).
-3. Ehhez is készíthetsz Widget-ikont (l. `shortcuts/Lumina kézi feltöltés.sh`).
+1. Nyisd meg a Galéria/Fotók appot, válaszd ki (többes kijelöléssel) a feltöltendő képeket.
+2. **Megosztás** → **"Mentés eszközre" / "Másolás ide"** → válaszd ki a **`Pictures/LuminaFeltoltes`** mappát (ha még nem létezik, hozd létre egyszer; ide fogsz mindig menteni, ha kézi feltöltést szeretnél).
+3. Ennyi — a háttérben futó figyelő (`lumina_watcher.sh`) ezt a mappát **mindig** figyeli, függetlenül attól, be van-e kapcsolva az automatikus kamera-feltöltés, és pár másodpercen belül automatikusan feltölti az odamentett képeket, majd egy `feltoltve` almappába mozgatja őket, hogy ne töltődjenek fel kétszer.
+
+Ha esetleg a figyelő folyamat épp nem futott, amikor odatetted a képeket, kézzel is kiválthatod az utólagos feldolgozást:
+```bash
+bash ~/lumina_auto_feltoltes/manual_upload.sh
+```
+(Ehhez is készíthetsz Widget-ikont, l. `shortcuts/Lumina kézi feltöltés.sh`.)
 
 ## Ismert korlátok
 

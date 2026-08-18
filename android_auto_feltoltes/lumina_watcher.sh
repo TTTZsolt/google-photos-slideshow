@@ -25,12 +25,27 @@ source "$SCRIPT_DIR/upload_lib.sh"
 
 TOGGLE_FLAG="$HOME/.lumina_auto_upload_enabled"
 
-log "--- Lumina auto-feltolto figyelo elindult ($CAMERA_DIR) ---"
+mkdir -p "$STAGING_DIR" "$STAGING_ARCHIVE"
 
-inotifywait -m -e close_write -e moved_to --format '%w%f' "$CAMERA_DIR" 2>>"$LOG_FILE" | \
-while read -r filepath; do
-    if [ ! -f "$TOGGLE_FLAG" ]; then
-        continue
-    fi
-    upload_photo "$filepath"
+log "--- Lumina auto-feltolto figyelo elindult (kamera: $CAMERA_DIR, kezi: $STAGING_DIR) ---"
+
+# Ket mappat figyelunk egyszerre:
+#  - CAMERA_DIR: csak akkor toltunk fel, ha a TOGGLE_FLAG be van kapcsolva.
+#  - STAGING_DIR: mindig feltoltunk, fuggetlenul a kapcsolotol - ide a
+#    felhasznalo mar tudatosan, a Galeria appbol valogatva tett kepeket.
+#    (Nem rekurziv figyeles, a STAGING_ARCHIVE almappa mozgatasai nem
+#    valtanak ki ujabb esemenyt.)
+inotifywait -m -e close_write -e moved_to --format '%w|%f' "$CAMERA_DIR" "$STAGING_DIR" 2>>"$LOG_FILE" | \
+while IFS='|' read -r watched_dir filename; do
+    filepath="${watched_dir}${filename}"
+    case "$watched_dir" in
+        "${STAGING_DIR}/")
+            upload_and_archive_staging "$filepath"
+            ;;
+        *)
+            if [ -f "$TOGGLE_FLAG" ]; then
+                upload_photo "$filepath"
+            fi
+            ;;
+    esac
 done

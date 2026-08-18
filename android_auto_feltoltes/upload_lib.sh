@@ -11,6 +11,15 @@ REMOTE_MAIN="b2_storage:Kepek02"
 REMOTE_THUMB="b2_storage:kepek02-thumbs"
 THUMB_SIZE="400x400"
 
+# Kezi, kivalasztasos feltoltes mappaja: a Galeria/Fotok app natic tobbes
+# kijelolesevel ide "Mentve"/"Masolva" kepek automatikusan feltoltodnek,
+# fuggetlenul attol, be van-e kapcsolva az automatikus feltoltes (a
+# felhasznalo mar explicit dontott, amikor idehelyezte a fajlt). Feltoltes
+# utan a fajl a $STAGING_DIR/feltoltve almappaba kerul, hogy ne toltodjon
+# fel ujra.
+STAGING_DIR="$HOME/storage/shared/Pictures/LuminaFeltoltes"
+STAGING_ARCHIVE="$STAGING_DIR/feltoltve"
+
 # A mindig futo (tablet) Lumina-peldany, aminek szolnunk kell feltoltes utan,
 # hogy azonnal felvegye az uj kepet az adatbazisaba (kulonben csak fizikailag
 # van fent a B2-n, a Lumina feluleten meg nem latszik, amig valaki kezzel nem
@@ -121,4 +130,30 @@ upload_photo() {
 
     [ -n "$tmp_converted" ] && rm -f "$tmp_converted"
     [ -n "$tmp_thumb" ] && rm -f "$tmp_thumb"
+}
+
+upload_and_archive_staging() {
+    # A STAGING_DIR-be kezzel (Galeria-megosztassal) betett kep feltoltese,
+    # majd a STAGING_ARCHIVE almappaba mozgatasa, hogy ne toltodjon fel
+    # ujra legkozelebb.
+    local filepath="$1"
+    local filename
+    filename=$(basename "$filepath")
+
+    mkdir -p "$STAGING_ARCHIVE"
+    upload_photo "$filepath"
+    if [ -f "$filepath" ]; then
+        mv "$filepath" "$STAGING_ARCHIVE/$filename"
+    fi
+}
+
+process_staging_folder_now() {
+    # Utolagos/kezi "flush": minden, a STAGING_DIR-ben (nem az archivumban)
+    # jelenleg talalhato kepet feltolt. Arra az esetre, ha a figyelo folyamat
+    # nem futott epp akkor, amikor a fajlt odatetted.
+    mkdir -p "$STAGING_DIR" "$STAGING_ARCHIVE"
+    find "$STAGING_DIR" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.heic' -o -iname '*.heif' \) -print0 | \
+    while IFS= read -r -d '' filepath; do
+        upload_and_archive_staging "$filepath"
+    done
 }
