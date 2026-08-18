@@ -1,8 +1,9 @@
 #!/data/data/com.termux/files/usr/bin/bash
 #
 # upload_lib.sh - kozos feltoltesi logika, amit tobb script is hasznal
-# (lumina_watcher.sh - automatikus figyeles, manual_upload.sh - kezi,
-# kivalasztasos feltoltes). Ne futtasd onmagaban, csak source-old be:
+# (lumina_watcher.sh - automatikus figyeles, manual_upload.sh - a
+# LuminaFeltoltes mappa utolagos "flush"-elese). Ne futtasd onmagaban, csak
+# source-old be:
 #   source "$HOME/lumina_auto_feltoltes/upload_lib.sh"
 
 CAMERA_DIR="$HOME/storage/dcim/Camera"
@@ -14,11 +15,13 @@ THUMB_SIZE="400x400"
 # Kezi, kivalasztasos feltoltes mappaja: a Galeria/Fotok app natic tobbes
 # kijelolesevel ide "Mentve"/"Masolva" kepek automatikusan feltoltodnek,
 # fuggetlenul attol, be van-e kapcsolva az automatikus feltoltes (a
-# felhasznalo mar explicit dontott, amikor idehelyezte a fajlt). Feltoltes
-# utan a fajl a $STAGING_DIR/feltoltve almappaba kerul, hogy ne toltodjon
-# fel ujra.
+# felhasznalo mar explicit dontott, amikor idehelyezte a fajlt). Sikeres
+# feltoltes utan a fajl TORLODIK a telefonrol (mar biztonsagban van a B2-n,
+# nem kell duplan foglalnia a helyet), es csak egy sor kerul a
+# $STAGING_ARCHIVE_LOG naplofajlba (fajlnev + idopont) - nem maga a kep.
 STAGING_DIR="$HOME/storage/shared/Pictures/LuminaFeltoltes"
 STAGING_ARCHIVE="$STAGING_DIR/feltoltve"
+STAGING_ARCHIVE_LOG="$STAGING_ARCHIVE/feltoltott_kepek.csv"
 
 # A mindig futo (tablet) Lumina-peldany, aminek szolnunk kell feltoltes utan,
 # hogy azonnal felvegye az uj kepet az adatbazisaba (kulonben csak fizikailag
@@ -57,11 +60,11 @@ upload_photo() {
 
     case "$lower_name" in
         *.jpg|*.jpeg|*.png|*.heic|*.heif) ;;
-        *) return ;;
+        *) return 1 ;;
     esac
 
     if [ ! -f "$filepath" ]; then
-        return  # a fajl kozben torlodott/atnevezodott
+        return 1  # a fajl kozben torlodott/atnevezodott
     fi
 
     # Varjunk, amig a fenykepezogep app befejezi az iras/mentest
@@ -74,7 +77,7 @@ upload_photo() {
         sleep 3
     fi
     if [ ! -f "$filepath" ]; then
-        return
+        return 1
     fi
 
     # EXIF datum (Ev/Honap), tartalek: fajl modositasi ideje
@@ -104,7 +107,7 @@ upload_photo() {
             upload_source="$tmp_converted"
         else
             log "HIBA: HEIC->JPG konverzio sikertelen ($filepath)"
-            return
+            return 1
         fi
     fi
 
@@ -114,8 +117,10 @@ upload_photo() {
         tmp_thumb=""
     fi
 
+    local upload_result=1
     if rclone copyto "$upload_source" "${REMOTE_MAIN}/${target_path}" 2>>"$LOG_FILE"; then
         log "OK (eredeti): $filepath -> ${REMOTE_MAIN}/${target_path}"
+        upload_result=0
         if [ -n "$tmp_thumb" ] && [ -f "$tmp_thumb" ]; then
             if rclone copyto "$tmp_thumb" "${REMOTE_THUMB}/${target_path}" 2>>"$LOG_FILE"; then
                 log "OK (thumb): ${REMOTE_THUMB}/${target_path}"
@@ -130,20 +135,25 @@ upload_photo() {
 
     [ -n "$tmp_converted" ] && rm -f "$tmp_converted"
     [ -n "$tmp_thumb" ] && rm -f "$tmp_thumb"
+
+    return "$upload_result"
 }
 
 upload_and_archive_staging() {
-    # A STAGING_DIR-be kezzel (Galeria-megosztassal) betett kep feltoltese,
-    # majd a STAGING_ARCHIVE almappaba mozgatasa, hogy ne toltodjon fel
-    # ujra legkozelebb.
+    # A STAGING_DIR-be kezzel (Galeria-megosztassal) betett kep feltoltese.
+    # Sikeres feltoltes utan a fajl TORLODIK a telefonrol (mar fent van a
+    # B2-n), es csak egy sor kerul a STAGING_ARCHIVE_LOG naplofajlba
+    # (fajlnev + idopont) - igy nem foglal duplan helyet a telefonon, de
+    # megmarad a nyoma, hogy mi es mikor lett feltoltve. Sikertelen
+    # feltoltes eseten a fajl a helyen marad, legkozelebb ujra probalkozunk.
     local filepath="$1"
     local filename
     filename=$(basename "$filepath")
 
     mkdir -p "$STAGING_ARCHIVE"
-    upload_photo "$filepath"
-    if [ -f "$filepath" ]; then
-        mv "$filepath" "$STAGING_ARCHIVE/$filename"
+    if upload_photo "$filepath"; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S'),${filename}" >> "$STAGING_ARCHIVE_LOG"
+        rm -f "$filepath"
     fi
 }
 
