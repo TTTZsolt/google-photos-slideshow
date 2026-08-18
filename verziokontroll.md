@@ -8,6 +8,12 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.2.1] - Forrás vödör szerepének megszüntetése (2026-08-18)
+
+- **Felismerés**: átfogó kódvizsgálat kimutatta, hogy a `forras` (staging) vödörnek a Zero-Move architektúra (V15.8.4) óta gyakorlatilag nincs önálló, szükséges szerepe — a Mover és a legtöbb folyamat már közvetlenül a `kepek02`-vel dolgozik.
+- **Zero-Move Lomtár-visszaállítás**: a `POST /api/trash/restore/{id}` és `/api/trash/restore-all` mostantól közvetlenül a `kepek02`-be állítja vissza a képet, nem a `forras`-on keresztül (eggyel kevesebb fizikai B2-mozgatás).
+- **Dokumentáció frissítése**: `DOKUMENTACIO.md` és `README.md` pontosítva — világosan szétválasztva a jelenlegi elsődleges út (közvetlen `kepek02`-feltöltés, azonnal vetíthető, kategorizálás opcionális a Mover-en keresztül) és a régebbi, ma is támogatott, de már nem szükséges `forras`-alapú út.
+
 ## [V16.1.0] - Fénykép válogatás AI segítségével (Fejlesztés alatt)
 
 - **AI integráció**: Előkészítés a fényképek automatikus válogatására és elemzésére AI segítségével.
@@ -135,6 +141,8 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.2.1 | `TBD`     | Dokumentáció frissítése: forras vödör szerepének pontosítása (DOKUMENTACIO.md, README.md)     |
+| V16.2.1 | `2feedbe` | Zero-Move a Lomtárból visszaállításnál: kepek02-be közvetlenül, forras kihagyásával           |
 | V16.1.0 | `a151660` | Fix: Az AI hibaállapotok megtartása az adatbázisban a részletes hibaüzenetek és hiba banner megjelenítéséhez |
 | V16.1.0 | `ee048f3` | Fix: Böngésző lefagyások megszüntetése visibility- és modul-érzékeny setTimeout alapú lekérdezéssel |
 | V16.1.0 | `2cdac25` | Feature: Felhasználó értesítése, ha az AI korlát miatt régebbi modellre váltott vissza         |

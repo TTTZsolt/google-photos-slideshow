@@ -62,7 +62,8 @@ A rendszer a válogatási folyamat gyorsítása érdekében immár **Zero-Move**
 *   **Válogatás előkészítése (Bulk Reverse)**: A képek **nem mozognak fizikailag** a vödrök között. A rendszer csak megjelöli őket válogatásra az adatbázisban. Ez 1300+ kép esetén is azonnali eredményt ad.
 *   **Klasszifikáció**: Ha a kép már a `kepek02` (aktív) vödörben van, a mentéskor nem történik fájlmozgatás, csak a metaadatok frissülnek a felhőben.
 *   **Törlés (Trash)**: Fizikai mozgatás csak törléskor történik (`kepek02` -> `torles-elott`), amit párhuzamosított szálakon végzünk a maximális sebességért.
-*   **Egyszerűsített struktúra**: Minden kép a `kepek02` vödörben lakik, a `forras` vödör használata már nem kötelező.
+*   **Visszaállítás (Lomtárból)**: közvetlenül `torles-elott` -> `kepek02`, nem a `forras`-on keresztül (2026-08-18-tól).
+*   **Egyszerűsített struktúra**: Minden kép a `kepek02` vödörben lakik. A `forras` vödörnek 2026-08-18 óta gyakorlatilag **nincs aktív szerepe** a rendszerben (sem a Mover, sem a Lomtár-visszaállítás nem használja) — csak a régi, `upload_with_thumbs.py`-alapú feltöltési út igényli, ha valaki azt választja.
 
 
 ## Versions

@@ -119,14 +119,14 @@ Ha egy korábbi mappát vagy kategória nélküli (régi) képeket szeretnél ú
 3. Kategória szerint kiválaszthatod, hogy csak a "kategorizálatlan" képeket (alapértelmezett) mozgassa vissza, vagy adott kategóriát. (Kategorizálatlannak számít minden "régi" fotó, amit még a V9.0 előtt egyből a `kepek02`-be töltöttél).
 4. Kattints az **Indítás** gombra.
 5. A folyamat a háttérben zajlik, haladását láthatod a megjelenő folyamatjelző csíkon (Progress bar).
-6. A művelet fizikailag átmozgatja a `kepek02`-ből a fájlokat vissza a `forras` vödörbe, és lenullázza az eddigi kategóriájukat az adatbázisban, hogy ismét felbukkanjanak a "Fotó Szortírozó" felületén, ahonnan újra besorolhatod őket.
+6. **Nincs fizikai fájlmozgatás** (Zero-Move, l. 7. fejezet): a művelet a `kepek02`-ben lévő fájlokat a helyükön hagyja, csak megjelöli őket az adatbázisban (`is_in_sorter = True`) és lenullázza a kategóriájukat, hogy ismét felbukkanjanak a "Fotó Szortírozó" felületén, ahonnan újra besorolhatod őket. (Ez a leírás korábban tévesen fizikai `forras`-ba mozgatást írt le — ez elavult volt, a `forras` vödörnek 2026-08-18 óta nincs szerepe ebben a folyamatban.)
 
 ### 8. Lomtár Átnézése (V10.0)
 A Szortírozóban törlésre jelölt képek nem törlődnek azonnal véglegesen. Ehelyett a `torles-elott` vödörbe kerülnek, és a **Lomtárban** várnak a végső döntésre.
 1. A Vezérlőpulton a "Fotó Szortírozó" kártyán egy élő piros jelvény (badge) mutatja, hány elem van jelenleg a lomtárban.
 2. Kattints a **Lomtár Átnézése** gombra a dedikált felület megnyitásához.
 3. Itt láthatod a törlésre váró képek előnézetét és eredeti elérési útját.
-4. **Visszaállítás (Vissza gomb)**: Ha meggondoltad magad, a kép visszakerül a `forras` vödörbe, és újra megjelenik a Szortírozóban.
+4. **Visszaállítás (Vissza gomb)**: Ha meggondoltad magad, a kép közvetlenül a `kepek02` vödörbe kerül vissza (2026-08-18-ig ez a `forras` vödörbe történt, de ez a köztes lépés feleslegesnek bizonyult és megszűnt), és újra megjelenik a Szortírozóban.
 5. **Lomtár Ürítése**: Ez a művelet **véglegesen és visszaállíthatatlanul** törli a kijelölt fájlokat a Backblaze B2 felhőtárhelyről. A folyamat a háttérben fut.
 
 ### 9. Dinamikus Kategória Kezelő (V11.0)
@@ -196,9 +196,11 @@ Az eredeti vödör neve után egy `-thumbs` utótagot használunk.
 | Funkció | Eredeti vödör | Bélyegkép vödör |
 | :--- | :--- | :--- |
 | **Éles Képtár** | `kepek02` | `kepek02-thumbs` |
-| **Szortírozó (Forrás)** | `forras` | `forras-thumbs` |
 | **Lomtár** | `torles-elott` | `torles-elott-thumbs` |
 | **Archívum** | `kepek01` | `kepek01-thumbs` |
+| **Beérkező/Staging (`Forrás`) — elavult, opcionális** | `forras` | `forras-thumbs` |
+
+**2026-08-18-i pontosítás**: a `forras` vödör a jelenlegi (Zero-Move, közvetlen `kepek02`-feltöltésre épülő) munkafolyamatban **már nem szükséges** — sem a Lomtárból való visszaállítás, sem a Mover nem használja aktívan. Csak a régebbi, `upload_with_thumbs.py`-jal történő feltöltési útvonal (l. 4. fejezet, 6/B pont) igényli továbbra is, ha valaki ragaszkodik hozzá.
 
 ### Feltöltés és Generálás
 A képek feltöltésekor az `upload_with_thumbs.py` scriptet kell használni. Ez automatikusan:
@@ -234,6 +236,8 @@ A szortírozó felületen végzett munka során a rendszer intelligensen dönt a
 2.  **Törlés (Trash)**:
     *   A fájl átkerül a `kepek02` vödörből a `torles-elott` (lomtár) vödörbe.
     *   Ezt a műveletet **párhuzamosított szálakon** végezzük, így több fájl egyidejű törlése is rendkívül gyors.
+3.  **Visszaállítás (Lomtárból) — 2026-08-18 óta**:
+    *   A fájl közvetlenül a `torles-elott`-ból a `kepek02`-be kerül vissza — **nem** a `forras`-on keresztül (ahogy korábban). Ez eggyel kevesebb fizikai mozgatás, jobban illeszkedik a Zero-Move filozófiához.
 
 ### Előnyök
 *   **Azonnaliság**: A válogatás előkészítése nem igényel várakozást.
