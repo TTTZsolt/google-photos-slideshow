@@ -141,7 +141,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
-| V16.2.1 | `TBD`     | Dokumentáció frissítése: forras vödör szerepének pontosítása (DOKUMENTACIO.md, README.md)     |
+| V16.2.1 | `0beeea7` | Dokumentáció frissítése: forras vödör szerepének pontosítása (DOKUMENTACIO.md, README.md)     |
 | V16.2.1 | `2feedbe` | Zero-Move a Lomtárból visszaállításnál: kepek02-be közvetlenül, forras kihagyásával           |
 | V16.1.0 | `a151660` | Fix: Az AI hibaállapotok megtartása az adatbázisban a részletes hibaüzenetek és hiba banner megjelenítéséhez |
 | V16.1.0 | `ee048f3` | Fix: Böngésző lefagyások megszüntetése visibility- és modul-érzékeny setTimeout alapú lekérdezéssel |
