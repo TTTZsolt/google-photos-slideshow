@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks,
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from ..database import SessionLocal
-from ..models import B2Account, MediaItem, MediaClassification, CategoryDefinition
+from ..models import B2Account, MediaItem, MediaClassification, CategoryDefinition, DeletedContentHash
 from pydantic import BaseModel
 from ..version import VERSION
 from typing import Optional, Dict, Any, List
@@ -104,6 +104,22 @@ def save_custom_rules(req: CustomRulesRequest):
     with open(CUSTOM_RULES_FILE, "w", encoding="utf-8") as f:
         f.write(req.text)
     return {"status": "ok"}
+
+@router.get("/api/media/check-sha1/{sha1}")
+def check_sha1(sha1: str, db: Session = Depends(get_db)):
+    """Checks a content SHA1 before an external upload (e.g. the Android auto-
+    feltoltes script) - same purpose as the Takeout uploader's SHA1 check:
+    avoid re-uploading a file that's already in the main bucket, and never
+    resurrect a file that was intentionally deleted (tombstoned)."""
+    b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
+    exists = False
+    if b2_acc:
+        exists = db.query(MediaItem).filter(
+            MediaItem.bucket_name == b2_acc.bucket_name,
+            MediaItem.sha1 == sha1
+        ).first() is not None
+    deleted = db.query(DeletedContentHash).filter(DeletedContentHash.sha1 == sha1).first() is not None
+    return {"exists": exists, "deleted": deleted}
 
 @router.get("/classify")
 def classify_page(request: Request):

@@ -111,6 +111,29 @@ upload_photo() {
         fi
     fi
 
+    # SHA1-ellenorzes feltoltes elott - ugyanaz a vedelem, mint a Takeout
+    # feltoltonel: ne toltsuk fel ujra, ami mar fent van, es soha ne
+    # hozzuk vissza, amit tudatosan toroltunk (tombstone).
+    local file_sha1
+    file_sha1=$(sha1sum "$upload_source" 2>/dev/null | cut -d' ' -f1)
+    if [ -n "$file_sha1" ]; then
+        local check_response already_exists already_deleted
+        check_response=$(curl -s -m 15 "http://${LUMINA_SERVER}/api/media/check-sha1/${file_sha1}" 2>>"$LOG_FILE")
+        already_exists=$(echo "$check_response" | jq -r '.exists // false' 2>/dev/null)
+        already_deleted=$(echo "$check_response" | jq -r '.deleted // false' 2>/dev/null)
+
+        if [ "$already_deleted" = "true" ]; then
+            log "KIHAGYVA (tudatosan torolt tartalom, nem allitjuk vissza): $filepath"
+            [ -n "$tmp_converted" ] && rm -f "$tmp_converted"
+            return 0
+        fi
+        if [ "$already_exists" = "true" ]; then
+            log "KIHAGYVA (tartalom mar fent van a B2-n): $filepath"
+            [ -n "$tmp_converted" ] && rm -f "$tmp_converted"
+            return 0
+        fi
+    fi
+
     local tmp_thumb="$HOME/.lumina_tmp_$$_thumb.jpg"
     if ! convert "$upload_source" -resize "$THUMB_SIZE" -quality 75 "$tmp_thumb" 2>>"$LOG_FILE"; then
         log "FIGYELEM: thumbnail generalas sikertelen ($filepath), csak az eredetit toltom fel"

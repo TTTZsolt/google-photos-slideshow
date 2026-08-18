@@ -15,7 +15,7 @@ Amikor bekapcsolod, a telefonod kamera-mappáját (`DCIM/Camera`) figyeli, és m
 3. Nyisd meg a Termux-ot, és futtasd:
    ```bash
    pkg update && pkg upgrade
-   pkg install inotify-tools rclone exiftool imagemagick coreutils
+   pkg install inotify-tools rclone exiftool imagemagick coreutils jq
    termux-setup-storage
    ```
    A `termux-setup-storage` egy engedélykérő ablakot dob fel — engedélyezd, hogy a Termux hozzáférjen a telefon tárhelyéhez (ez teszi elérhetővé a `~/storage/dcim/Camera` mappát).
@@ -78,7 +78,7 @@ Ha egy kép akkor készült, amikor az automatikus feltöltés ki volt kapcsolva
 
 1. Nyisd meg a Galéria/Fotók appot, válaszd ki (többes kijelöléssel) a feltöltendő képeket.
 2. **Megosztás** → **"Mentés eszközre" / "Másolás ide"** → válaszd ki a **`Pictures/LuminaFeltoltes`** mappát (ha még nem létezik, hozd létre egyszer; ide fogsz mindig menteni, ha kézi feltöltést szeretnél).
-3. Ennyi — a háttérben futó figyelő (`lumina_watcher.sh`) ezt a mappát **mindig** figyeli, függetlenül attól, be van-e kapcsolva az automatikus kamera-feltöltés, és pár másodpercen belül automatikusan feltölti az odamentett képeket, majd egy `feltoltve` almappába mozgatja őket, hogy ne töltődjenek fel kétszer.
+3. Ennyi — a háttérben futó figyelő (`lumina_watcher.sh`) ezt a mappát **mindig** figyeli, függetlenül attól, be van-e kapcsolva az automatikus kamera-feltöltés, és pár másodpercen belül automatikusan feltölti az odamentett képeket. Sikeres feltöltés után a kép törlődik a telefonról (már biztonságban van a B2-n), és csak egy sor kerül a `feltoltve/feltoltott_kepek.csv` naplóba (fájlnév + időpont). Ha a kép SHA1-tartalma alapján már fent van a B2-n, vagy korábban tudatosan törölted, a script kihagyja (nem tölti fel újra, nem hozza vissza a törölt tartalmat) — ez ugyanaz a védelem, mint amit a Takeout-feltöltő eszköz használ.
 
 Ha esetleg a figyelő folyamat épp nem futott, amikor odatetted a képeket, kézzel is kiválthatod az utólagos feldolgozást:
 ```bash
