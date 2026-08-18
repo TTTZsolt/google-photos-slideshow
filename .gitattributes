@@ -1,0 +1,3 @@
+# A .sh fajloknak mindig LF sorveggel kell maradniuk (Linux/Termux futtatja
+# oket) - CRLF eseten "bad interpreter" hibaval elszallnanak.
+*.sh text eol=lf

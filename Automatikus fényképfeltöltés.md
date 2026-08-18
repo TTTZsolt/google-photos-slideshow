@@ -1,7 +1,18 @@
 # Automatikus fényképfeltöltés - Tervezési jegyzet
 
-Státusz: **Tervezés alatt, kód még nem készült**
+Státusz: **Android: kód elkészült, telepítésre/tesztelésre vár. iPhone: még tervezés alatt.**
 Utolsó frissítés: 2026-08-18
+
+## Android — döntések és megvalósítás (2026-08-18)
+
+- **Fő döntés**: nem épült saját `/api/upload` végpont — a platformspecifikus (`rclone`-alapú Termux-szkript) út mellett döntöttünk, mert egyszerűbb és nem igényel backend-fejlesztést.
+- **Android eszköz**: Termux + `inotify-tools` szkript (nem Tasker) — így a kód verziózható, git alatt tartható, és konzisztens a projekt többi Termux-alapú eszközével (Tablet, SSH).
+- **Célhely**: közvetlenül a `Kepek02` vödör (**nem** a `forras` — annak, mint korábban tisztáztuk, már nincs aktív szerepe), a `mappazasi_algoritmus_specifikacio.md` szerinti Év/Hónap struktúrával. Mivel a telefon kamera-mappája nem albumokba szervezett, mindig a sima EXIF-alapú (album nélküli) ág érvényesül.
+- **Duplikátum-kezelés**: nem volt szükség külön megoldásra — a cél a `Kepek02`-ben minden fájl a saját Év/Hónap/névtisztított útvonalára kerül, natural key-ként működik (ha véletlenül kétszer töltődne fel ugyanaz, `rclone copyto` egyszerűen felülírja ugyanazon az útvonalon).
+- **Be/kikapcsolható**: egyszerű jelzőfájl (`~/.lumina_auto_upload_enabled`) — a figyelő folyamat (`lumina_watcher.sh`) folyamatosan fut a háttérben (Termux:Boot indítja újraindítás után is), de csak akkor tölt fel, ha a jelzőfájl létezik.
+- **Megvalósítás helye**: `android_auto_feltoltes/` mappa (`lumina_watcher.sh`, `start_auto_feltoltes.sh`, `stop_auto_feltoltes.sh`, `status_auto_feltoltes.sh`, `termux_boot_start_lumina_watcher.sh`, `user_guide.md`).
+- **Ismert korlát**: csak valós idejű figyelés (`inotifywait`) — ha a folyamat leáll, a kimaradt időszak fotóit nem pótolja utólag automatikusan (l. `android_auto_feltoltes/user_guide.md`, "Ismert korlátok").
+- **Még hátra van**: a telepítés és éles tesztelés a te saját Androidodon — ehhez nekem nincs hozzáférésem, a `user_guide.md` lépésről lépésre vezet végig rajta.
 
 ## Cél
 
