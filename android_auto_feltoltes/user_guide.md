@@ -27,8 +27,10 @@ Amikor bekapcsolod, a telefonod kamera-mappáját (`DCIM/Camera`) figyeli, és m
 
 ## 2. A scriptek elhelyezése
 
-Másold át ezt a négy fájlt a telefonra, a Termux home könyvtárába egy `lumina_auto_feltoltes` almappába:
-- `lumina_watcher.sh`
+Másold át ezeket a fájlokat a telefonra, a Termux home könyvtárába egy `lumina_auto_feltoltes` almappába:
+- `upload_lib.sh` (közös feltöltési logika - ezt a másik két script használja)
+- `lumina_watcher.sh` (automatikus figyelő)
+- `manual_upload.sh` (kézi, kiválasztásos feltöltés - l. 6. pont)
 - `start_auto_feltoltes.sh`
 - `stop_auto_feltoltes.sh`
 - `status_auto_feltoltes.sh`
@@ -70,8 +72,23 @@ bash ~/lumina_auto_feltoltes/status_auto_feltoltes.sh   # állapot + napló elle
 
 **Tipp**: ezekhez a Termux widgeten (Termux:Widget app) keresztül egy-egy ikont is létrehozhatsz a telefon kezdőképernyőjén, hogy ne kelljen a parancsokat begépelned.
 
+## 6. Kézi, kiválasztásos feltöltés (ha az automatikus ki volt kapcsolva)
+
+Ha egy kép akkor készült, amikor az automatikus feltöltés ki volt kapcsolva, utólag is felküldheted:
+
+1. Egyszeri telepítés: a **Termux:API** appot is telepítsd F-Droid-ról (**ugyanarról a forrásról, mint a fő Termux appot** — ha eltér, a párbeszédablak nem fog működni, ugyanaz a probléma, mint a Termux:Widget-nél), majd:
+   ```bash
+   pkg install termux-api jq
+   ```
+2. Futtatás:
+   ```bash
+   bash ~/lumina_auto_feltoltes/manual_upload.sh
+   ```
+   Ez megmutatja a kamera-mappa legutóbbi (max. 50) képét egy kipipálható listában — jelöld ki, amit fel szeretnél tölteni, és a script a többit elintézi (ugyanazzal a logikával, mint az automatikus figyelő: Év/Hónap mappa, bélyegkép, Lumina-értesítés).
+3. Ehhez is készíthetsz Widget-ikont (l. `shortcuts/Lumina kézi feltöltés.sh`).
+
 ## Ismert korlátok
 
-- A figyelés **valós idejű** (`inotifywait`) — ha a figyelő folyamat véletlenül leáll (pl. Android lekilövi a háttérben), és közben készül egy fotó, azt **nem** fogja utólag észrevenni, amikor újraindul. Ha ez problémát okoz, jelezd — megoldható egy időszakos "utólagos átvizsgálás" hozzáadásával is.
+- A figyelés **valós idejű** (`inotifywait`) — ha a figyelő folyamat véletlenül leáll (pl. Android lekilövi a háttérben), és közben készül egy fotó, azt **nem** fogja utólag automatikusan észrevenni, amikor újraindul. Erre való a fenti **6. pont (kézi feltöltés)** — azzal utólag pótolható.
 - HEIC-fájlok JPG-vé konvertálása az `imagemagick`-kel történik; ha ez lassú a telefonon, jelezd, más módszert is választhatunk.
 - A `clean_string()` névtisztítás bash-ben van megvalósítva (nem Python), a legtöbb esetben ugyanazt az eredményt adja, mint a PC-s eszközök, de nagyon egzotikus fájlnevek esetén apró eltérés előfordulhat.
