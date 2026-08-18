@@ -8,6 +8,14 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.2.2] - Android automatikus fényképfeltöltés (2026-08-18)
+
+- **Új eszköz** (`android_auto_feltoltes/`): Termux + `inotify-tools` alapú háttérfolyamat a telefonon, ami a kamera-mappát figyeli, és minden új fotót közvetlenül a `Kepek02` vödörbe tölt fel (EXIF-dátum alapú Év/Hónap struktúra), be/kikapcsolható jelzőfájllal.
+- **Automatikus adatbázis-szinkron**: sikeres feltöltés után a script meghívja a mindig futó (tablet) példány `/b2/sync/{id}` végpontját, hogy a kép azonnal megjelenjen a Luminában, kézi Sync nélkül.
+- **Kézi feltöltés natív Galéria-kiválasztással**: a telefon saját, bélyegképes, többes kijelöléses Galéria/Fotók felületéből "Megosztás → Mentés ide" művelettel egy `Pictures/LuminaFeltoltes` mappába helyezett képeket a figyelő szintén automatikusan feltölti (a be/kikapcsolt állapottól függetlenül) — erre való, ha egy kép az automatikus feltöltés kikapcsolt állapotában készült.
+- **Új backend végpont**: `GET /api/media/check-sha1/{sha1}` — megmondja, hogy egy tartalom SHA1 alapján már fent van-e a fő bucketben, vagy korábban tudatosan törölve lett-e (tombstone). A telefonos feltöltő minden kép előtt ezt ellenőrzi, hogy elkerülje a duplikált feltöltést és a szándékosan törölt tartalom véletlen visszaállítását — ugyanaz a védelem, mint a Takeout-feltöltő eszköznél.
+- **Naplózás**: a kézi feltöltésnél feldolgozott képek nem másolódnak fizikailag sehova (törlődnek a telefonról sikeres feltöltés után) — csak egy `feltoltott_kepek.csv` napló őrzi az időpontot, fájlnevet és a kimenetel státuszát (`feltoltve` / `skip-mar-fent` / `skip-torolve`).
+
 ## [V16.2.1] - Forrás vödör szerepének megszüntetése (2026-08-18)
 
 - **Felismerés**: átfogó kódvizsgálat kimutatta, hogy a `forras` (staging) vödörnek a Zero-Move architektúra (V15.8.4) óta gyakorlatilag nincs önálló, szükséges szerepe — a Mover és a legtöbb folyamat már közvetlenül a `kepek02`-vel dolgozik.
