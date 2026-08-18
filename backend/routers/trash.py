@@ -90,7 +90,9 @@ def get_trash_count(db: Session = Depends(get_db)):
 
 @router.post("/api/trash/restore/{file_id}")
 def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
-    """Moves a file back from trash to the source bucket."""
+    """Moves a file back from trash directly into the live bucket (Zero-Move:
+    no longer bounces through the 'forras' staging bucket, which no longer
+    has any active role in the architecture)."""
     # Special handling for virtual IDs
     if file_id.startswith("virtual-"):
         file_name = file_id.replace("virtual-", "", 1)
@@ -116,21 +118,22 @@ def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Fájl nem található.")
 
     b2_acc = db.query(B2Account).filter(B2Account.id == mi.b2_account_id).first()
-    if not b2_acc or not b2_acc.source_bucket_name:
-        raise HTTPException(status_code=500, detail="Hiányzó forrás vödör konfiguráció.")
+    if not b2_acc or not b2_acc.bucket_name:
+        raise HTTPException(status_code=500, detail="Hiányzó éles vödör konfiguráció.")
 
     try:
         client = B2Client(b2_acc.key_id, b2_acc.application_key)
-        
-        # 1. Move physically in B2 (Original + Thumb)
-        new_version = client.move_file(mi.bucket_name, b2_acc.source_bucket_name, mi.file_name)
+
+        # 1. Move physically in B2 (Original + Thumb) - directly into the live
+        #    bucket, not via 'forras' (Zero-Move, l. mappazasi_algoritmus_specifikacio.md)
+        new_version = client.move_file(mi.bucket_name, b2_acc.bucket_name, mi.file_name)
         try:
-            client.move_file(f"{mi.bucket_name}-thumbs", f"{b2_acc.source_bucket_name}-thumbs", mi.file_name)
+            client.move_file(f"{mi.bucket_name}-thumbs", f"{b2_acc.bucket_name}-thumbs", mi.file_name)
         except Exception as th_err:
             logger.warning(f"Could not restore thumbnail for {mi.file_name}: {th_err}")
-        
+
         # 2. Update MediaItem entry
-        mi.bucket_name = b2_acc.source_bucket_name
+        mi.bucket_name = b2_acc.bucket_name
         mi.id = new_version.id_
         mi.is_in_sorter = True
         
@@ -258,10 +261,11 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 
 @router.post("/api/trash/restore-all")
 def restore_all_from_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Restores all items from the trash back to the source bucket."""
+    """Restores all items from the trash directly into the live bucket
+    (Zero-Move: no longer bounces through 'forras')."""
     b2_acc = db.query(B2Account).filter(B2Account.is_active == True).first()
-    if not b2_acc or not b2_acc.source_bucket_name:
-        raise HTTPException(status_code=500, detail="Hiányzó forrás vödör konfiguráció.")
+    if not b2_acc or not b2_acc.bucket_name:
+        raise HTTPException(status_code=500, detail="Hiányzó éles vödör konfiguráció.")
 
     # 1. Identify items to restore
     query = db.query(MediaClassification, MediaItem).outerjoin(
@@ -290,7 +294,7 @@ def restore_all_from_trash(background_tasks: BackgroundTasks, db: Session = Depe
 
     key_id = b2_acc.key_id
     app_key = b2_acc.application_key
-    target_bucket = b2_acc.source_bucket_name
+    target_bucket = b2_acc.bucket_name
 
     def perform_physical_restore(b2_key, b2_secret, items, target_bucket_name):
         client = B2Client(b2_key, b2_secret)
