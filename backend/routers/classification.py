@@ -12,6 +12,9 @@ from sqlalchemy import delete, and_, or_
 import concurrent.futures
 import threading
 import os
+import requests
+from io import BytesIO
+from PIL import Image
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -36,6 +39,10 @@ class BulkManualItem(BaseModel):
 
 class BulkManualRequest(BaseModel):
     items: List[BulkManualItem]
+
+class RotateImageRequest(BaseModel):
+    file_name: str
+    direction: str # "left" or "right"
 
 class CategoryCreate(BaseModel):
     name: str # internal name, lowercase
@@ -107,9 +114,9 @@ def folder_kanban_page(request: Request):
     return templates.TemplateResponse("folder_kanban.html", {"request": request, "version": VERSION})
 
 @router.get("/api/folders/items")
-def get_folder_items(folder_path: str = Query(""), limit: int = Query(100), db: Session = Depends(get_db)):
-    """Returns up to `limit` items (recursively) under folder_path, with download/thumb
-    URLs and their current category - a data feed for the Folder Kanban view."""
+def get_folder_items(folder_path: str = Query(""), limit: int = Query(100), offset: int = Query(0), db: Session = Depends(get_db)):
+    """Returns up to `limit` items (recursively) under folder_path, starting at `offset`,
+    with download/thumb URLs and their current category - a data feed for the Folder Kanban view."""
     b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
     if not b2_account:
         raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
@@ -118,22 +125,28 @@ def get_folder_items(folder_path: str = Query(""), limit: int = Query(100), db: 
     if prefix and not prefix.endswith('/'):
         prefix += '/'
 
-    query = db.query(MediaItem).filter(MediaItem.bucket_name == b2_account.bucket_name)
+    # Include the trash bucket too, so images marked "delete" in the Kanban
+    # (which are moved there immediately) still show up in the Törlendő column
+    # until they're permanently removed via the Trash page.
+    bucket_names = [b2_account.bucket_name]
+    if b2_account.trash_bucket_name:
+        bucket_names.append(b2_account.trash_bucket_name)
+
+    query = db.query(MediaItem).filter(MediaItem.bucket_name.in_(bucket_names))
     if prefix:
         query = query.filter(MediaItem.file_name.like(f"{prefix}%"))
     query = query.order_by(MediaItem.file_name.asc())
 
     total_count = query.count()
-    media_items = query.limit(limit).all()
+    media_items = query.offset(offset).limit(limit).all()
 
     file_names = [mi.file_name for mi in media_items]
     classifications = {}
     if file_names:
-        rows = db.query(MediaClassification.file_name, MediaClassification.category).filter(
-            MediaClassification.file_name.in_(file_names),
-            MediaClassification.is_deleted == False
+        rows = db.query(MediaClassification.file_name, MediaClassification.category, MediaClassification.is_deleted).filter(
+            MediaClassification.file_name.in_(file_names)
         ).all()
-        classifications = {fn: cat for fn, cat in rows}
+        classifications = {fn: ('delete' if is_deleted else cat) for fn, cat, is_deleted in rows}
 
     client = B2Client(b2_account.key_id, b2_account.application_key)
     items = []
@@ -145,7 +158,48 @@ def get_folder_items(folder_path: str = Query(""), limit: int = Query(100), db: 
             "thumb_url": client.get_download_url(f"{mi.bucket_name}-thumbs", mi.file_name, b2_account.cloudflare_proxy_url),
         })
 
-    return {"items": items, "has_more": total_count > limit}
+    return {"items": items, "has_more": (offset + limit) < total_count}
+
+@router.post("/api/classification/rotate-image")
+def rotate_image(req: RotateImageRequest, db: Session = Depends(get_db)):
+    """Rotates an image (and its thumbnail) 90 degrees left or right, in place, on B2."""
+    if req.direction not in ("left", "right"):
+        raise HTTPException(status_code=400, detail="direction must be 'left' or 'right'")
+
+    b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
+    if not b2_account:
+        raise HTTPException(status_code=500, detail="Nincs aktív B2 fiók.")
+
+    mi = db.query(MediaItem).filter(MediaItem.file_name == req.file_name).first()
+    if not mi:
+        raise HTTPException(status_code=404, detail="Fájl nem található.")
+
+    transpose = Image.Transpose.ROTATE_90 if req.direction == "left" else Image.Transpose.ROTATE_270
+
+    client = B2Client(b2_account.key_id, b2_account.application_key)
+
+    def rotate_and_reupload(bucket_name: str, file_name: str):
+        # Bypass the Cloudflare proxy for both the download (must be the true
+        # latest bytes, not a stale cached copy) and the returned URL (must
+        # reflect the just-uploaded rotation immediately, not the proxy's cache).
+        url = client.get_download_url(bucket_name, file_name, b2_account.cloudflare_proxy_url, use_proxy=False)
+        resp = requests.get(url, timeout=20)
+        resp.raise_for_status()
+        img = Image.open(BytesIO(resp.content))
+        rotated = img.transpose(transpose)
+        buf = BytesIO()
+        rotated.convert("RGB").save(buf, format="JPEG", quality=92)
+        client.upload_byte_stream(bucket_name, file_name, buf.getvalue(), content_type="image/jpeg")
+        return client.get_download_url(bucket_name, file_name, b2_account.cloudflare_proxy_url, use_proxy=False)
+
+    try:
+        fresh_url = rotate_and_reupload(mi.bucket_name, mi.file_name)
+        fresh_thumb_url = rotate_and_reupload(f"{mi.bucket_name}-thumbs", mi.file_name)
+    except Exception as e:
+        logger.error(f"Rotate failed for {req.file_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Forgatás sikertelen: {e}")
+
+    return {"success": True, "url": fresh_url, "thumb_url": fresh_thumb_url}
 
 @router.get("/api/classify/next")
 def get_next_for_classification(exclude: List[str] = Query(None), db: Session = Depends(get_db)):
@@ -884,6 +938,17 @@ def bulk_classify_manual(req: BulkManualRequest, db: Session = Depends(get_db)):
                 mc.category = None
                 mc.is_deleted = False
                 mi.is_in_sorter = False # It's not in the regular sorter queue anymore, it was manually viewed.
+                # If it was previously moved to trash, move it back out so the bucket
+                # matches the now-restored (non-deleted) state.
+                if b2_account.trash_bucket_name and source_bucket == b2_account.trash_bucket_name:
+                    target_bucket = b2_account.bucket_name
+                    threading.Thread(target=b2_move_background_task, args=(
+                        b2_account.key_id, b2_account.application_key, source_bucket, target_bucket, item.file_name
+                    )).start()
+                    threading.Thread(target=b2_move_background_task, args=(
+                        b2_account.key_id, b2_account.application_key, f"{source_bucket}-thumbs", f"{target_bucket}-thumbs", item.file_name
+                    )).start()
+                    mi.bucket_name = target_bucket
                 continue
 
             if target_action == "delete":

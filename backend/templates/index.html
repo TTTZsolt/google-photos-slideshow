@@ -921,18 +921,36 @@
                     statsHtml += '</div>';
                 }
 
+                let directStatsHtml = '';
+                if (data.direct_file_stats && data.direct_file_stats.total > 0) {
+                    const ds = data.direct_file_stats;
+                    directStatsHtml = '<div class="flex items-center justify-between p-2 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 mb-1">';
+                    directStatsHtml += '<div class="flex items-center gap-2"><i data-lucide="file-image" class="w-4 h-4 text-slate-300"></i><span class="text-xs font-bold text-slate-500">Közvetlenül itt (alkönyvtár nélkül)</span></div>';
+                    directStatsHtml += '<div class="flex items-center gap-1 flex-wrap">';
+                    if (ds.unclassified > 0) {
+                        directStatsHtml += `<span class="bg-slate-100 text-slate-500 text-[10px] font-black px-1.5 py-0.5 rounded border border-slate-200" title="Besorolatlan">${ds.unclassified}</span>`;
+                    }
+                    if (ds.categories && Object.keys(ds.categories).length > 0) {
+                        for (const [cat, count] of Object.entries(ds.categories)) {
+                            directStatsHtml += `<span class="bg-rose-100 text-rose-600 text-[10px] font-black px-1.5 py-0.5 rounded border border-rose-200" title="${cat}">${count} ${cat.charAt(0).toUpperCase()}</span>`;
+                        }
+                    }
+                    directStatsHtml += '</div></div>';
+                }
+
                 if (!data.folders || data.folders.length === 0) {
                     listContainer.innerHTML = `
                         <div class="py-6 text-center">
                             <div class="text-slate-300 text-[10px] font-bold uppercase tracking-wider mb-4">Nincs több almappa</div>
                             ${statsHtml}
+                            ${directStatsHtml}
                         </div>
                     `;
                     return;
                 }
-                
-                if (statsHtml) {
-                    listContainer.innerHTML = statsHtml;
+
+                if (statsHtml || directStatsHtml) {
+                    listContainer.innerHTML = statsHtml + directStatsHtml;
                 }
 
                 data.folders.forEach(f => {

@@ -174,13 +174,15 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
             "sha1": mi.sha1 if mi else None
         })
 
-    # 2. IMMEDIATE DB CLEANUP (Main thread)
-    # This ensures the UI sees the empty state right away
-    for mc, mi in results:
-        db.delete(mc)
-        if mi:
-            db.delete(mi)
-    db.commit()
+    # NOTE: DB rows are intentionally NOT deleted here up-front. The frontend
+    # already clears the Trash view optimistically as soon as this request
+    # succeeds (see trash.html), so there's no UX need to pre-clear the DB -
+    # and doing so here used to mean a crash/hang partway through the
+    # background loop below left the not-yet-processed items with no DB
+    # record at all: physically still in the trash bucket, but invisible to
+    # the app and absent from the tombstone list (so a Takeout re-upload
+    # could resurrect them). Each item's DB rows are now removed only after
+    # its own tombstone + physical delete attempt has run.
 
     # Convert to primitives for background task safety
     key_id = b2_acc.key_id
@@ -195,50 +197,59 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
                 file_id = item["file_id"]
                 current_bucket = item["bucket_name"]
                 sha1 = item.get("sha1")
+                is_virtual = bool(file_id) and str(file_id).startswith('repair-')
 
                 try:
-                    # Skip B2 if ID is virtual
-                    if file_id and str(file_id).startswith('repair-'):
-                        continue
-
-                    # Fetch missing B2 ID (and SHA1, if still missing) if needed
-                    if not file_id or not sha1:
-                        try:
-                            trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
-                            file_info = trash_bucket.get_file_info_by_name(file_name)
-                            if not file_id:
-                                file_id = file_info.id_
-                            if not sha1:
-                                sha1 = getattr(file_info, "content_sha1", None)
-                        except:
-                            pass
-
-                    # Record the tombstone BEFORE the physical delete, so a crash
-                    # mid-way still leaves the "don't re-upload this" record.
-                    if sha1:
-                        try:
-                            existing = tombstone_db.query(DeletedContentHash).filter(DeletedContentHash.sha1 == sha1).first()
-                            if not existing:
-                                tombstone_db.add(DeletedContentHash(sha1=sha1, last_known_file_name=file_name, reason="trash-empty"))
-                                tombstone_db.commit()
-                                append_deleted_sha1_csv(sha1, file_name, "trash-empty")
-                        except Exception as tomb_err:
-                            logger.error(f"Failed to record tombstone for {file_name}: {tomb_err}")
-                            tombstone_db.rollback()
-
-                    # Delete B2 file
-                    if file_id:
-                        try:
-                            client.delete_file_version(current_bucket, file_name, file_id)
-                            # Also try to delete thumbnail
+                    if not is_virtual:
+                        # Fetch missing B2 ID (and SHA1, if still missing) if needed
+                        if not file_id or not sha1:
                             try:
-                                client.delete_file_version(f"{current_bucket}-thumbs", file_name, "")
+                                trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
+                                file_info = trash_bucket.get_file_info_by_name(file_name)
+                                if not file_id:
+                                    file_id = file_info.id_
+                                if not sha1:
+                                    sha1 = getattr(file_info, "content_sha1", None)
                             except:
                                 pass
-                        except Exception as b2_err:
-                            logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
+
+                        # Record the tombstone BEFORE the physical delete, so a crash
+                        # mid-way still leaves the "don't re-upload this" record.
+                        if sha1:
+                            try:
+                                existing = tombstone_db.query(DeletedContentHash).filter(DeletedContentHash.sha1 == sha1).first()
+                                if not existing:
+                                    tombstone_db.add(DeletedContentHash(sha1=sha1, last_known_file_name=file_name, reason="trash-empty"))
+                                    tombstone_db.commit()
+                                    append_deleted_sha1_csv(sha1, file_name, "trash-empty")
+                            except Exception as tomb_err:
+                                logger.error(f"Failed to record tombstone for {file_name}: {tomb_err}")
+                                tombstone_db.rollback()
+
+                        # Delete B2 file
+                        if file_id:
+                            try:
+                                client.delete_file_version(current_bucket, file_name, file_id)
+                                # Also try to delete thumbnail
+                                try:
+                                    client.delete_file_version(f"{current_bucket}-thumbs", file_name, "")
+                                except:
+                                    pass
+                            except Exception as b2_err:
+                                logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
+
+                    # Only now remove the DB rows for this item - after its own
+                    # tombstone + physical delete attempt has actually run.
+                    mc_row = tombstone_db.query(MediaClassification).filter(MediaClassification.file_name == file_name).first()
+                    if mc_row:
+                        tombstone_db.delete(mc_row)
+                    mi_row = tombstone_db.query(MediaItem).filter(MediaItem.file_name == file_name).first()
+                    if mi_row:
+                        tombstone_db.delete(mi_row)
+                    tombstone_db.commit()
                 except Exception as e:
                     logger.error(f"Failed background trash delete for {file_name}: {e}")
+                    tombstone_db.rollback()
         finally:
             tombstone_db.close()
 

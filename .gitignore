@@ -18,6 +18,11 @@ egyeni_torlesi_szempontok.txt
 *.db-shm
 *.sqlite3
 
+# Torolt-tartalom tombstone lista - futasi adat, gepenkent Google Drive-on
+# szinkronizalodik, nem git-en keresztul (a testverprojekt is ezt a fizikai
+# fajlt olvassa, nem egy git-kovetett masolatot)
+deleted_sha1_list.csv
+
 # Sensitive Google Cloud Files
 client_secrets.json
 token.json

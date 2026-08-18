@@ -31,7 +31,13 @@ A backend szerver jellemzően a helyi hálózati **Tableten** fut (Linux/Termux 
    - **Megjelölés**: Ha vetítés közben hibás fotót látsz, kattints a kijelző sarkában lévő **Zászló (Megjelölés)** ikonra. A kép piros keretet kap és bekerül a javítandó sorba.
    - **Javítás**: Ülj le a PC elé, nyisd meg a Dashboard alján lévő **Digitális Labor (Retouch Queue)** panelt. Kattints a kép melletti **Photopea** ikonra. Végezd el a forgatást/javítást a megnyíló képszerkesztőben, majd válaszd a **File -> Save** menüpontot. A javított kép visszakerül a felhőbe, a régi pedig archiválódik.
 
-6. **Fotók válogatása (Szortírozó)**:
+6. **Kategóriák kezelése és leírás az AI számára**:
+   - **Megnyitás**: A Dashboard főoldalán kattints a **"Tags"** (címke ikonos) menüpontra — ez nyitja meg a **Kategóriák Kezelése** oldalt.
+   - **Új kategória**: az "Új Kategória" gombbal hozhatsz létre egyet: megjelenített név (pl. "Család"), ikon, szín, és egy **"Leírás az AI számára"** szövegmező.
+   - **Meglévő szerkesztése**: minden kategória mellett van egy ceruza ("Szerkesztés") gomb, amivel bármikor módosíthatod a nevét, ikonját, színét vagy leírását.
+   - **Miért érdemes kitölteni a leírást**: ez a szöveg közvetlenül bekerül az AI-nak küldött promptba minden egyes kép besorolásakor (l. 9. pont) — tehát ha pontosan leírod, milyen jellegű képek tartozzanak egy-egy kategóriába (pl. Utazás: "külföldi és belföldi nyaralások, repülőtér, szálloda, látványosságok"; Siklóernyő: "siklóernyős felszállás, repülés közbeni felvételek, leszállóhely"), az AI érdemben pontosabban fog besorolni — anélkül, hogy a rendszernek bármi mást kellene tenned. Üresen hagyva a kategória csak a nevéből próbál "kitalálni".
+
+7. **Fotók válogatása (Szortírozó)**:
    - Nyisd meg a Dashboardról (lehetőleg telefonon/tableten) a **Szortírozót**.
    - Egyszerre egy kép jelenik meg nagyban; a jobb alsó sarokban egy kis előnézetben látszik az előzőleg besorolt kép.
    - **Besorolás**: koppints a kép alatt megjelenő kategória-gombok egyikére (ezek a nálad definiált kategóriák, saját ikonnal és színnel) — a kép azonnal átkerül a megfelelő csoportba, és betöltődik a következő.
@@ -41,7 +47,7 @@ A backend szerver jellemzően a helyi hálózati **Tableten** fut (Linux/Termux 
    - **Teljes képernyő**: a jobb felső maximalizáló ikonnal válthatsz zavartalan, teljes képernyős módra.
    - **Szortírozó ürítése**: a jobb felső körkörös nyíl ikonnal kiürítheted a várólistát (a képek megmaradnak, csak a "szortírozandó" jelölés törlődik).
 
-7. **Képek manuális "huzogatással" történő csoportosítása (Mappa Kanban)**:
+8. **Képek manuális "huzogatással" történő csoportosítása (Mappa Kanban)**:
    - **Megnyitás**: A Dashboardon nyisd meg a **Visszamozgató (Mover)** modult, a jobb oldali Mappaböngészőben navigálj a kívánt mappához, majd kattints a mappa neve melletti kis mappa-ikonra ("Képek megnyitása a Kanban nézetben"). Ez megnyitja az adott mappa képeit a Kanban nézetben.
    - **Oszlopok**: A tábla oszlopai balról jobbra: **Törlendő**, **Besorolatlan**, majd egy-egy oszlop minden nálad definiált kategóriának (pl. Család, Utazás, stb.).
    - **Húzás**: Fogd meg egérrel (vagy érintéssel) egy kép kártyáját, és húzd át a kívánt oszlopba. A kép azonnal átkerül a felületen, de **még nincs elmentve** — a módosított képeken egy apró sárga pötty jelenik meg.
@@ -50,7 +56,7 @@ A backend szerver jellemzően a helyi hálózati **Tableten** fut (Linux/Termux 
    - **Mentés**: Ha végeztél a rendezéssel, kattints a **Változások Mentése** gombra. Csak ekkor íródnak a módosítások az adatbázisba, és csak ekkor mozognak a fájlok ténylegesen a Backblaze B2-ben (a háttérben).
    - **Korlát**: Egy mappában egyszerre legfeljebb 100 kép jelenik meg (teljesítmény miatt). Ha ennél több van, egy figyelmeztető sáv jelzi ezt, és mentés után automatikusan betöltődik a következő adag.
 
-8. **AI-alapú előszűrés és -előkészítés**:
+9. **AI-alapú előszűrés és -előkészítés**:
    - **Indítás**: Ugyanabban a **Visszamozgató (Mover)** modulban, a bal oldali panelen:
      - **Szűrés kategóriára**: eldöntheted, hogy csak a még kategorizálatlan képeket vonja be a folyamat, vagy az adott mappa/kategória összes képét.
      - **Válogatási Mód**:
@@ -65,5 +71,5 @@ A backend szerver jellemzően a helyi hálózati **Tableten** fut (Linux/Termux 
      - egyesével elfogadhatod egy kép jobb alsó pipa gombjával,
      - vagy egyszerre az **Összes Elfogadása** / **Összes Elvetése** gombbal döntheted el az összes függőben lévő javaslat sorsát (az elvetett képek besorolatlanként visszakerülnek a kézi szortírozóba).
 
-9. **Lomtár kezelése**:
+10. **Lomtár kezelése**:
    - A szortírozó kártyán látható a törlésre váró képek száma. A **Lomtár Átnézése** gombbal megnyithatod a listát, ahol a nem kívánt fotókat véglegesen törölheted a Backblaze B2 felhőtárhelyről.
