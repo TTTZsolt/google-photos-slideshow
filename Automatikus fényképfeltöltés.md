@@ -1,6 +1,6 @@
 # Automatikus fényképfeltöltés - Tervezési jegyzet
 
-Státusz: **Android: kód elkészült, telepítésre/tesztelésre vár. iPhone: még tervezés alatt.**
+Státusz: **Android: telepítve, tesztelve, élesben működik (vég-a-végig ellenőrizve). iPhone: még tervezés alatt.**
 Utolsó frissítés: 2026-08-18
 
 ## Android — döntések és megvalósítás (2026-08-18)
@@ -10,9 +10,12 @@ Utolsó frissítés: 2026-08-18
 - **Célhely**: közvetlenül a `Kepek02` vödör (**nem** a `forras` — annak, mint korábban tisztáztuk, már nincs aktív szerepe), a `mappazasi_algoritmus_specifikacio.md` szerinti Év/Hónap struktúrával. Mivel a telefon kamera-mappája nem albumokba szervezett, mindig a sima EXIF-alapú (album nélküli) ág érvényesül.
 - **Duplikátum-kezelés**: nem volt szükség külön megoldásra — a cél a `Kepek02`-ben minden fájl a saját Év/Hónap/névtisztított útvonalára kerül, natural key-ként működik (ha véletlenül kétszer töltődne fel ugyanaz, `rclone copyto` egyszerűen felülírja ugyanazon az útvonalon).
 - **Be/kikapcsolható**: egyszerű jelzőfájl (`~/.lumina_auto_upload_enabled`) — a figyelő folyamat (`lumina_watcher.sh`) folyamatosan fut a háttérben (Termux:Boot indítja újraindítás után is), de csak akkor tölt fel, ha a jelzőfájl létezik.
-- **Megvalósítás helye**: `android_auto_feltoltes/` mappa (`lumina_watcher.sh`, `start_auto_feltoltes.sh`, `stop_auto_feltoltes.sh`, `status_auto_feltoltes.sh`, `termux_boot_start_lumina_watcher.sh`, `user_guide.md`).
+- **Automatikus adatbázis-szinkron**: sikeres feltöltés után a script meghívja a tablet (a mindig futó, éles példány) `/b2/sync/1` végpontját, hogy a kép azonnal megjelenjen a Lumina felületén, ne kelljen kézzel Sync-et nyomni. Csak a tabletet értesíti, a PC-s fejlesztői példányt szándékosan nem.
+- **Home-képernyő ikonok (be/ki kapcsolás)**: `android_auto_feltoltes/shortcuts/` — Termux:Widget-kompatibilis wrapper scriptek (`Lumina feltöltés BE.sh`, `Lumina feltöltés KI.sh`, `Lumina állapot.sh`), amiket a `~/.shortcuts/` mappába kell másolni. **Ismert probléma, még megoldatlan**: a Termux:Widget nem látta őket (üres lista) — valószínű ok, hogy a Termux és a kiegészítő appok (Boot/Widget) nem egyeznek meg a telepítési forrásban (F-Droid vs. más), emiatt az Android nem enged megosztott hozzáférést. A felhasználó egyelőre elhalasztotta ennek kivizsgálását, mert a fő funkció (automatikus feltöltés) enélkül is működik, csak a be/kikapcsolás jelenleg SSH-n vagy kézzel, Termux-ban futtatott paranccsal történik.
+- **SSH-hozzáférés a fejlesztéshez**: a telefonon `sshd` fut (port 8022), Termux:Boot-tal automatikusan is elindul újraindítás után (`start-sshd.sh`). A PC nyilvános kulcsa (`claude-code-remote@hul-0185`) hozzá lett adva a telefon `~/.ssh/authorized_keys`-éhez, így a fejlesztés/telepítés jelentős része SSH-n keresztül, közvetlenül a PC-ről történt (fájlmásolás, csomagellenőrzés, script-frissítés, újraindítás).
+- **Megvalósítás helye**: `android_auto_feltoltes/` mappa (`lumina_watcher.sh`, `start_auto_feltoltes.sh`, `stop_auto_feltoltes.sh`, `status_auto_feltoltes.sh`, `termux_boot_start_lumina_watcher.sh`, `start-sshd.sh`, `shortcuts/`, `user_guide.md`).
 - **Ismert korlát**: csak valós idejű figyelés (`inotifywait`) — ha a folyamat leáll, a kimaradt időszak fotóit nem pótolja utólag automatikusan (l. `android_auto_feltoltes/user_guide.md`, "Ismert korlátok").
-- **Még hátra van**: a telepítés és éles tesztelés a te saját Androidodon — ehhez nekem nincs hozzáférésem, a `user_guide.md` lépésről lépésre vezet végig rajta.
+- **Éles teszt eredménye (2026-08-18 este)**: valódi fényképpel tesztelve a teljes lánc - telefon → Termux figyelő → rclone feltöltés B2-re (eredeti + bélyegkép) → automatikus `/b2/sync/1` hívás → a kép azonnal megjelent a Luminában, helyes Év/Hónap mappában, besorolatlan állapotban. **Sikeres, működik.**
 
 ## Cél
 

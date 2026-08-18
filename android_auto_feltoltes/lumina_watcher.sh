@@ -23,6 +23,21 @@ REMOTE_MAIN="b2_storage:Kepek02"
 REMOTE_THUMB="b2_storage:kepek02-thumbs"
 THUMB_SIZE="400x400"
 
+# A mindig futo (tablet) Lumina-peldany, aminek szolnunk kell feltoltes utan,
+# hogy azonnal felvegye az uj kepet az adatbazisaba (kulonben csak fizikailag
+# van fent a B2-n, a Lumina feluleten meg nem latszik, amig valaki kezzel nem
+# szinkronizal). A PC-s fejlesztoi peldanyt szandekosan nem erinti.
+LUMINA_SERVER="100.67.27.6:8000"
+B2_ACCOUNT_ID="1"
+
+trigger_lumina_sync() {
+    if curl -s -m 15 -X POST "http://${LUMINA_SERVER}/b2/sync/${B2_ACCOUNT_ID}" >>"$LOG_FILE" 2>&1; then
+        log "OK (sync): a Lumina ertesitve, adatbazis-szinkron elindult"
+    else
+        log "FIGYELEM: nem sikerult ertesiteni a Luminat (${LUMINA_SERVER}) - a kep fent van a B2-n, de kesobb kezi Sync kellhet"
+    fi
+}
+
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
@@ -111,6 +126,7 @@ upload_photo() {
                 log "HIBA: thumbnail feltoltese sikertelen (${target_path})"
             fi
         fi
+        trigger_lumina_sync
     else
         log "HIBA: feltoltes sikertelen ($filepath)"
     fi

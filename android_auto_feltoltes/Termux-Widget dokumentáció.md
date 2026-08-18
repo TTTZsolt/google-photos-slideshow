@@ -1,0 +1,5 @@
+The Termux:Widget app does not require a launcher activity/icon to function. You can optionally disable the launcher activity if you want and enable it again from the main activity if required.
+
+The launcher activity is an alias for the current main activity of the app which can still be opened after disabling the launcher activity. The main activity can be opened from  Termux app settings  ->  Termux:Widget  ->  Open App  if the option has been implemented in your installed Termux app version. Otherwise, running the  am start com.termux.widget/com.termux.widget.activities.TermuxWidgetMainActivity  command in the Termux app should open it.
+
+Note that on some devices the widgets created on launcher home may not function properly if the launcher activity is disabled and if the widgets have reverted to their default view and show the Open Termux:Widget app to refresh widget message, then opening the launcher/main activity will be necessary to refresh the widgets. Additionally, if the launcher activity has been disabled and the widget is in the default view, then clicking the widget title may crash your launcher.
