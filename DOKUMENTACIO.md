@@ -81,16 +81,36 @@ Bármikor a jövőben, amikor időd engedi, ülj le a Vezérlőpult (PC) elé.
 - A Photopea közli a sikeres mentést. A háttérben a program ekkor fogja a most manipulált adataidat feltölti a B2 rendszerre `-szerkesztett` névvel a végén, miközben biztonsági okokból a régi eredeti fotót átmenti az Edit Archive (kepek01) Backblaze vödörbe!
 - Zárhatod a Photopea-t, a kép lekerül a Labor listájáról. Kész vagy.
 
-### 6. Képek hozzáadása, majd kategorizálása
-Amikor új képeket szeretnél a rendszerhez adni (pld. a Google Photos-ból), először a `forras` vödörbe kell őket feltöltened. Ezt követően a rendszer észleli őket, amint rányomsz a **[Resync]** gombra a B2 Account kártyán.
-A képek kategorizálásához végezd el az alábbi lépéseket:
-1. Nyisd meg a Vezérlőpult (Dashboard) oldalát, és kattints a "Fotó Szortírozó" kártyán lévő **Indítás Mobilon** gombra. Ezt érdemes a telefonodról vagy egy kényelmes érintőképernyős eszközről megtenni.
-2. A megnyíló felületen (Tinder-stílusban) húzz egyet az ujjaddal a képernyőn a megjelenő képen:
+### 6. Képek hozzáadása, majd (opcionális) kategorizálása
+
+**Fontos, 2026-08-18-án pontosított rész**: a rendszernek jelenleg **két útja** van új képek hozzáadására — a kettő különbözik abban, hogy a kép **azonnal vetíthető-e kategória nélkül**, vagy **előbb be kell kerülnie a Szortírozóba**.
+
+#### A) Közvetlen feltöltés a `kepek02`-be (jelenlegi elsődleges út)
+
+Ha a képet olyan eszközzel töltöd fel, ami közvetlenül a `kepek02` vödörbe ír (pl. a `takeout_to_b2_feltoltes.py` Takeout-feltöltő, vagy bármilyen jövőbeli automatikus telefon-feltöltés), a kép **kategória nélkül** kerül be — és ez **nem akadálya a vetítésnek**.
+
+- A diavetítés (`Receiver`) alapértelmezett, szűretlen módja a `kepek02` vödör **összes**, nem törölt képét véletlenszerűen vetíti, **függetlenül attól, van-e kategóriája**. Tehát a frissen feltöltött kép a következő Resync után **azonnal megjelenhet a vetítésben** — nincs kötelező válogatási lépés a láthatósághoz.
+- Kategóriaszűrt vetítéshez (pl. csak "Utazás" mutatása) viszont **igen** kell kategória — az ilyen, kategóriára szűrt vetítés csak a már besorolt képeket veszi figyelembe.
+
+Ha **szeretnéd** utólag kategorizálni ezeket a képeket (hogy pl. kategóriaszűrt vetítésben is megjelenjenek, vagy csak rendet szeretnél), ehhez a **Mover ("Visszamozgató")** eszközt kell használnod:
+1. Nyisd meg a Vezérlőpult **Mover** moduljának Mappaböngészőjét, és válaszd ki a kívánt mappát (vagy hagyd a gyökéren).
+2. A bal oldali panelen válaszd a **"Manuális válogatás"** módot, szűrve "csak kategorizálatlan" képekre (alapértelmezett).
+3. Kattints az **Indítás** gombra — ez a `kepek02`-ben lévő, még kategória nélküli képeket **megjelöli** (`is_in_sorter = True`), **fizikai fájlmozgatás nélkül** (Zero-Move, l. 7. fejezet).
+4. Ezután nyisd meg a **Fotó Szortírozó**t (lásd B) pont, 2-3. lépés) — a megjelölt képek most már ott várnak rád.
+
+#### B) Feltöltés a `forras` vödörbe (a régebbi, ma is támogatott alternatív út)
+
+Ha inkább a `forras` (staging/"beérkező") vödörbe töltöd fel a képeket (pl. `upload_with_thumbs.py` scripttel):
+
+1. Töltsd fel a képeket a `forras` vödörbe, majd nyomd meg a **[Resync]** gombot a B2 Account kártyán.
+2. **Ez a lépés önmagában még nem elég** ahhoz, hogy a kép megjelenjen a Szortírozóban vagy a vetítésben — a `forras`-beli kép egyelőre "láthatatlan", amíg be nem kerül a `kepek02`-be. Ehhez is a fenti **Mover "Manuális válogatás"** lépését kell futtatni (A) pont, 1-3. lépés) — ez veszi észre a `forras`-beli, kategorizálatlan képeket is.
+3. Nyisd meg a Vezérlőpult (Dashboard) oldalát, és kattints a "Fotó Szortírozó" kártyán lévő **Indítás Mobilon** gombra. Ezt érdemes a telefonodról vagy egy kényelmes érintőképernyős eszközről megtenni.
+4. A megnyíló felületen (Tinder-stílusban) húzz egyet az ujjaddal a képernyőn a megjelenő képen:
    - **Jobbra húzás**: Család kategória
    - **Balra húzás**: Utazás kategória
    - **Lefelé húzás**: Állatok / Növények kategória
    - **Felfelé húzás**: Törlés (a kép a B2-tárolón is átkerül a biztonsági `torles-elott` vödörbe)
-3. A besorolt képek az adatbázisban végleges rögzítésre kerülnek és valós időben átkerülnek a fizikai B2 tárolón is az aktív vetítésért felelős `kepek02` vödörbe.
+5. A besorolt képek az adatbázisban végleges rögzítésre kerülnek, és — mivel a `forras` a `kepek02`-től eltérő vödör — a rendszer **fizikailag átmozgatja** a fájlt a `forras`-ból a `kepek02`-be (ellentétben az A) úttal, ahol a kép már eleve a `kepek02`-ben volt, így a besoroláskor nincs fájlmozgatás, csak metaadat-frissítés).
 
 ### 7. Képek újra kategorizálása (Visszamozgató)
 Ha egy korábbi mappát vagy kategória nélküli (régi) képeket szeretnél újra átszortírozni (akár azért, mert hibáztál, akár a régi gyűjteménnyel kezdesz neki a rendszer használatának):
@@ -220,8 +240,8 @@ A szortírozó felületen végzett munka során a rendszer intelligensen dönt a
 *   **Biztonság**: Kevesebb fájlművelet a felhőben kisebb hibaforrást jelent.
 *   **Rendezettség**: A rendszer támogatja az **egyvödrös (Single-Bucket)** felépítést, ahol minden kép a `kepek02`-ben lakik, és csak a lomtár különül el.
 
-## Android Phantom Process Killer �s Termux Wake-Lock
+## Android Phantom Process Killer és Termux Wake-Lock
 
-**Probl�ma:** �jabb Android rendszereken (pl. a t�r�tt kijelz�s headless szerverk�nt m�k�d� tableten) az agressz�v mem�riakezel� (Phantom Process Killer) hajlamos kil�ni a h�tt�rben fut� Termux folyamatokat, k�l�n�sen akkor, ha t�bb er�forr�s-ig�nyes script (pl. a WOL bot �s a K�pn�zeget� backend) fut egyszerre. Ez a K�pn�zeget� v�ratlan le�ll�s�t eredm�nyezheti.
+**Probléma:** Újabb Android rendszereken (pl. a törött kijelzős headless szerverként működő tableten) az agresszív memóriakezelő (Phantom Process Killer) hajlamos kilőni a háttérben futó Termux folyamatokat, különösen akkor, ha több erőforrás-igényes script (pl. a WOL bot és a Képnézegető backend) fut egyszerre. Ez a Képnézegető váratlan leállását eredményezheti.
 
-**Megold�s:** A 	ablet_start_kepnezegeto.bat ind�t�szkriptbe be�p�t�sre ker�lt a 	ermux-wake-lock parancs. Ez a parancs egy �gynevezett wakelockot k�r az Androidt�l a Termux sz�m�ra, amely megakad�lyozza, hogy a rendszer CPU-ja m�lyalv�sba menjen, �s drasztikusan cs�kkenti annak az es�ly�t, hogy az Android kil�je a K�pn�zeget� python backendj�t h�tt�rfolyamatk�nt.
+**Megoldás:** A `tablet_start_kepnezegeto.bat` indítószkriptbe beépítésre került a `termux-wake-lock` parancs. Ez a parancs egy úgynevezett wakelockot kér az Androidtól a Termux számára, amely megakadályozza, hogy a rendszer CPU-ja mélyalvásba menjen, és drasztikusan csökkenti annak az esélyét, hogy az Android kilője a Képnézegető python backendjét háttérfolyamatként.
