@@ -125,12 +125,12 @@ upload_photo() {
         if [ "$already_deleted" = "true" ]; then
             log "KIHAGYVA (tudatosan torolt tartalom, nem allitjuk vissza): $filepath"
             [ -n "$tmp_converted" ] && rm -f "$tmp_converted"
-            return 0
+            return 3
         fi
         if [ "$already_exists" = "true" ]; then
             log "KIHAGYVA (tartalom mar fent van a B2-n): $filepath"
             [ -n "$tmp_converted" ] && rm -f "$tmp_converted"
-            return 0
+            return 2
         fi
     fi
 
@@ -164,18 +164,32 @@ upload_photo() {
 
 upload_and_archive_staging() {
     # A STAGING_DIR-be kezzel (Galeria-megosztassal) betett kep feltoltese.
-    # Sikeres feltoltes utan a fajl TORLODIK a telefonrol (mar fent van a
-    # B2-n), es csak egy sor kerul a STAGING_ARCHIVE_LOG naplofajlba
-    # (fajlnev + idopont) - igy nem foglal duplan helyet a telefonon, de
-    # megmarad a nyoma, hogy mi es mikor lett feltoltve. Sikertelen
-    # feltoltes eseten a fajl a helyen marad, legkozelebb ujra probalkozunk.
+    # Sikeres feltoltes (vagy tudatos kihagyas) utan a fajl TORLODIK a
+    # telefonrol (mar fent van a B2-n, vagy nem is kellett odaraknia), es
+    # csak egy sor kerul a STAGING_ARCHIVE_LOG naplofajlba (idopont, fajlnev,
+    # statusz) - igy nem foglal duplan helyet a telefonon, de megmarad a
+    # nyoma, hogy mi tortent. Valodi hiba eseten a fajl a helyen marad,
+    # legkozelebb ujra probalkozunk.
+    #
+    # upload_photo() visszateresi kodja hatarozza meg a statuszt:
+    #   0 = feltoltve | 2 = skip-mar-fent | 3 = skip-torolve | mas = hiba
     local filepath="$1"
     local filename
     filename=$(basename "$filepath")
 
     mkdir -p "$STAGING_ARCHIVE"
-    if upload_photo "$filepath"; then
-        echo "$(date '+%Y-%m-%d %H:%M:%S'),${filename}" >> "$STAGING_ARCHIVE_LOG"
+    upload_photo "$filepath"
+    local result=$?
+
+    local status=""
+    case "$result" in
+        0) status="feltoltve" ;;
+        2) status="skip-mar-fent" ;;
+        3) status="skip-torolve" ;;
+    esac
+
+    if [ -n "$status" ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S'),${filename},${status}" >> "$STAGING_ARCHIVE_LOG"
         rm -f "$filepath"
     fi
 }
