@@ -59,7 +59,7 @@ váltottunk (`...0005`). Ez technikailag minden vödrödet eléri, de **külön,
    S3-kompatibilis módban pontosan úgy viselkedik, mint az Amazon S3).
 4. Add meg a mezőket:
    - **Account name**: bármilyen, neked beszédes név (pl. "Lumina beérkező")
-   - **Access Key** / **Access Key ID**: `00349a10e344d8c0000000004`
+   - **Access Key** / **Access Key ID**: `00349a10e344d8c0000000005`
    - **Secret Key** / **Secret Access Key**: a KeePass-ből másold be
    - **Server / Endpoint / Custom endpoint**: `s3.eu-central-003.backblazeb2.com`
      - Ha a FolderSync region-t is kér külön mezőben: `eu-central-003`
