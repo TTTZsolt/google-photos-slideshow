@@ -69,6 +69,16 @@ class B2Client:
             if file_version:
                 yield file_version
 
+    def download_bytes(self, bucket_name: str, file_name: str) -> bytes:
+        """Letolti egy fajl teljes tartalmat memoriaba (kis/kozepes fajlokhoz,
+        pl. telefonrol erkezo kepekhez valo)."""
+        import io
+        bucket = self.b2_api.get_bucket_by_name(bucket_name)
+        downloaded = bucket.download_file_by_name(file_name)
+        buf = io.BytesIO()
+        downloaded.save(buf)
+        return buf.getvalue()
+
     def get_download_url(self, bucket_name: str, file_name: str, cloudflare_proxy_url: str = None, valid_duration_seconds: int = 7200, use_proxy: bool = True):
         import urllib.parse
         

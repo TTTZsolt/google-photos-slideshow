@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -38,7 +39,7 @@ def auto_migrate():
             cursor = conn.cursor()
             
             # Add missing B2Account columns
-            for col in ["source_bucket_name", "trash_bucket_name", "archive_bucket_name"]:
+            for col in ["source_bucket_name", "trash_bucket_name", "archive_bucket_name", "incoming_bucket_name"]:
                 try:
                     cursor.execute(f"ALTER TABLE b2_accounts ADD COLUMN {col} TEXT;")
                 except sqlite3.OperationalError:
@@ -53,6 +54,12 @@ def auto_migrate():
             try:
                 cursor.execute("ALTER TABLE media_items ADD COLUMN is_in_sorter BOOLEAN DEFAULT 0;")
                 cursor.execute("CREATE INDEX IF NOT EXISTS ix_media_items_is_in_sorter ON media_items (is_in_sorter);")
+            except sqlite3.OperationalError:
+                pass
+
+            try:
+                cursor.execute("ALTER TABLE media_items ADD COLUMN sha1 TEXT;")
+                cursor.execute("CREATE INDEX IF NOT EXISTS ix_media_items_sha1 ON media_items (sha1);")
             except sqlite3.OperationalError:
                 pass
             
@@ -135,6 +142,33 @@ templates.env.globals.update(version=VERSION)
 @app.get("/")
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "version": VERSION})
+
+# --- Incoming bucket (beerkezo) idoszakos feldolgozasa ---
+# A telefon (pl. FolderSync app, S3-kompatibilis modon) ide szinkronizal
+# nyers kepeket - ezt a hatterfolyamat rendszeresen (5 percenkent) atnezi
+# es feldolgozza (l. backend/incoming_processor.py).
+INCOMING_POLL_INTERVAL_SECONDS = 300
+
+@app.on_event("startup")
+async def start_incoming_bucket_poller():
+    async def poll_loop():
+        from .incoming_processor import process_incoming_bucket
+        while True:
+            try:
+                result = await asyncio.to_thread(process_incoming_bucket)
+                if result.get("processed") or result.get("failed"):
+                    print(f"[incoming poller] {result}")
+            except Exception as e:
+                print(f"[incoming poller] hiba: {e}")
+            await asyncio.sleep(INCOMING_POLL_INTERVAL_SECONDS)
+    asyncio.create_task(poll_loop())
+
+@app.post("/api/incoming/process-now")
+def process_incoming_now():
+    """Manualis kivaltasa a beerkezo vodor feldolgozasanak (teszteleshez -
+    nem kell megvarni az idoszakos futast)."""
+    from .incoming_processor import process_incoming_bucket
+    return process_incoming_bucket()
 
 if __name__ == "__main__":
     import uvicorn

@@ -13,7 +13,7 @@ try:
     cursor = conn.cursor()
     
     # 1. B2Account additions
-    for col in ["source_bucket_name", "trash_bucket_name", "sync_total"]:
+    for col in ["source_bucket_name", "trash_bucket_name", "sync_total", "incoming_bucket_name"]:
         try:
             # Set INTEGER for sync_total, TEXT for others
             col_type = "INTEGER" if col == "sync_total" else "TEXT"
