@@ -22,13 +22,18 @@ Ezeket korábban már megkaptad/elmentetted (KeePass vagy más jelszókezelő):
 | Mező | Érték |
 |---|---|
 | Endpoint / Server | `s3.eu-central-003.backblazeb2.com` |
-| Access Key ID | `00349a10e344d8c0000000004` |
+| Access Key ID | `00349a10e344d8c0000000005` |
 | Secret Access Key | *(a KeePass-edben elmentve — ez itt szándékosan nincs leírva)* |
 | Bucket / vödör neve | `beerkezo` |
 | Region | `eu-central-003` |
 
-Ez a kulcs **kizárólag** a `beerkezo` vödörhöz fér hozzá — a `kepek02`-t,
-`torles-elott`-ot stb. nem éri el, biztonsági okból.
+**2026-08-19-i pontosítás**: eredetileg egy csak a `beerkezo` vödörre
+korlátozott kulcsot hoztunk létre biztonsági okból, de a B2 S3-kompatibilis
+rétege "not entitled" hibával elutasítja a vödör-korlátozott kulcsokkal
+végzett `ListBuckets` műveletet (amit a FolderSync a fiók teszteléséhez/
+böngészéséhez használ) — ezért egy **teljes fiók-hozzáférésű** kulcsra
+váltottunk (`...0005`). Ez technikailag minden vödrödet eléri, de **külön,
+önállóan visszavonható** kulcs marad a fő alkalmazás-kulcsodtól.
 
 ---
 
