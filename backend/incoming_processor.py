@@ -96,6 +96,23 @@ def create_thumbnail_bytes(image_bytes: bytes) -> bytes:
     return out.getvalue()
 
 
+def mark_as_processed_in_incoming(client: B2Client, bucket_name: str, file_name: str, file_id: str):
+    """A beerkezo-beli eredetit 0 bajtos helyjelolore cimezi (nem torli teljesen
+    a nevet) - igy a telefon-oldali szinkron-app (meretellenorzes nelkul
+    beallitva) a nevet latva 'mar szinkronizalt'-nak tekinti, es nem tolti
+    fel ujra vegtelenul ugyanazt a fajlt minden szinkronnal. Csak nevenkent
+    egyszer fut le (torles + ures ujrafeltoltes), utana a nev mindig letezik,
+    0 bajttal - elhanyagolhato tarhelykoltseg."""
+    try:
+        client.delete_file_version(bucket_name, file_name, file_id)
+    except Exception as e:
+        logger.warning(f"Incoming: nem sikerult torolni az eredetit ({file_name}): {e}")
+    try:
+        client.upload_byte_stream(bucket_name, file_name, b"", content_type="application/octet-stream")
+    except Exception as e:
+        logger.warning(f"Incoming: nem sikerult 0 bajtos helyjelolot feltolteni ({file_name}): {e}")
+
+
 def compute_target_path(dt: datetime, filename: str) -> str:
     """A specifikacio "nincs album" aga: {ev}/{honap}/{tisztitott nev}{kiterjesztes}."""
     name, ext = os.path.splitext(filename)
@@ -136,6 +153,11 @@ def process_incoming_bucket() -> dict:
                 logger.warning(f"Incoming: nem tamogatott kiterjesztes, kihagyva: {file_name}")
                 continue
 
+            if file_version.size == 0:
+                # Sajat 0 bajtos helyjelolonk (l. mark_as_processed_in_incoming) -
+                # mar korabban feldolgoztuk, csendben atugorjuk.
+                continue
+
             try:
                 data = client.download_bytes(incoming_bucket, file_name)
             except Exception as e:
@@ -156,10 +178,7 @@ def process_incoming_bucket() -> dict:
             if already_exists or already_deleted:
                 reason = "mar-fent-van" if already_exists else "szandekosan-torolve"
                 logger.info(f"Incoming: kihagyva ({reason}): {file_name}")
-                try:
-                    client.delete_file_version(incoming_bucket, file_name, file_version.id_)
-                except Exception as e:
-                    logger.warning(f"Incoming: nem sikerult torolni a beerkezo-bol ({file_name}): {e}")
+                mark_as_processed_in_incoming(client, incoming_bucket, file_name, file_version.id_)
                 skipped += 1
                 continue
 
@@ -217,10 +236,7 @@ def process_incoming_bucket() -> dict:
 
             db.commit()
 
-            try:
-                client.delete_file_version(incoming_bucket, file_name, file_version.id_)
-            except Exception as e:
-                logger.warning(f"Incoming: nem sikerult torolni a beerkezo-bol feltoltes utan ({file_name}): {e}")
+            mark_as_processed_in_incoming(client, incoming_bucket, file_name, file_version.id_)
 
             logger.info(f"Incoming: feldolgozva {file_name} -> {target_bucket}/{target_path}")
             processed += 1
