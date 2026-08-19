@@ -1,1 +1,0 @@
-Dynamic shortcuts will normally show when long holding the Termux:Widget app launcher icon and in launcher searches results. To create dynamic shortcuts, put desired scripts/binaries in  ~/.termux/widget/dynamic_shortcuts  with the Termux app and then click the create shortcuts button.

@@ -1,12 +1,13 @@
-# FolderSync beállítása — Android automatikus fényképfeltöltés (B2 útvonal)
+# FolderSync beállítása — Android automatikus fényképfeltöltés
 
-Ez az útmutató a **jelenlegi, ajánlott** módszert írja le: egy kész, Play Áruház-os
-app (FolderSync) szinkronizálja a telefon kamera-mappáját közvetlenül a B2-re,
-**eredeti fájlnévvel, feldolgozás nélkül** — a Lumina szerver dolgozza fel
-utólag, automatikusan (l. `backend/incoming_processor.py`).
+Ez az útmutató az **egyetlen, aktuális** módszert írja le: egy kész, Play
+Áruház-os app (FolderSync) szinkronizálja a telefon kamera-mappáját
+közvetlenül a B2-re, **eredeti fájlnévvel, feldolgozás nélkül** — a Lumina
+szerver dolgozza fel utólag, automatikusan (l. `backend/incoming_processor.py`).
 
-**Ez lecseréli** a korábbi, Termux-alapú megoldást (`user_guide.md` a
-mappában) — nincs szükség Termux-ra, SSH-ra, csomagtelepítésre a telefonon.
+Nincs szükség Termux-ra, SSH-ra, csomagtelepítésre a telefonon — egy korábbi,
+Termux-alapú próbálkozást ez a megoldás véglegesen leváltott és eltávolított
+(2026-08-19).
 
 **Fontos**: ez a leírás a FolderSync egy adott verziójának felülete alapján
 készült — a pontos menüpont-elnevezések app-frissítés után kicsit eltérhetnek,
@@ -88,6 +89,14 @@ váltottunk (`...0005`). Ez technikailag minden vödrödet eléri, de **külön,
      szerver törli majd a `beerkezo`-ból, miután feldolgozta — így ha a
      szerver-oldali feldolgozás valamiért elakadna, a fotó akkor is megvan
      a telefonon, nem vész el).
+   - **"Check file size" / "Compare by size"**: **KAPCSOLD KI** (fontos!) —
+     a szerver a feldolgozás után egy azonos nevű, de 0 bájtos
+     helyjelölőre cseréli a fájlt a `beerkezo`-ban (l. lent, "Végtelen
+     újra-feltöltés elleni védelem" a fő tervezési jegyzetben). Ha a
+     FolderSync a fájlméretet is vizsgálná, ezt "megváltozott" fájlnak
+     látná, és minden szinkronnál újra feltöltené ugyanazt a képet —
+     méretellenőrzés nélkül csak a fájlnév létezését nézi, és helyesen
+     "már szinkronizált"-nak tekinti.
    - **"Overwrite files"**: mindegy, mert egyedi fájlnevek lesznek, de
      nyugodtan hagyhatod bekapcsolva.
    - **Fájltípus-szűrés** (ha van ilyen opció): állítsd be, hogy csak
@@ -126,7 +135,16 @@ ugyanahhoz az S3-fiókhoz):
 1. **Local folder**: egy dedikált mappa, pl. `Pictures/LuminaFeltoltes`
    (ha még nem létezik, hozd létre egyszer a Fájlkezelőben).
 2. **Remote folder**: ugyanaz a `beerkezo` vödör, mint az elsőnél.
-3. **Sync type**: ugyanúgy "Upload only", "Delete source files" kikapcsolva.
+3. **Sync type**: ugyanúgy "Upload only". Két beállítás azonban **eltér**
+   az első (kamera-mappás) mappapártól:
+   - **"Check file size" / "Compare by size"**: itt is **KAPCSOLD KI**,
+     ugyanazért az okért, mint az 5. lépésben fent.
+   - **"Delete source files after sync"**: itt **KAPCSOLD BE** (az első
+     mappapárnál ez ki volt kapcsolva!) — mivel ide a felhasználó saját
+     kezűleg másolja be a képeket a Galériából, a szinkron utáni törlés
+     biztosítja, hogy a `Pictures/LuminaFeltoltes` mappa kiürüljön, és a
+     kép ne tárolódjon feleslegesen kétszer a telefonon (egyszer az
+     eredeti helyén, egyszer itt).
 4. **Ütemezés**: ennél nyugodtan választhatsz **ritkább vagy csak kézi**
    indítást — nem kell folyamatosan futnia, csak amikor ténylegesen
    tettél bele valamit.
