@@ -1,4 +1,10 @@
-# Android automatikus fényképfeltöltés — Beüzemelési útmutató
+# Android automatikus fényképfeltöltés — Beüzemelési útmutató (Termux, LEGACY)
+
+> ⚠️ **2026-08-19-től ez a módszer elavult.** A jelenlegi, ajánlott megoldás
+> nem igényel Termux-ot/SSH-t/scripteket a telefonon — egy kész, Play
+> Áruház-os app (FolderSync) elég, a feldolgozás a szerveren, automatikusan
+> történik. L. `folder_sync_setup_utmutato.md` ebben a mappában. Ezt a
+> Termux-alapú leírást csak referenciának/tartaléknak hagytuk meg.
 
 ## Mit csinál
 
