@@ -101,7 +101,46 @@ Ez a kulcs **kizárólag** a `beerkezo` vödörhöz fér hozzá — a `kepek02`-
 
 ---
 
-## 5. Első teszt
+## 5. Ki/bekapcsolás és utólagos (régebbi) képek feltöltése
+
+### 5.1 Realtime feltöltés ki/bekapcsolása
+
+Nincs szükség egyedi kapcsoló-fájlra vagy parancsra — ez **magában a
+FolderSync appban** van:
+- A mappapár melletti kapcsolóval, vagy a mappapárt hosszan nyomva
+  **"Disable" / "Enable"** — ezzel csak azt a konkrét szinkront
+  kapcsolod ki/be.
+- Sok verzióban van egy **globális szünet-gomb** is (a főképernyőn vagy az
+  értesítési sávban), ami minden szinkront egyszerre felfüggeszt.
+
+### 5.2 Régebbi/kihagyott képek utólagos feltöltése
+
+Hozz létre egy **második mappapárt** (ismételd meg a 4. fejezet lépéseit,
+ugyanahhoz az S3-fiókhoz):
+
+1. **Local folder**: egy dedikált mappa, pl. `Pictures/LuminaFeltoltes`
+   (ha még nem létezik, hozd létre egyszer a Fájlkezelőben).
+2. **Remote folder**: ugyanaz a `beerkezo` vödör, mint az elsőnél.
+3. **Sync type**: ugyanúgy "Upload only", "Delete source files" kikapcsolva.
+4. **Ütemezés**: ennél nyugodtan választhatsz **ritkább vagy csak kézi**
+   indítást — nem kell folyamatosan futnia, csak amikor ténylegesen
+   tettél bele valamit.
+
+**Használat, amikor egy régebbi/kihagyott képet szeretnél feltölteni:**
+1. Nyisd meg a telefon **Galéria/Fotók** appját, válaszd ki (akár többes
+   kijelöléssel) a feltöltendő képe(ke)t.
+2. **Megosztás → "Mentés eszközre" / "Másolás ide"** → válaszd a
+   `Pictures/LuminaFeltoltes` mappát.
+3. Nyisd meg a FolderSync-et, és nyomd meg ennél a mappapárnál a
+   **"Sync now"** gombot (nem kell megvárnod az ütemezést).
+
+A szerver ugyanazzal a logikával dolgozza fel, mint a kamera-mappából
+érkező képeket — a `beerkezo` vödör nem tesz különbséget aközött, melyik
+mappapár tette oda a fájlt.
+
+---
+
+## 6. Első teszt
 
 1. Nyomd meg a mappapár melletti **"Sync now" / "Szinkronizálás most"**
    gombot (ne várj az ütemezésre).
@@ -119,7 +158,7 @@ Ez a kulcs **kizárólag** a `beerkezo` vödörhöz fér hozzá — a `kepek02`-
 
 ---
 
-## 6. Hibaelhárítás
+## 7. Hibaelhárítás
 
 - **"Connection failed" / nem sikerül csatlakozni a fióknál**: ellenőrizd,
   hogy pontosan másoltad-e be az Access Key ID-t és a Secret Key-t (nincs
