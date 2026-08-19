@@ -8,6 +8,16 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.0] - Android automatikus feltöltés újratervezése: FolderSync + beérkező vödör (2026-08-19)
+
+- **A V16.2.2-es Termux-alapú megoldás teljes leváltása**: a korábbi, saját `inotify`-figyelő szkriptre és SSH-hozzáférésre épülő megoldás telepítése/karbantartása túl bonyolult lett volna egy nem technikai felhasználó számára, ha ez egyszer termékké válna. Helyette a telefon oldalán mostantól egy kész, Play Áruház-os S3-kompatibilis szinkron-app (**FolderSync**) elég — nincs Termux, nincs SSH, nincs csomagtelepítés a telefonon.
+- **Új, dedikált B2-vödör (`beerkezo`)**: a FolderSync ide szinkronizálja a telefon kamera-mappáját, eredeti fájlnévvel, feldolgozás nélkül.
+- **Új szerver-oldali automatikus feldolgozó** (`backend/incoming_processor.py`): a Lumina backend 5 percenként (vagy a `POST /api/incoming/process-now` végponttal azonnal) átnézi a `beerkezo` vödröt, SHA1 alapján dedup/tombstone-ellenőrzést végez, EXIF-dátum alapján Év/Hónap útvonalra rendez, bélyegképet generál, és feltölti a `kepek02`-be az adatbázis-rekord közvetlen létrehozásával.
+- **Végtelen újra-feltöltés elleni védelem**: feldolgozás után az eredeti fájlt a `beerkezo`-ban nem töröljük teljesen, hanem egy azonos nevű, 0 bájtos helyjelölőre cseréljük — a FolderSync (méret-ellenőrzés nélkül beállítva) így "már szinkronizált"-nak látja, és nem tölti fel újra minden alkalommal ugyanazt a képet.
+- **Hibafeltárás és javítás (élő tesztelés közben)**: kiderült, hogy a régi Termux-folyamat a telefonon a háttérben (Termux:Boot-tal) továbbra is futott, és versenyhelyzetben volt az új FolderSync-megoldással - a saját (elavult) logikájával "elnyelte" az új fotókat, mielőtt a FolderSync szinkronizálhatta volna őket. Megoldás: a telefonon leállítottuk a futó folyamatot, töröltük a Termux:Boot indítószkriptjét és a `~/lumina_auto_feltoltes/` mappát, valamint a `beerkezo` vödörből a régi megoldás maradvány-fájljait (`feltoltve/` mappa, `feltoltott_kepek.csv`, minden verzióval együtt).
+- **Dokumentáció**: a régi Termux-alapú útmutatók és szkriptek (`android_auto_feltoltes/`) törölve, az `Automatikus fényképfeltöltés.md` tervezési jegyzet és a `folder_sync_setup_utmutato.md` frissítve az új architektúrának megfelelően, kiegészítve a FolderSync két mappapárjának (kamera-mappa + kézi/régebbi képek) szükséges beállításaival (fájlméret-ellenőrzés kikapcsolása, szinkron utáni törlés).
+- **Éles teszt eredménye**: több körben, valódi fotókkal tesztelve - egyaránt automatikusan (a szerver 5 perces időzítője által elkapva) és kézzel kiváltva -, a régi Termux-folyamat eltávolítása után a versenyhelyzet megszűnt, minden szinkronizált fájl helyesen célba ért a `kepek02`-ben, a duplikátum-szűrés (SHA1) is helyesen működött.
+
 ## [V16.2.2] - Android automatikus fényképfeltöltés (2026-08-18)
 
 - **Új eszköz** (`android_auto_feltoltes/`): Termux + `inotify-tools` alapú háttérfolyamat a telefonon, ami a kamera-mappát figyeli, és minden új fotót közvetlenül a `Kepek02` vödörbe tölt fel (EXIF-dátum alapú Év/Hónap struktúra), be/kikapcsolható jelzőfájllal.
