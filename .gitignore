@@ -8,6 +8,7 @@ ENV/
 
 # Secrets
 .env
+.env.*
 
 # Local user preferences
 egyeni_torlesi_szempontok.txt
