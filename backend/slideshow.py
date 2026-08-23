@@ -20,6 +20,14 @@ class SlideshowController:
         self.active_sessions = {} # {session_id: {"last_seen": float, "ip": str, "user_agent": str, "device_name": str, "folder": str, "category": str}}
         self.killed_sessions = set() # {session_id}
 
+    def _get_last_month_range(self):
+        """Returns (start, end) datetimes covering the rolling last 30 days
+        (start inclusive, end exclusive), relative to now."""
+        from datetime import datetime, timedelta
+        end = datetime.now()
+        start = end - timedelta(days=30)
+        return start, end
+
     def _get_b2_client(self, db: Session, account_id: int):
         if account_id not in self._b2_clients:
             b2_acc = db.query(B2Account).filter(B2Account.id == account_id).first()
@@ -175,9 +183,9 @@ class SlideshowController:
         
         return sorted(list(seen_folders))
 
-    def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default"):
+    def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default", last_month: bool = False):
         """Fetches a random image, filtered by folder and category. Uses a 'deck' system per session to avoid repetition."""
-        
+
         # Get active account - Prefer one that is already 'Finished' sync
         b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
         if not b2_acc:
@@ -191,11 +199,13 @@ class SlideshowController:
         if folder_prefix and not folder_prefix.endswith('/'):
             folder_prefix += '/'
 
-        deck_key = (session_id, folder_prefix, category)
+        deck_key = (session_id, folder_prefix, category, last_month)
 
         # Initialize or refill deck if empty
         if deck_key not in self._decks or not self._decks[deck_key]:
             logger.info(f"Session '{session_id}': Deck empty for key {deck_key}. Refilling...")
+            last_month_start, last_month_end = self._get_last_month_range() if last_month else (None, None)
+
             if category:
                 # LEVEL 2 INSTANT VISIBILITY: Build deck from classifications table
                 query = db.query(MediaClassification.file_name).filter(
@@ -204,9 +214,13 @@ class SlideshowController:
                 )
                 if folder_prefix:
                     query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
-                
+                if last_month:
+                    query = query.join(MediaItem, MediaItem.file_name == MediaClassification.file_name).filter(
+                        MediaItem.creation_time >= last_month_start, MediaItem.creation_time < last_month_end
+                    )
+
                 all_items = [row[0] for row in query.all()]
-                
+
                 # V14.1 fallback: Try without accents if empty
                 if not all_items:
                     alt_category = category.lower().replace('ó', 'o').replace('ő', 'o').replace('ö', 'o').replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ú', 'u').replace('ü', 'u')
@@ -218,6 +232,10 @@ class SlideshowController:
                         )
                         if folder_prefix:
                             query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
+                        if last_month:
+                            query = query.join(MediaItem, MediaItem.file_name == MediaClassification.file_name).filter(
+                                MediaItem.creation_time >= last_month_start, MediaItem.creation_time < last_month_end
+                            )
                         all_items = [row[0] for row in query.all()]
 
                 logger.info(f"Building category deck for '{category}'. Found {len(all_items)} items in DB.")
@@ -231,7 +249,9 @@ class SlideshowController:
                 )
                 if folder_prefix:
                     query = query.filter(MediaItem.file_name.like(f"{folder_prefix}%"))
-                
+                if last_month:
+                    query = query.filter(MediaItem.creation_time >= last_month_start, MediaItem.creation_time < last_month_end)
+
                 all_items = [row[0] for row in query.all()]
                 logger.info(f"Building folder deck for '{folder_prefix or 'Root'}'. Found {len(all_items)} items in DB.")
             

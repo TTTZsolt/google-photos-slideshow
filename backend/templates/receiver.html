@@ -422,6 +422,13 @@
                         <i data-lucide="shuffle" class="w-4 h-4 group-hover:rotate-180 transition-transform duration-500"></i>
                         Shuffle All Photos
                     </button>
+
+                    <!-- Last Month Shuffle Button -->
+                    <button onclick="startSlideshow(null, true)"
+                        class="relative z-10 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg shrink-0 group h-12 w-3/4 -mt-3">
+                        <i data-lucide="calendar-days" class="w-4 h-4 group-hover:rotate-12 transition-transform duration-500"></i>
+                        Pictures of Last Month
+                    </button>
                 </div>
 
             <!-- Path Breadcrumbs -->
@@ -539,6 +546,7 @@
         let config = {
             folder: null,
             category: null,
+            lastMonth: false,
             intervalMs: 240000,
             showFilename: false,
             showCategory: true,
@@ -601,6 +609,7 @@
             if (urlParams.has('folder') || urlParams.has('start_global')) {
                 config.folder = urlParams.get('folder') || null;
                 config.category = urlParams.get('category') || null;
+                config.lastMonth = urlParams.get('last_month') === 'true';
                 config.intervalMs = parseInt(urlParams.get('interval') || 240) * 1000;
                 config.showFilename = urlParams.get('show_filename') === 'true';
                 config.showCategory = urlParams.get('show_category') !== 'false';
@@ -723,9 +732,10 @@
             breadcrumbContainer.scrollLeft = breadcrumbContainer.scrollWidth;
         }
 
-        function startSlideshow(folderPath) {
+        function startSlideshow(folderPath, lastMonth) {
             config.folder = folderPath;
             config.category = document.getElementById('setupCategory').value || null;
+            config.lastMonth = !!lastMonth;
             config.intervalMs = parseInt(document.getElementById('setupInterval').value || 240) * 1000;
             config.showFilename = document.getElementById('setupShowFilename').checked;
             config.showCategory = document.getElementById('setupShowCategory') ? document.getElementById('setupShowCategory').checked : true;
@@ -753,6 +763,7 @@
                 + '?start_global=true'
                 + (config.folder ? '&folder=' + encodeURIComponent(config.folder) : '')
                 + (config.category ? '&category=' + encodeURIComponent(config.category) : '')
+                + (config.lastMonth ? '&last_month=true' : '')
                 + `&interval=${config.intervalMs / 1000}`
                 + `&show_filename=${config.showFilename}`
                 + `&show_category=${config.showCategory}`;
@@ -899,6 +910,7 @@
             const params = new URLSearchParams();
             if (config.folder) params.append("folder", config.folder);
             if (config.category) params.append("category", config.category);
+            if (config.lastMonth) params.append("last_month", "true");
             if (config.intervalMs) params.append("interval", config.intervalMs / 1000);
             if (config.showFilename !== undefined) params.append("show_filename", config.showFilename);
             if (config.showCategory !== undefined) params.append("show_category", config.showCategory);
@@ -945,6 +957,9 @@
                 }
                 if (config.category) {
                     queryParams.append('category', config.category);
+                }
+                if (config.lastMonth) {
+                    queryParams.append('last_month', 'true');
                 }
 
                 const response = await fetch(`/api/media/random?${queryParams.toString()}`);
