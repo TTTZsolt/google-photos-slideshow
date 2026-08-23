@@ -8,6 +8,12 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.1] - "Pictures of Last Month" gomb a Slideshow-hoz (2026-08-23)
+
+- **Új Slideshow indítási mód**: a Slideshow Setup oldalon (Shuffle All Photos gomb alatt) egy új, "Pictures of Last Month" gomb indítja el a vetítést, ami kizárólag az utolsó 30 nap (gördülő időablak, nem naptári hónap) fényképeit játssza le véletlenszerű sorrendben.
+- **Backend**: a `/api/media/random` végpont és a `SlideshowController.get_random_image` egy új `last_month` paramétert fogad, ami a `MediaItem.creation_time` (EXIF-dátum) alapján szűr; a szűrt paklinak (deck) saját kulcsa van, hogy ne keveredjen a mappa/kategória szerinti válogatással.
+- **Konzisztencia**: a szűrő állapota átmegy az URL-en (megosztás/újratöltés), a lekérdezéseken és a Chromecast-küldésen (`initiateCast`) is.
+
 ## [V16.3.0] - Android automatikus feltöltés újratervezése: FolderSync + beérkező vödör (2026-08-19)
 
 - **A V16.2.2-es Termux-alapú megoldás teljes leváltása**: a korábbi, saját `inotify`-figyelő szkriptre és SSH-hozzáférésre épülő megoldás telepítése/karbantartása túl bonyolult lett volna egy nem technikai felhasználó számára, ha ez egyszer termékké válna. Helyette a telefon oldalán mostantól egy kész, Play Áruház-os S3-kompatibilis szinkron-app (**FolderSync**) elég — nincs Termux, nincs SSH, nincs csomagtelepítés a telefonon.
@@ -159,6 +165,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.1 | `d045c65` | "Pictures of Last Month" gomb a Slideshow-hoz - utolsó 30 nap véletlenszerű lejátszása          |
 | V16.2.1 | `0beeea7` | Dokumentáció frissítése: forras vödör szerepének pontosítása (DOKUMENTACIO.md, README.md)     |
 | V16.2.1 | `2feedbe` | Zero-Move a Lomtárból visszaállításnál: kepek02-be közvetlenül, forras kihagyásával           |
 | V16.1.0 | `a151660` | Fix: Az AI hibaállapotok megtartása az adatbázisban a részletes hibaüzenetek és hiba banner megjelenítéséhez |
