@@ -466,11 +466,11 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
         from ..utils.ai_service import analyze_image_for_sorting
         from ..utils.b2_client import B2Client
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
-        if not b2_account: 
+        if not b2_account:
             bulk_reverse_status["is_running"] = False
             return
         client = B2Client(b2_account.key_id, b2_account.application_key)
-        
+
         categories = db.query(CategoryDefinition).all()
         # Separate normal categories and system delete rules
         delete_rules = ""
@@ -480,101 +480,129 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                 delete_rules = c.description or ""
             else:
                 cat_details[c.name] = c.description or ""
-        
+
         # Combine system delete rules with custom rules from request
         combined_rules = delete_rules
         if custom_rules:
             combined_rules = f"{delete_rules}\n{custom_rules}".strip()
-        
+
         total_imgs = len(filenames)
-        for idx, fname in enumerate(filenames):
+
+        # Rate-limiting: images are processed concurrently (GEMINI_MAX_CONCURRENCY workers,
+        # default 1 = old sequential behavior), but every worker shares this single pacer so
+        # calls are never started more often in aggregate than the configured RPM allows.
+        # Free-tier Gemini defaults to 12 RPM. A paid/billed API key supports a much higher
+        # RPM - set GEMINI_RPM_LIMIT env var to raise it (e.g. GEMINI_RPM_LIMIT=900).
+        rpm_limit = int(os.environ.get("GEMINI_RPM_LIMIT", "12"))
+        min_interval = (60.0 / rpm_limit) if rpm_limit > 0 else 0.0
+        max_concurrency = max(1, int(os.environ.get("GEMINI_MAX_CONCURRENCY", "1")))
+        rate_lock = threading.Lock()
+        next_call_time = [0.0]
+        progress_lock = threading.Lock()
+
+        def wait_for_rate_slot():
+            if min_interval <= 0:
+                return
+            with rate_lock:
+                now = time.monotonic()
+                wait = next_call_time[0] - now
+                if wait > 0:
+                    time.sleep(wait)
+                    now = time.monotonic()
+                next_call_time[0] = now + min_interval
+
+        def classify_one(fname):
             if not bulk_reverse_status.get("is_running", False):
-                break
-                
-            # 1. Rate-limiting: wait between images to stay under the configured RPM.
-            # Free-tier Gemini defaults to 12 RPM (~5.5s buffer). A paid/billed API key
-            # supports a much higher RPM - set GEMINI_RPM_LIMIT env var to raise it
-            # (e.g. GEMINI_RPM_LIMIT=1000 for an effectively negligible delay).
-            if idx > 0:
-                rpm_limit = int(os.environ.get("GEMINI_RPM_LIMIT", "12"))
-                if rpm_limit > 0:
-                    time.sleep(60.0 / rpm_limit)
-                
-            mi = db.query(MediaItem).filter(MediaItem.file_name == fname, MediaItem.is_in_sorter == True).first()
-            if not mi: continue
-            
-            bulk_reverse_status["current"] = idx + 1
-            bulk_reverse_status["message"] = f"AI elemzés folyamatban: {idx+1}/{total_imgs} kép..."
-            
-            # Quota retry loop
-            retry_count = 0
-            while True:
-                try:
-                    thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
-                    suggested, used_model = analyze_image_for_sorting(thumb_url, cat_details, combined_rules, ai_model)
-                    
-                    # If a fallback happened (the used model is different than requested), note it in status
-                    if used_model != ai_model:
-                        bulk_reverse_status["fallback_model_used"] = used_model
-                    
-                    if ai_mode == "ai-delete-only" and suggested != "delete":
-                        suggested = None
-                        
-                    mc = db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
-                    if not mc:
-                        mc = MediaClassification(file_name=fname)
-                        db.add(mc)
-                    
-                    if suggested:
-                        mc.ai_suggested_category = suggested
-                        mc.ai_status = "pending"
-                        mc.ai_error = None
-                    else:
-                        mc.ai_status = None
-                        mc.ai_error = None
-                    
-                    db.commit()
-                    break # Success, proceed to next image
-                except Exception as item_err:
-                    err_msg = str(item_err).lower()
-                    is_quota = "429" in err_msg or "quota" in err_msg or "resource_exhausted" in err_msg or "rate limit" in err_msg
-                    
-                    if is_quota:
-                        if retry_count == 0:
-                            retry_count += 1
-                            logger.warning(f"AI Quota limit hit for {fname}. Sleeping 2 minutes for retry...")
-                            bulk_reverse_status["message"] = "Percen belüli AI limit elérve. Várok 2 percet az újraindításig..."
-                            time.sleep(120)
-                            continue # Retry same image
-                        else:
-                            logger.error(f"AI Daily Quota limit hit for {fname}. Pausing classification until tomorrow.")
-                            
-                            now = datetime.now()
-                            tomorrow = datetime(now.year, now.month, now.day) + timedelta(days=1)
-                            tomorrow_8am = tomorrow.replace(hour=8, minute=0, second=0)
-                            sleep_seconds = int((tomorrow_8am - now).total_seconds())
-                            
-                            if sleep_seconds < 3600:
-                                sleep_seconds = 3600
-                            elif sleep_seconds > 86400:
-                                sleep_seconds = 86400
-                            
-                            bulk_reverse_status["message"] = f"A napi AI limit elfogyott. Az elemzés szünetel holnap reggelig (várakozás: {sleep_seconds // 3600} óra)..."
-                            time.sleep(sleep_seconds)
-                            retry_count = 0
-                            continue # Retry same image after tomorrow's sleep
-                    else:
-                        # Non-quota error, save failure and continue
-                        logger.error(f"Failed AI classification for {fname}: {item_err}")
-                        mc = db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
+                return
+            # Each concurrent worker needs its own DB session - SQLAlchemy sessions
+            # are not thread-safe to share (same pattern as the B2 background threads).
+            item_db = SessionLocal()
+            try:
+                mi = item_db.query(MediaItem).filter(MediaItem.file_name == fname, MediaItem.is_in_sorter == True).first()
+                if not mi:
+                    return
+
+                # Quota retry loop
+                retry_count = 0
+                while True:
+                    wait_for_rate_slot()
+                    try:
+                        thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
+                        suggested, used_model = analyze_image_for_sorting(thumb_url, cat_details, combined_rules, ai_model)
+
+                        # If a fallback happened (the used model is different than requested), note it in status
+                        if used_model != ai_model:
+                            bulk_reverse_status["fallback_model_used"] = used_model
+
+                        if ai_mode == "ai-delete-only" and suggested != "delete":
+                            suggested = None
+
+                        mc = item_db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
                         if not mc:
                             mc = MediaClassification(file_name=fname)
-                            db.add(mc)
-                        mc.ai_status = "failed"
-                        mc.ai_error = str(item_err)
-                        db.commit()
-                        break # Stop retrying, proceed to next image
-            
+                            item_db.add(mc)
+
+                        if suggested:
+                            mc.ai_suggested_category = suggested
+                            mc.ai_status = "pending"
+                            mc.ai_error = None
+                        else:
+                            mc.ai_status = None
+                            mc.ai_error = None
+
+                        item_db.commit()
+                        break # Success, proceed to next image
+                    except Exception as item_err:
+                        err_msg = str(item_err).lower()
+                        is_quota = "429" in err_msg or "quota" in err_msg or "resource_exhausted" in err_msg or "rate limit" in err_msg
+
+                        if is_quota:
+                            if retry_count == 0:
+                                retry_count += 1
+                                logger.warning(f"AI Quota limit hit for {fname}. Sleeping 2 minutes for retry...")
+                                bulk_reverse_status["message"] = "Percen belüli AI limit elérve. Várok 2 percet az újraindításig..."
+                                time.sleep(120)
+                                continue # Retry same image
+                            else:
+                                logger.error(f"AI Daily Quota limit hit for {fname}. Pausing classification until tomorrow.")
+
+                                now = datetime.now()
+                                tomorrow = datetime(now.year, now.month, now.day) + timedelta(days=1)
+                                tomorrow_8am = tomorrow.replace(hour=8, minute=0, second=0)
+                                sleep_seconds = int((tomorrow_8am - now).total_seconds())
+
+                                if sleep_seconds < 3600:
+                                    sleep_seconds = 3600
+                                elif sleep_seconds > 86400:
+                                    sleep_seconds = 86400
+
+                                bulk_reverse_status["message"] = f"A napi AI limit elfogyott. Az elemzés szünetel holnap reggelig (várakozás: {sleep_seconds // 3600} óra)..."
+                                time.sleep(sleep_seconds)
+                                retry_count = 0
+                                continue # Retry same image after tomorrow's sleep
+                        else:
+                            # Non-quota error, save failure and continue
+                            logger.error(f"Failed AI classification for {fname}: {item_err}")
+                            mc = item_db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
+                            if not mc:
+                                mc = MediaClassification(file_name=fname)
+                                item_db.add(mc)
+                            mc.ai_status = "failed"
+                            mc.ai_error = str(item_err)
+                            item_db.commit()
+                            break # Stop retrying, proceed to next image
+            finally:
+                item_db.close()
+
+            with progress_lock:
+                bulk_reverse_status["current"] = bulk_reverse_status.get("current", 0) + 1
+                bulk_reverse_status["message"] = f"AI elemzés folyamatban: {bulk_reverse_status['current']}/{total_imgs} kép..."
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
+            futures = [executor.submit(classify_one, fname) for fname in filenames]
+            for future in concurrent.futures.as_completed(futures):
+                future.result()  # re-raise unexpected worker exceptions here
+
         bulk_reverse_status["message"] = f"Kész! {total_imgs} kép sikeresen szortírozva az AI által."
     except Exception as e:
         logger.error(f"AI Classification background task failed: {e}")
