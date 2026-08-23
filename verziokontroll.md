@@ -8,6 +8,14 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.2] - Fizetős Gemini kulcs, párhuzamos AI-osztályozás, Jóváhagyó billentyűparancsok (2026-08-23)
+
+- **Biztonsági javítás**: a `.env.txt` fájl (egy régi, nyilvánosan kiszivárgott Gemini API kulcsot tartalmazó, véletlenül git-követett fájl) eltávolítva a git követésből, `.gitignore` kiegészítve (`.env.*`). A kiszivárgott kulcs visszavonva a Google AI Studio-ban; a ténylegesen használt kulcs (a helyesen `.gitignore`-olt `.env`-ben) sosem volt kitéve.
+- **Fizetős Gemini tier**: a Lumina AI-osztályozáshoz használt Google Cloud projekten (billing bekapcsolva, Tier 1) mostantól sokkal magasabb (1000 RPM `gemini-2.5-flash`-nél) a kvóta az ingyenes tier (12 RPM) helyett.
+- **Konfigurálható RPM-limit**: a képenkénti mesterséges várakozás a `GEMINI_RPM_LIMIT` környezeti változóból számolódik (alapértelmezett: 12, tehát változatlan marad, amíg be nem állítják) - fizetős kulcshoz magasabb értékkel (pl. 900) gyakorlatilag elhanyagolható a várakozás.
+- **Párhuzamos AI-feldolgozás**: a `GEMINI_MAX_CONCURRENCY` változóval szabályozható, hány kép menjen egyszerre a Gemini-nek (alapértelmezett: 1 = szekvenciális, változatlan viselkedés). Minden egyidejű worker saját adatbázis-kapcsolatot nyit (a meglévő B2-háttérszál mintát követve), egy megosztott ratelimiterrel, hogy összesen se lépjék túl a beállított RPM-et.
+- **Jóváhagyó nézet (`/review`) billentyűparancsai**: a képnagyító modálban mostantól ugyanaz a billentyűkészlet érhető el, mint a kézi Kanban-nál - PageUp/PageDown lapozás a kategórián belüli képek között, L/R forgatás, Delete a Törlendő oszlopba helyezés (itt azonnali mentéssel, mivel a Jóváhagyó nézetnek nincs külön Mentés lépése).
+
 ## [V16.3.1] - "Pictures of Last Month" gomb a Slideshow-hoz (2026-08-23)
 
 - **Új Slideshow indítási mód**: a Slideshow Setup oldalon (Shuffle All Photos gomb alatt) egy új, "Pictures of Last Month" gomb indítja el a vetítést, ami kizárólag az utolsó 30 nap (gördülő időablak, nem naptári hónap) fényképeit játssza le véletlenszerű sorrendben.
@@ -165,6 +173,9 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.2 | `95c2834` | Párhuzamos AI-osztályozás (GEMINI_MAX_CONCURRENCY) + Kanban billentyűparancsok a Jóváhagyóban   |
+| V16.3.2 | `f86bbd0` | Konfigurálható Gemini RPM limit (GEMINI_RPM_LIMIT) fizetős API kulcsokhoz                       |
+| V16.3.2 | `625ba0a` | Biztonsági javítás: .env.txt eltávolítása a git követésből (kiszivárgott Gemini kulcs)          |
 | V16.3.1 | `d045c65` | "Pictures of Last Month" gomb a Slideshow-hoz - utolsó 30 nap véletlenszerű lejátszása          |
 | V16.2.1 | `0beeea7` | Dokumentáció frissítése: forras vödör szerepének pontosítása (DOKUMENTACIO.md, README.md)     |
 | V16.2.1 | `2feedbe` | Zero-Move a Lomtárból visszaállításnál: kepek02-be közvetlenül, forras kihagyásával           |

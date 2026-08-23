@@ -1,4 +1,4 @@
-# Lumina Képtár (V16.3.1)
+# Lumina Képtár (V16.3.2)
 
 **Cél**: Fényképek szortírozása nyomógombokkal
 
