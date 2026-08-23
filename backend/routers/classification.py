@@ -491,9 +491,14 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
             if not bulk_reverse_status.get("is_running", False):
                 break
                 
-            # 1. Rate-limiting: Wait 5.5 seconds between images to stay under 12 RPM
+            # 1. Rate-limiting: wait between images to stay under the configured RPM.
+            # Free-tier Gemini defaults to 12 RPM (~5.5s buffer). A paid/billed API key
+            # supports a much higher RPM - set GEMINI_RPM_LIMIT env var to raise it
+            # (e.g. GEMINI_RPM_LIMIT=1000 for an effectively negligible delay).
             if idx > 0:
-                time.sleep(5.5)
+                rpm_limit = int(os.environ.get("GEMINI_RPM_LIMIT", "12"))
+                if rpm_limit > 0:
+                    time.sleep(60.0 / rpm_limit)
                 
             mi = db.query(MediaItem).filter(MediaItem.file_name == fname, MediaItem.is_in_sorter == True).first()
             if not mi: continue
