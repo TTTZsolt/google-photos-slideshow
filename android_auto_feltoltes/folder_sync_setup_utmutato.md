@@ -99,6 +99,17 @@ váltottunk (`...0005`). Ez technikailag minden vödrödet eléri, de **külön,
      "már szinkronizált"-nak tekinti.
    - **"Overwrite files"**: mindegy, mert egyedi fájlnevek lesznek, de
      nyugodtan hagyhatod bekapcsolva.
+   - **"If both local and remote file have been modified" (Sync options
+     fül)**: **"Assume files are identical"** (NEM "Skip file", ami az
+     alapértelmezett!). Fontos, mert a fenti 0 bájtos helyjelölő-csere
+     miatt a FolderSync időről időre "mindkét oldalon módosult" állapotot
+     észlel ugyanarra a már feldolgozott fájlra, és ezt "Conflicts"
+     hibaként jelzi, ami **leállítja a teljes szinkront** (a 2026-08-23-i
+     éles tapasztalat szerint így 2 napig egyetlen új kép sem ment fel,
+     amíg ezt nem javítottuk). Az "Assume files are identical" ilyenkor
+     egyszerűen átugorja a fájlt, **újra-feltöltés (adatforgalom) nélkül**
+     - a "Use left file" ("helyi győz") opciót kerüld, mert az minden
+     ilyen álkonfliktusnál feleslegesen újra feltöltené a teljes képet.
    - **Fájltípus-szűrés** (ha van ilyen opció): állítsd be, hogy csak
      `.jpg`, `.jpeg`, `.png`, `.heic`, `.heif` fájlokat szinkronizáljon
      (a szerver-oldali feldolgozó úgyis kihagyja a többit, de érdemes
@@ -135,10 +146,13 @@ ugyanahhoz az S3-fiókhoz):
 1. **Local folder**: egy dedikált mappa, pl. `Pictures/LuminaFeltoltes`
    (ha még nem létezik, hozd létre egyszer a Fájlkezelőben).
 2. **Remote folder**: ugyanaz a `beerkezo` vödör, mint az elsőnél.
-3. **Sync type**: ugyanúgy "Upload only". Két beállítás azonban **eltér**
-   az első (kamera-mappás) mappapártól:
-   - **"Check file size" / "Compare by size"**: itt is **KAPCSOLD KI**,
-     ugyanazért az okért, mint az 5. lépésben fent.
+3. **Sync type**: ugyanúgy "Upload only". A "Check file size" és az
+   "If both local and remote file have been modified" beállítást
+   **ugyanúgy** állítsd be, mint az első (kamera-mappás) mappapárnál
+   (l. 4. fejezet 5. pontja: "Check file size" KI, "Assume files are
+   identical" - ugyanaz a `beerkezo` a cél, tehát ugyanúgy előjöhet a
+   "Conflicts" hiba, ha ezt kihagynád). Egy beállítás azonban **eltér**
+   az első mappapártól:
    - **"Delete source files after sync"**: itt **KAPCSOLD BE** (az első
      mappapárnál ez ki volt kapcsolva!) — mivel ide a felhasználó saját
      kezűleg másolja be a képeket a Galériából, a szinkron utáni törlés
@@ -195,3 +209,13 @@ mappapár tette oda a fájlt.
 - **Csak néhány kép szinkronizálódik, a többi nem**: ellenőrizd a
   fájltípus-szűrőt (3. lépés) — lehet, hogy pl. `.png` vagy `.heic`
   ki van zárva a szűrőből.
+- **"Conflicts" hiba, a szinkron leáll, azóta semmi új kép nem megy fel**:
+  ellenőrizd a mappapár Sync options fülén az "If both local and remote
+  file have been modified" beállítást — ha "Skip file"-on áll (ez az
+  alapértelmezett!), állítsd át **"Assume files are identical"**-re
+  (l. 4. fejezet 5. pontja). A jelenség oka: a szerver a feldolgozás után
+  0 bájtos helyjelölőre cseréli a fájlt a `beerkezo`-ban, amit a
+  FolderSync időnként "mindkét oldalon módosultként" észlel és
+  konfliktusnak jelöl - "Skip file" mellett ez leállítja a további
+  szinkronizálást, "Assume files are identical" mellett viszont csendben
+  átugorja, és a folyamat zavartalanul folytatódik.
