@@ -146,19 +146,21 @@ ugyanahhoz az S3-fiókhoz):
 1. **Local folder**: egy dedikált mappa, pl. `Pictures/LuminaFeltoltes`
    (ha még nem létezik, hozd létre egyszer a Fájlkezelőben).
 2. **Remote folder**: ugyanaz a `beerkezo` vödör, mint az elsőnél.
-3. **Sync type**: ugyanúgy "Upload only". A "Check file size" és az
-   "If both local and remote file have been modified" beállítást
-   **ugyanúgy** állítsd be, mint az első (kamera-mappás) mappapárnál
-   (l. 4. fejezet 5. pontja: "Check file size" KI, "Assume files are
-   identical" - ugyanaz a `beerkezo` a cél, tehát ugyanúgy előjöhet a
-   "Conflicts" hiba, ha ezt kihagynád). Egy beállítás azonban **eltér**
-   az első mappapártól:
-   - **"Delete source files after sync"**: itt **KAPCSOLD BE** (az első
-     mappapárnál ez ki volt kapcsolva!) — mivel ide a felhasználó saját
-     kezűleg másolja be a képeket a Galériából, a szinkron utáni törlés
-     biztosítja, hogy a `Pictures/LuminaFeltoltes` mappa kiürüljön, és a
-     kép ne tárolódjon feleslegesen kétszer a telefonon (egyszer az
-     eredeti helyén, egyszer itt).
+3. **Sync type**: itt válaszd a **"One way sync" → "Move file to target
+   folder"** opciót (NEM "Upload only" + "Do deletions after file
+   transfers" - ez utóbbi próbálkozás **nem törli a helyi forrásfájlt**,
+   mert az egyirányú "To right folder" típusnál ez a jelölőnégyzet a
+   *távoli* oldal takarítására vonatkozik, nem a helyi fájl törlésére;
+   élesben tesztelve, 2026-08-23). A "Move file to target folder" viszont
+   ténylegesen áthelyezi (feltölti, majd helyileg törli) a fájlt, ezzel
+   biztosítva, hogy a `Pictures/LuminaFeltoltes` mappa kiürüljön a
+   szinkron után, és a kép ne tárolódjon feleslegesen kétszer a telefonon
+   (egyszer az eredeti helyén, egyszer itt).
+   A "Check file size" és az "If both local and remote file have been
+   modified" beállítást **ugyanúgy** állítsd be, mint az első
+   (kamera-mappás) mappapárnál (l. 4. fejezet 5. pontja: "Check file
+   size" KI, "Assume files are identical" - ugyanaz a `beerkezo` a cél,
+   tehát ugyanúgy előjöhet a "Conflicts" hiba, ha ezt kihagynád).
 4. **Ütemezés**: ennél nyugodtan választhatsz **ritkább vagy csak kézi**
    indítást — nem kell folyamatosan futnia, csak amikor ténylegesen
    tettél bele valamit.
