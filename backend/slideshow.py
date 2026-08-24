@@ -20,12 +20,23 @@ class SlideshowController:
         self.active_sessions = {} # {session_id: {"last_seen": float, "ip": str, "user_agent": str, "device_name": str, "folder": str, "category": str}}
         self.killed_sessions = set() # {session_id}
 
-    def _get_last_month_range(self):
-        """Returns (start, end) datetimes covering the rolling last 30 days
-        (start inclusive, end exclusive), relative to now."""
+    def _parse_date_range(self, date_from: str = None, date_to: str = None):
+        """Parses 'YYYY-MM-DD' date strings into (start, end) datetimes.
+        start is inclusive (midnight of date_from). end is exclusive (midnight
+        of the day AFTER date_to), so date_to's whole calendar day is included."""
         from datetime import datetime, timedelta
-        end = datetime.now()
-        start = end - timedelta(days=30)
+        start = None
+        end = None
+        if date_from:
+            try:
+                start = datetime.strptime(date_from, "%Y-%m-%d")
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+            except ValueError:
+                pass
         return start, end
 
     def _get_b2_client(self, db: Session, account_id: int):
@@ -183,8 +194,10 @@ class SlideshowController:
         
         return sorted(list(seen_folders))
 
-    def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default", last_month: bool = False):
-        """Fetches a random image, filtered by folder and category. Uses a 'deck' system per session to avoid repetition."""
+    def get_random_image(self, db: Session, folder: str = None, category: str = None, session_id: str = "default", date_from: str = None, date_to: str = None):
+        """Fetches a random image, filtered by folder, category and an optional
+        (date_from, date_to) 'YYYY-MM-DD' date range. Uses a 'deck' system per
+        session to avoid repetition."""
 
         # Get active account - Prefer one that is already 'Finished' sync
         b2_acc = db.query(B2Account).filter(B2Account.is_active == True, B2Account.sync_status == 'Finished').first()
@@ -199,12 +212,12 @@ class SlideshowController:
         if folder_prefix and not folder_prefix.endswith('/'):
             folder_prefix += '/'
 
-        deck_key = (session_id, folder_prefix, category, last_month)
+        deck_key = (session_id, folder_prefix, category, date_from, date_to)
 
         # Initialize or refill deck if empty
         if deck_key not in self._decks or not self._decks[deck_key]:
             logger.info(f"Session '{session_id}': Deck empty for key {deck_key}. Refilling...")
-            last_month_start, last_month_end = self._get_last_month_range() if last_month else (None, None)
+            range_start, range_end = self._parse_date_range(date_from, date_to)
 
             if category:
                 # LEVEL 2 INSTANT VISIBILITY: Build deck from classifications table
@@ -214,10 +227,12 @@ class SlideshowController:
                 )
                 if folder_prefix:
                     query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
-                if last_month:
-                    query = query.join(MediaItem, MediaItem.file_name == MediaClassification.file_name).filter(
-                        MediaItem.creation_time >= last_month_start, MediaItem.creation_time < last_month_end
-                    )
+                if range_start or range_end:
+                    query = query.join(MediaItem, MediaItem.file_name == MediaClassification.file_name)
+                    if range_start:
+                        query = query.filter(MediaItem.creation_time >= range_start)
+                    if range_end:
+                        query = query.filter(MediaItem.creation_time < range_end)
 
                 all_items = [row[0] for row in query.all()]
 
@@ -232,10 +247,12 @@ class SlideshowController:
                         )
                         if folder_prefix:
                             query = query.filter(MediaClassification.file_name.like(f"{folder_prefix}%"))
-                        if last_month:
-                            query = query.join(MediaItem, MediaItem.file_name == MediaClassification.file_name).filter(
-                                MediaItem.creation_time >= last_month_start, MediaItem.creation_time < last_month_end
-                            )
+                        if range_start or range_end:
+                            query = query.join(MediaItem, MediaItem.file_name == MediaClassification.file_name)
+                            if range_start:
+                                query = query.filter(MediaItem.creation_time >= range_start)
+                            if range_end:
+                                query = query.filter(MediaItem.creation_time < range_end)
                         all_items = [row[0] for row in query.all()]
 
                 logger.info(f"Building category deck for '{category}'. Found {len(all_items)} items in DB.")
@@ -249,8 +266,10 @@ class SlideshowController:
                 )
                 if folder_prefix:
                     query = query.filter(MediaItem.file_name.like(f"{folder_prefix}%"))
-                if last_month:
-                    query = query.filter(MediaItem.creation_time >= last_month_start, MediaItem.creation_time < last_month_end)
+                if range_start:
+                    query = query.filter(MediaItem.creation_time >= range_start)
+                if range_end:
+                    query = query.filter(MediaItem.creation_time < range_end)
 
                 all_items = [row[0] for row in query.all()]
                 logger.info(f"Building folder deck for '{folder_prefix or 'Root'}'. Found {len(all_items)} items in DB.")

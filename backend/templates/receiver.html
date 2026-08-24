@@ -423,12 +423,35 @@
                         Shuffle All Photos
                     </button>
 
-                    <!-- Last Month Shuffle Button -->
-                    <button onclick="startSlideshow(null, true)"
-                        class="relative z-10 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg shrink-0 group h-12 w-3/4 -mt-3">
-                        <i data-lucide="calendar-days" class="w-4 h-4 group-hover:rotate-12 transition-transform duration-500"></i>
-                        Pictures of Last Month
-                    </button>
+                    <!-- Date-range quick picks + custom range -->
+                    <div class="relative z-10 w-3/4 flex flex-col gap-2 -mt-2">
+                        <div class="flex gap-2">
+                            <button onclick="setQuickDateRange(30)" type="button"
+                                class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-bold text-xs transition">
+                                Utolsó hónap
+                            </button>
+                            <button onclick="setQuickDateRange(7)" type="button"
+                                class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-bold text-xs transition">
+                                Utolsó hét
+                            </button>
+                            <button onclick="setQuickDateRange(1)" type="button"
+                                class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-bold text-xs transition">
+                                Utolsó nap
+                            </button>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <input type="date" id="setupDateFrom"
+                                class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
+                            <span class="text-slate-400 text-xs font-bold">-</span>
+                            <input type="date" id="setupDateTo"
+                                class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
+                        </div>
+                        <button onclick="startDateRangeSlideshow()" type="button"
+                            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg group h-12">
+                            <i data-lucide="calendar-days" class="w-4 h-4 group-hover:rotate-12 transition-transform duration-500"></i>
+                            Lejátszás a kiválasztott időszakból
+                        </button>
+                    </div>
                 </div>
 
             <!-- Path Breadcrumbs -->
@@ -546,7 +569,8 @@
         let config = {
             folder: null,
             category: null,
-            lastMonth: false,
+            dateFrom: null,
+            dateTo: null,
             intervalMs: 240000,
             showFilename: false,
             showCategory: true,
@@ -609,7 +633,8 @@
             if (urlParams.has('folder') || urlParams.has('start_global')) {
                 config.folder = urlParams.get('folder') || null;
                 config.category = urlParams.get('category') || null;
-                config.lastMonth = urlParams.get('last_month') === 'true';
+                config.dateFrom = urlParams.get('date_from') || null;
+                config.dateTo = urlParams.get('date_to') || null;
                 config.intervalMs = parseInt(urlParams.get('interval') || 240) * 1000;
                 config.showFilename = urlParams.get('show_filename') === 'true';
                 config.showCategory = urlParams.get('show_category') !== 'false';
@@ -732,10 +757,41 @@
             breadcrumbContainer.scrollLeft = breadcrumbContainer.scrollWidth;
         }
 
-        function startSlideshow(folderPath, lastMonth) {
+        function formatDateInput(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function setQuickDateRange(days) {
+            const today = new Date();
+            const from = new Date(today);
+            from.setDate(from.getDate() - days);
+            document.getElementById('setupDateFrom').value = formatDateInput(from);
+            document.getElementById('setupDateTo').value = formatDateInput(today);
+        }
+
+        function startDateRangeSlideshow() {
+            const from = document.getElementById('setupDateFrom').value;
+            const to = document.getElementById('setupDateTo').value;
+            if (!from || !to) {
+                showCustomModal({
+                    title: "Hiányzó dátum",
+                    message: "Kérlek válassz kezdő és záró dátumot (vagy nyomj meg egy gyorsgombot: Utolsó hónap/hét/nap).",
+                    icon: "calendar-x",
+                    confirmText: "Értem"
+                });
+                return;
+            }
+            startSlideshow(null, from, to);
+        }
+
+        function startSlideshow(folderPath, dateFrom, dateTo) {
             config.folder = folderPath;
             config.category = document.getElementById('setupCategory').value || null;
-            config.lastMonth = !!lastMonth;
+            config.dateFrom = dateFrom || null;
+            config.dateTo = dateTo || null;
             config.intervalMs = parseInt(document.getElementById('setupInterval').value || 240) * 1000;
             config.showFilename = document.getElementById('setupShowFilename').checked;
             config.showCategory = document.getElementById('setupShowCategory') ? document.getElementById('setupShowCategory').checked : true;
@@ -763,7 +819,8 @@
                 + '?start_global=true'
                 + (config.folder ? '&folder=' + encodeURIComponent(config.folder) : '')
                 + (config.category ? '&category=' + encodeURIComponent(config.category) : '')
-                + (config.lastMonth ? '&last_month=true' : '')
+                + (config.dateFrom ? '&date_from=' + encodeURIComponent(config.dateFrom) : '')
+                + (config.dateTo ? '&date_to=' + encodeURIComponent(config.dateTo) : '')
                 + `&interval=${config.intervalMs / 1000}`
                 + `&show_filename=${config.showFilename}`
                 + `&show_category=${config.showCategory}`;
@@ -910,7 +967,8 @@
             const params = new URLSearchParams();
             if (config.folder) params.append("folder", config.folder);
             if (config.category) params.append("category", config.category);
-            if (config.lastMonth) params.append("last_month", "true");
+            if (config.dateFrom) params.append("date_from", config.dateFrom);
+            if (config.dateTo) params.append("date_to", config.dateTo);
             if (config.intervalMs) params.append("interval", config.intervalMs / 1000);
             if (config.showFilename !== undefined) params.append("show_filename", config.showFilename);
             if (config.showCategory !== undefined) params.append("show_category", config.showCategory);
@@ -958,8 +1016,11 @@
                 if (config.category) {
                     queryParams.append('category', config.category);
                 }
-                if (config.lastMonth) {
-                    queryParams.append('last_month', 'true');
+                if (config.dateFrom) {
+                    queryParams.append('date_from', config.dateFrom);
+                }
+                if (config.dateTo) {
+                    queryParams.append('date_to', config.dateTo);
                 }
 
                 const response = await fetch(`/api/media/random?${queryParams.toString()}`);
