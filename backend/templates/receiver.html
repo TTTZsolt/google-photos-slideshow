@@ -221,6 +221,39 @@
             color: #facc15;
         }
 
+        .categorize-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 132px;
+            /* Positioned left of the flag button */
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            z-index: 1000;
+            cursor: pointer;
+            opacity: 0.2;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+        }
+
+        .categorize-btn:hover {
+            opacity: 1;
+            background: rgba(0, 0, 0, 0.8);
+            border-color: rgba(168, 85, 247, 0.5);
+            color: #c084fc;
+        }
+
+        .categorize-btn.hidden {
+            display: none !important;
+        }
+
         .next-btn {
             position: absolute;
             bottom: 20px;
@@ -309,6 +342,44 @@
             color: #475569;
         }
         .modal-btn-secondary:hover { background-color: #e2e8f0; }
+
+        /* One-click quick-range players (Hó/Hét/Nap) */
+        .quick-play-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.2rem;
+            padding: 0.25rem 0.35rem;
+            border-radius: 0.6rem;
+            background: rgba(99, 102, 241, 0.06);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            color: #4338ca;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 0;
+        }
+        .quick-play-btn:hover {
+            background: rgba(99, 102, 241, 0.12);
+            border-color: rgba(99, 102, 241, 0.3);
+            transform: translateY(-1px);
+        }
+        .quick-play-btn:active { transform: scale(0.94); }
+        .quick-play-icon {
+            color: #059669;
+            flex-shrink: 0;
+        }
+        .quick-play-label {
+            font-size: 0.55rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+        .quick-play-date {
+            font-size: 0.58rem;
+            font-weight: 800;
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -331,6 +402,10 @@
         <i data-lucide="wand-2" class="w-5 h-5"></i>
     </button>
 
+    <button id="categorizeBtn" class="categorize-btn hidden" onclick="openCategorizePicker()" title="Kategorizálás">
+        <i data-lucide="tags" class="w-5 h-5"></i>
+    </button>
+
     <button id="castBtn" class="cast-btn hidden" onclick="openCastModal()" title="Cast to TV">
         <i data-lucide="cast" class="w-5 h-5"></i>
     </button>
@@ -338,6 +413,22 @@
     <button id="nextBtn" class="next-btn hidden" onclick="nextImage()" title="Next Image (Immediate)">
         <i data-lucide="skip-forward" class="w-5 h-5"></i>
     </button>
+
+    <!-- Category Picker Overlay -->
+    <div id="categoryPickerModal"
+        class="fixed inset-0 z-[4000] flex items-center justify-center bg-black/60 backdrop-blur-md hidden transition-opacity duration-300"
+        onclick="closeCategoryPicker()">
+        <div class="glass-panel w-full max-w-sm rounded-3xl shadow-2xl flex flex-col m-4 overflow-hidden border border-white/40 p-6"
+            onclick="event.stopPropagation()">
+            <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <i data-lucide="tags" class="text-indigo-500 w-5 h-5"></i>
+                Kategória kiválasztása
+            </h2>
+            <div id="categoryPickerList" class="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto custom-scrollbar"></div>
+            <button onclick="closeCategoryPicker()"
+                class="mt-6 w-full py-3 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 transition">Mégse</button>
+        </div>
+    </div>
 
     <!-- Cast Modal Overlay -->
     <div id="castModal"
@@ -402,10 +493,10 @@
                 </div>
             </div>
 
-            <div class="glass-panel w-full rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/40" style="max-height: 80vh;">
+            <div class="glass-panel w-full rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/40" style="max-height: 80vh; max-height: 80dvh;">
 
                 <!-- Header -->
-                <div class="p-6 border-b border-white/40 flex flex-col items-center bg-white/40 relative gap-6">
+                <div class="px-3 sm:px-6 py-6 border-b border-white/40 flex flex-col items-center bg-white/40 relative gap-4">
                     <div class="absolute inset-0 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 z-0"></div>
                     
                     <div class="relative z-10 w-full flex flex-col items-start px-2">
@@ -423,33 +514,23 @@
                         Shuffle All Photos
                     </button>
 
-                    <!-- Date-range quick picks + custom range -->
-                    <div class="relative z-10 w-3/4 flex flex-col gap-2 -mt-2">
-                        <div class="flex gap-2">
-                            <button onclick="setQuickDateRange(30)" type="button"
-                                class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-bold text-xs transition">
-                                Utolsó hónap
-                            </button>
-                            <button onclick="setQuickDateRange(7)" type="button"
-                                class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-bold text-xs transition">
-                                Utolsó hét
-                            </button>
-                            <button onclick="setQuickDateRange(1)" type="button"
-                                class="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-2 rounded-xl font-bold text-xs transition">
-                                Utolsó nap
-                            </button>
-                        </div>
-                        <div class="flex gap-2 items-center">
-                            <input type="date" id="setupDateFrom"
-                                class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
-                            <span class="text-slate-400 text-xs font-bold">-</span>
-                            <input type="date" id="setupDateTo"
-                                class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700">
-                        </div>
-                        <button onclick="startDateRangeSlideshow()" type="button"
-                            class="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-10 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition shadow-lg group h-12">
-                            <i data-lucide="calendar-days" class="w-4 h-4 group-hover:rotate-12 transition-transform duration-500"></i>
-                            Lejátszás a kiválasztott időszakból
+                    <!-- Three one-click quick-range players (Hó/Hét/Nap) - label to the
+                         left of each play icon, resolved start date to the right. -->
+                    <div class="relative z-10 w-full flex items-center justify-center gap-1.5 flex-nowrap">
+                        <button onclick="startQuickRange(30)" type="button" class="quick-play-btn" title="Utolsó hónap lejátszása">
+                            <span class="quick-play-label">Hó</span>
+                            <i data-lucide="play-circle" class="quick-play-icon w-4 h-4"></i>
+                            <span class="quick-play-date" id="quickDateLabel30"></span>
+                        </button>
+                        <button onclick="startQuickRange(7)" type="button" class="quick-play-btn" title="Utolsó hét lejátszása">
+                            <span class="quick-play-label">Hét</span>
+                            <i data-lucide="play-circle" class="quick-play-icon w-4 h-4"></i>
+                            <span class="quick-play-date" id="quickDateLabel7"></span>
+                        </button>
+                        <button onclick="startQuickRange(1)" type="button" class="quick-play-btn" title="Utolsó nap lejátszása">
+                            <span class="quick-play-label">Nap</span>
+                            <i data-lucide="play-circle" class="quick-play-icon w-4 h-4"></i>
+                            <span class="quick-play-date" id="quickDateLabel1"></span>
                         </button>
                     </div>
                 </div>
@@ -471,60 +552,38 @@
                 <div id="folderList" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
             </div>
 
-            <!-- Footer / Global Settings -->
+            <!-- Footer / Global Settings.
+                 Mobile/narrow (below md=768px): 2x2 grid, DOM order drives placement
+                 (row1: Idő+Kategória, row2: Nevek+Kateg.) - this is the safe layout,
+                 it never overflows since grid items simply wrap/shrink to their cell.
+                 The breakpoint is md (not sm=640px) on purpose: a plain flex-wrap row
+                 with justify-between can leave an orphaned item stranded far right on
+                 a partially-filled wrapped line on in-between widths (e.g. some phones
+                 report a >640px layout viewport) - staying in the grid until 768px
+                 avoids that. True desktop (md+): one flex row, md:order-* restores the
+                 original left-to-right sequence, md:justify-between spreads all four
+                 evenly across the width. -->
             <div class="p-4 bg-white/80 border-t border-white/50">
-                <div class="flex flex-col gap-3 items-stretch sm:flex-row sm:flex-wrap sm:items-center sm:justify-between px-2">
+                <div class="grid grid-cols-2 gap-x-3 gap-y-3 justify-items-center md:flex md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4 px-2">
 
-                    <!-- Interval & Toggle Group -->
-                    <div class="flex flex-wrap gap-4 items-center justify-center px-1 sm:px-0">
-                        <!-- Interval Setting -->
-                        <div class="flex items-center gap-2">
-                            <div
-                                class="bg-indigo-50 w-8 h-8 flex items-center justify-center rounded-xl shadow-inner border border-indigo-100 text-indigo-500">
-                                <i data-lucide="timer" class="w-4 h-4 text-indigo-500"></i>
-                            </div>
-                            <div class="flex flex-col justify-center">
-                                <label
-                                    class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Idő</label>
-                                <div class="flex items-baseline gap-1">
-                                    <input type="number" id="setupInterval" value="240" min="1"
-                                        class="w-14 bg-transparent border-0 p-0 text-base font-bold focus:ring-0 text-slate-700 h-5">
-                                    <span class="text-xs font-bold text-slate-400">s</span>
-                                </div>
-                            </div>
+                    <!-- Interval Setting -->
+                    <div class="flex items-center gap-2 md:order-1">
+                        <div
+                            class="bg-indigo-50 w-8 h-8 flex items-center justify-center rounded-xl shadow-inner border border-indigo-100 text-indigo-500">
+                            <i data-lucide="timer" class="w-4 h-4 text-indigo-500"></i>
                         </div>
-
-                        <!-- Filename Toggle -->
-                        <div class="flex items-center gap-3">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <span
-                                    class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Nevek</span>
-                                <div class="relative inline-flex items-center">
-                                    <input type="checkbox" id="setupShowFilename" class="sr-only switch-peer">
-                                    <div
-                                        class="w-9 h-5 bg-slate-200 rounded-full transition-all switch-target after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all shadow-inner">
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <!-- Category Toggle -->
-                        <div class="flex items-center gap-3">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <span
-                                    class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Kateg.</span>
-                                <div class="relative inline-flex items-center">
-                                    <input type="checkbox" id="setupShowCategory" class="sr-only switch-peer" checked>
-                                    <div
-                                        class="w-9 h-5 bg-slate-200 rounded-full transition-all switch-target after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all shadow-inner">
-                                    </div>
-                                </div>
-                            </label>
+                        <div class="flex flex-col justify-center">
+                            <label
+                                class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Idő (s)</label>
+                            <div class="flex items-baseline gap-1">
+                                <input type="number" id="setupInterval" value="240" min="1"
+                                    class="w-14 bg-transparent border-0 p-0 text-base font-bold focus:ring-0 text-slate-700 h-5">
+                            </div>
                         </div>
                     </div>
 
                     <!-- Category Selector -->
-                    <div class="flex items-center gap-2 bg-slate-100/50 sm:bg-transparent p-1 px-3 sm:px-0 rounded-xl">
+                    <div class="flex items-center gap-2 bg-slate-100/50 md:bg-transparent p-1 px-3 md:px-0 rounded-xl md:order-4">
                         <div class="bg-purple-50 w-8 h-8 flex items-center justify-center rounded-xl shadow-inner border border-purple-100 text-purple-500 shrink-0">
                             <i data-lucide="filter" class="w-4 h-4"></i>
                         </div>
@@ -536,15 +595,32 @@
                         </div>
                     </div>
 
-                    <!-- Device Name Input -->
-                    <div class="flex items-center gap-2">
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                <i data-lucide="tag" class="w-3 h-3 text-slate-400"></i>
+                    <!-- Filename Toggle -->
+                    <div class="flex items-center gap-3 md:order-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <span
+                                class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Nevek</span>
+                            <div class="relative inline-flex items-center">
+                                <input type="checkbox" id="setupShowFilename" class="sr-only switch-peer" checked>
+                                <div
+                                    class="w-9 h-5 bg-slate-200 rounded-full transition-all switch-target after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all shadow-inner">
+                                </div>
                             </div>
-                            <input type="text" id="setupDeviceName" placeholder="Név..."
-                                class="w-24 sm:w-28 bg-slate-100/80 border-transparent focus:bg-white border focus:border-indigo-500 focus:ring-0 rounded-xl py-1.5 pl-8 pr-2 text-xs font-bold text-slate-700 shadow-sm transition-all placeholder:font-normal placeholder:text-slate-400">
-                        </div>
+                        </label>
+                    </div>
+
+                    <!-- Category Toggle -->
+                    <div class="flex items-center gap-3 md:order-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <span
+                                class="text-[9px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Kateg.</span>
+                            <div class="relative inline-flex items-center">
+                                <input type="checkbox" id="setupShowCategory" class="sr-only switch-peer" checked>
+                                <div
+                                    class="w-9 h-5 bg-slate-200 rounded-full transition-all switch-target after:absolute after:top-[3px] after:left-[3px] after:bg-white after:rounded-full after:h-3.5 after:w-3.5 after:transition-all shadow-inner">
+                                </div>
+                            </div>
+                        </label>
                     </div>
 
                 </div>
@@ -580,6 +656,9 @@
         let currentImg = 1;
         let lastUrl = "";
         let actualCurrentFilename = ""; // Tracks the file name independently of the UI display
+        let actualCurrentDisplayFilename = ""; // The short display name shown in the overlay
+        let actualCurrentCategoryInfo = null; // {name, display_name, color, icon} or null if uncategorized
+        let categoriesCache = [];
         let currentPath = ""; // Empty string means root
         const sessionId = Math.random().toString(36).substring(2, 15); // Unique session ID for smart shuffle deck
         let heartbeatInterval = null;
@@ -644,6 +723,7 @@
                 modal.classList.remove('hidden');
                 loadFolders("");
                 fetchCategories();
+                renderQuickDateLabels();
             }
         });
 
@@ -764,27 +844,34 @@
             return `${y}-${m}-${day}`;
         }
 
-        function setQuickDateRange(days) {
+        // Compact numeric "MM.DD" label - short and fixed-width (unlike Hungarian
+        // month abbreviations, which vary a lot in length), so all three quick-play
+        // buttons reliably fit on one row even on a narrow phone screen.
+        function formatDateLabel(dateStr) {
+            if (!dateStr) return null;
+            const [, m, d] = dateStr.split('-');
+            return `${m}.${d}`;
+        }
+
+        // Populates the small date label next to each Hó/Hét/Nap play icon
+        // with the resolved start-date of that range, so it's visible before clicking.
+        function renderQuickDateLabels() {
+            const today = new Date();
+            [1, 7, 30].forEach(days => {
+                const from = new Date(today);
+                from.setDate(from.getDate() - days);
+                const el = document.getElementById('quickDateLabel' + days);
+                if (el) el.textContent = formatDateLabel(formatDateInput(from));
+            });
+        }
+
+        // One click = start immediately (no separate confirm step): today back to
+        // `days` ago, played back in random order.
+        function startQuickRange(days) {
             const today = new Date();
             const from = new Date(today);
             from.setDate(from.getDate() - days);
-            document.getElementById('setupDateFrom').value = formatDateInput(from);
-            document.getElementById('setupDateTo').value = formatDateInput(today);
-        }
-
-        function startDateRangeSlideshow() {
-            const from = document.getElementById('setupDateFrom').value;
-            const to = document.getElementById('setupDateTo').value;
-            if (!from || !to) {
-                showCustomModal({
-                    title: "Hiányzó dátum",
-                    message: "Kérlek válassz kezdő és záró dátumot (vagy nyomj meg egy gyorsgombot: Utolsó hónap/hét/nap).",
-                    icon: "calendar-x",
-                    confirmText: "Értem"
-                });
-                return;
-            }
-            startSlideshow(null, from, to);
+            startSlideshow(null, formatDateInput(from), formatDateInput(today));
         }
 
         function startSlideshow(folderPath, dateFrom, dateTo) {
@@ -836,15 +923,17 @@
             if (heartbeatInterval) clearInterval(heartbeatInterval);
             heartbeatInterval = setInterval(sendHeartbeat, 5000);
 
-            // Show the Stop/Change Folder, Flag, and Cast buttons
+            // Show the Stop/Change Folder, Flag, Categorize, and Cast buttons
             const backBtn = document.getElementById('backBtn');
             const castBtn = document.getElementById('castBtn');
             const flagBtn = document.getElementById('flagBtn');
+            const categorizeBtn = document.getElementById('categorizeBtn');
             const nextBtn = document.getElementById('nextBtn');
 
             if (backBtn) backBtn.classList.remove('hidden');
             if (castBtn) castBtn.classList.remove('hidden');
             if (flagBtn) flagBtn.classList.remove('hidden');
+            if (categorizeBtn) categorizeBtn.classList.remove('hidden');
             if (nextBtn) nextBtn.classList.remove('hidden');
 
             // Keyboard shortcut listener (R key)
@@ -866,11 +955,13 @@
             const backBtn = document.getElementById('backBtn');
             const castBtn = document.getElementById('castBtn');
             const flagBtn = document.getElementById('flagBtn');
+            const categorizeBtn = document.getElementById('categorizeBtn');
             const nextBtn = document.getElementById('nextBtn');
 
             if (backBtn) backBtn.classList.add('hidden');
             if (castBtn) castBtn.classList.add('hidden');
             if (flagBtn) flagBtn.classList.add('hidden');
+            if (categorizeBtn) categorizeBtn.classList.add('hidden');
             if (nextBtn) nextBtn.classList.add('hidden');
 
             document.removeEventListener('keydown', handleKeyboardShortcuts);
@@ -1054,22 +1145,13 @@
                 } else if (data.filename) { // Fallback just in case
                     actualCurrentFilename = data.filename;
                 }
+                actualCurrentDisplayFilename = data.filename || "";
+                actualCurrentCategoryInfo = data.category_info || null;
 
                 // Handle Filename Overlay
                 const filenameEl = document.getElementById('filename');
-                let overlayHtml = '';
-                
-                if (config.showCategory && data.category_info) {
-                    overlayHtml += `<span style="color: ${data.category_info.color}; font-weight: bold; margin-right: 8px;">
-                                        <i data-lucide="${data.category_info.icon}" style="display:inline-block; width:16px; height:16px; vertical-align:-3px; margin-right:4px;"></i>
-                                        ${data.category_info.display_name}
-                                    </span>`;
-                }
+                let overlayHtml = renderOverlayHtml();
 
-                if (config.showFilename && data.filename) {
-                    overlayHtml += `<span class="text-slate-200">${data.filename}</span>`;
-                }
-                
                 if (overlayHtml !== '') {
                     filenameEl.innerHTML = overlayHtml;
                     filenameEl.classList.add('filename-visible');
@@ -1152,6 +1234,89 @@
             } finally {
                 fb.innerHTML = '<i data-lucide="wand-2" class="w-5 h-5"></i>';
                 lucide.createIcons();
+            }
+        }
+
+        function renderOverlayHtml() {
+            let html = '';
+            if (config.showCategory && actualCurrentCategoryInfo) {
+                html += `<span style="color: ${actualCurrentCategoryInfo.color}; font-weight: bold; margin-right: 8px;">
+                            <i data-lucide="${actualCurrentCategoryInfo.icon}" style="display:inline-block; width:16px; height:16px; vertical-align:-3px; margin-right:4px;"></i>
+                            ${actualCurrentCategoryInfo.display_name}
+                        </span>`;
+            }
+            if (config.showFilename && actualCurrentDisplayFilename) {
+                html += `<span class="text-slate-200">${actualCurrentDisplayFilename}</span>`;
+            }
+            return html;
+        }
+
+        // --- Quick Categorize Logic (categorize the currently shown photo mid-slideshow) ---
+        async function openCategorizePicker() {
+            if (!config.isRunning || !actualCurrentFilename) return;
+
+            const modal = document.getElementById('categoryPickerModal');
+            const list = document.getElementById('categoryPickerList');
+            list.innerHTML = '<div class="col-span-2 text-center text-slate-400 text-sm py-4">Betöltés...</div>';
+            modal.classList.remove('hidden');
+
+            try {
+                if (categoriesCache.length === 0) {
+                    const res = await fetch('/api/categories');
+                    categoriesCache = await res.json();
+                }
+
+                list.innerHTML = '';
+                categoriesCache.filter(cat => cat.name !== 'delete').forEach(cat => {
+                    const btn = document.createElement('button');
+                    btn.className = "flex items-center gap-2 p-3 rounded-xl border font-bold text-sm text-left transition hover:scale-[1.02] active:scale-95";
+                    btn.style.borderColor = `${cat.color}40`;
+                    btn.style.backgroundColor = `${cat.color}12`;
+                    btn.style.color = cat.color;
+                    btn.innerHTML = `<i data-lucide="${cat.icon || 'tag'}" class="w-4 h-4 shrink-0"></i> <span class="truncate">${cat.display_name}</span>`;
+                    btn.onclick = () => assignCategory(cat);
+                    list.appendChild(btn);
+                });
+                lucide.createIcons();
+            } catch (e) {
+                list.innerHTML = '<div class="col-span-2 text-center text-rose-500 text-sm py-4">Hiba a kategóriák betöltésekor.</div>';
+            }
+        }
+
+        function closeCategoryPicker() {
+            document.getElementById('categoryPickerModal').classList.add('hidden');
+        }
+
+        async function assignCategory(cat) {
+            if (!actualCurrentFilename) return;
+            const fname = actualCurrentFilename;
+            closeCategoryPicker();
+
+            try {
+                const res = await fetch('/api/classification/bulk-classify-manual', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: [{ file_name: fname, category: cat.name }] })
+                });
+
+                if (res.ok) {
+                    showNotification(`Besorolva: ${cat.display_name}`);
+                    // Only touch the on-screen overlay if we're still showing this same photo
+                    if (actualCurrentFilename === fname) {
+                        actualCurrentCategoryInfo = { name: cat.name, display_name: cat.display_name, color: cat.color, icon: cat.icon };
+                        const filenameEl = document.getElementById('filename');
+                        const overlayHtml = renderOverlayHtml();
+                        if (overlayHtml !== '') {
+                            filenameEl.innerHTML = overlayHtml;
+                            filenameEl.classList.add('filename-visible');
+                            lucide.createIcons();
+                        }
+                    }
+                } else {
+                    showNotification("Hiba a besorolás mentésekor.");
+                }
+            } catch (e) {
+                showNotification("Hálózati hiba a besorolás mentésekor.");
             }
         }
 
