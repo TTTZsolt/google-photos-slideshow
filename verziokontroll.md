@@ -8,6 +8,18 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.4] - Slideshow UI finomhangolás + gyors kategorizáló gomb vetítés közben (2026-08-25)
+
+- **Slideshow Setup gyorsgombok**: a "Fényidő" fény-spektrum sáv (V16.3.3 kreatív első próbálkozása) helyett egy egyszerűbb, kompakt megoldás - a Shuffle All Photos alatt Hó/Hét/Nap felirat + zöld lejátszás-ikon + a feloldott dátum, egy kattintásra azonnal indítva, külön megerősítő lépés nélkül.
+- **Setup felület egyszerűsítése**: "Idő (s)" egyértelmű felirat (a redundáns "s" jelzés törölve), a "Nevek" kapcsoló alapértelmezetten bekapcsolva, a "Név" (device name) mező eltávolítva a felületről (a funkció a háttérben megmaradt, csak kézzel már nem állítható be itt).
+- **Mobil footer javítások**: a beállítások alsó sora telefonon 2×2 rácsba rendezve (Idő+Kategória felül, Nevek+Kateg. kapcsoló alul), `md` töréspontig, hogy köztes szélességű telefonok se csússzanak át a deszktop flex-sorba; deszktopon (md+) az eredeti sorrend és egyenletes elosztás megmaradt. A Setup modal `max-height`-je `80vh` mellett `80dvh`-t is kap, hogy a mobil böngésző címsávja miatt ne vágódjon le az alsó sor.
+- **Új funkció - gyors kategorizálás vetítés közben**: "Kategorizálás" ikon a Flag gomb mellett - rákattintva egy felugró listázza a kategóriákat (a "Törlés (AI)" rendszerkategória nélkül), kiválasztásra azonnal elmenti a besorolást a meglévő `/api/classification/bulk-classify-manual` végponton keresztül, ugyanazzal a mechanizmussal, mint a kézi Kanban.
+
+## [V16.3.3] - Általános dátumtartomány-szűrő a Slideshow-hoz (2026-08-24)
+
+- A V16.3.1-es, kizárólag "utolsó hónapra" szabott szűrőt (`last_month` bool) felváltotta egy általános `(date_from, date_to)` 'YYYY-MM-DD' dátumtartomány-mechanizmus a `get_random_image`-ben és a `/api/media/random` végponton, `MediaItem.creation_time` alapján szűrve.
+- Frontend: három gyorsgomb (Utolsó hónap/hét/nap) tölti ki a dátumokat a megfelelő gördülő időablakkal - ez a `verziokontroll.md`-ben nem külön dokumentált, kísérleti UI-verzió (fénysáv, kézi "Tól-Ig" dátumválasztó) volt a V16.3.4 véglegesített, kompaktabb megoldásának előzménye.
+
 ## [V16.3.2] - Fizetős Gemini kulcs, párhuzamos AI-osztályozás, Jóváhagyó billentyűparancsok (2026-08-23)
 
 - **Biztonsági javítás**: a `.env.txt` fájl (egy régi, nyilvánosan kiszivárgott Gemini API kulcsot tartalmazó, véletlenül git-követett fájl) eltávolítva a git követésből, `.gitignore` kiegészítve (`.env.*`). A kiszivárgott kulcs visszavonva a Google AI Studio-ban; a ténylegesen használt kulcs (a helyesen `.gitignore`-olt `.env`-ben) sosem volt kitéve.
@@ -173,6 +185,8 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.4 | `8b46516` | Slideshow UI finomhangolás (Hó/Hét/Nap gyorsgombok, mobil footer) + gyors kategorizáló gomb     |
+| V16.3.3 | `64d1627` | Általános dátumtartomány-szűrő a Slideshow-hoz (Utolsó hónap/hét/nap + kézi dátumok)            |
 | V16.3.2 | `95c2834` | Párhuzamos AI-osztályozás (GEMINI_MAX_CONCURRENCY) + Kanban billentyűparancsok a Jóváhagyóban   |
 | V16.3.2 | `f86bbd0` | Konfigurálható Gemini RPM limit (GEMINI_RPM_LIMIT) fizetős API kulcsokhoz                       |
 | V16.3.2 | `625ba0a` | Biztonsági javítás: .env.txt eltávolítása a git követésből (kiszivárgott Gemini kulcs)          |
