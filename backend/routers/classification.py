@@ -528,6 +528,8 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
             bulk_reverse_status["message"] = "Duplikátumok keresése (kép-hasonlóság elemzése)..."
             sorted_filenames = sorted(filenames)
             hash_threshold = int(os.environ.get("DUPLICATE_HASH_THRESHOLD", "10"))
+            hash_loose_threshold = int(os.environ.get("DUPLICATE_HASH_LOOSE_THRESHOLD", "28"))
+            time_gap_seconds = int(os.environ.get("DUPLICATE_TIME_GAP_SECONDS", "15"))
 
             item_lookup = {
                 mi.file_name: mi
@@ -551,7 +553,15 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                 hash_results = list(hash_executor.map(compute_hash_for, sorted_filenames))
 
             valid_hashes = [(fname, h) for fname, h in hash_results if h is not None]
-            duplicate_groups = [g for g in group_near_duplicates(valid_hashes, threshold=hash_threshold) if len(g) > 1]
+            duplicate_groups = [
+                g for g in group_near_duplicates(
+                    valid_hashes,
+                    threshold=hash_threshold,
+                    loose_threshold=hash_loose_threshold,
+                    max_time_gap_seconds=time_gap_seconds,
+                )
+                if len(g) > 1
+            ]
 
             if duplicate_groups:
                 bulk_reverse_status["message"] = (

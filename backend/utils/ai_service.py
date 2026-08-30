@@ -140,6 +140,11 @@ def pick_best_from_duplicate_group(
                 "or near-duplicate shots of the same moment - labeled Image 1, Image 2, "
                 "etc. in the order given. Pick exactly ONE to keep: the best one overall "
                 "(sharpest, best composition, eyes open, faces visible and not obscured). "
+                "If NONE of the images have everyone's eyes open (e.g. everyone has their "
+                "eyes closed in every shot), fall back to whichever image has the best "
+                "facial expression (e.g. smiling, natural) and overall composition - do "
+                "not pick an image with a worse expression just because eyes-open was "
+                "unreachable in the whole set. "
                 "Reply ONLY with the number of the image to keep (e.g. '2'). "
                 "DO NOT output any other text or explanation."
             )
