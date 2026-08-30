@@ -8,6 +8,14 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.5] - Duplikátum-előszűrés a Mover AI-osztályozásához (2026-08-30)
+
+- **Duplikátum-felismerés**: a Mover AI-folyamata eddig minden képet külön-külön küldött a Gemini-nek, így sosem látott egyszerre két képet - nem tudta érvényesíteni az `egyeni_torlesi_szempontok.txt` "ha több nagyon hasonló kép van, csak egyet tarts meg" szabályát. Új előszűrő lépés: olcsó dHash (difference-hash) perceptual ujjlenyomat minden képhez, majd az egymás után következő, nagyon hasonló képek (pl. sorozatfelvételek) csoportosítása, majd csoportonként EGYETLEN több-képes Gemini-hívás dönti el, melyik példányt érdemes megtartani.
+- **Kameramozdulás-toleráns egyezés**: a dHash nem eltolás-toleráns - egy kis kameramozdulás két felvétel között (pl. állókép egy szoborról) nagy hamming-távolságot okozhat, holott a képek valójában ugyanaz a felvétel. Két-lépcsős egyezés: a szigorú küszöb felett is elfogad egy lazább hash-egyezést, de csak ha mindkét fájlnévből kiolvasható egy nagyon közeli (alapértelmezett: 15 másodpercen belüli) időbélyeg is - így a fellazított küszöb nem növeli meg a téves, távoli fényképek összemosásának kockázatát. Új env-változók: `DUPLICATE_HASH_THRESHOLD` (10), `DUPLICATE_HASH_LOOSE_THRESHOLD` (28), `DUPLICATE_TIME_GAP_SECONDS` (15).
+- **Csukott szem tie-breaker**: ha egy duplikátum-csoport MINDEN tagján csukva van a szem, a Gemini-prompt mostantól explicit tartalék-szempontot kap: ilyenkor a jobb arckifejezésűt/mosolygósat válassza, ne véletlenszerűen döntsön.
+- **Jópofa várakozó animáció**: a Mover AI-folyamat haladásjelzője pörgő pontsort és véletlenszerűen váltakozó, játékos "mit csinál épp az AI" feliratokat kapott, hogy várakozás közben ne legyen türelmetlen a felhasználó.
+- **Fix: hiányzó `B2Client.update_file_info()`**: a kategória-jóváhagyás azon ága, amikor egy kép vödre nem változik (csak kategóriát kap), egy sosem létezett metódust hívott, ezért a kategória eddig kizárólag a helyi SQLite adatbázisban létezett, a B2 fájl `file_info`-jába sosem íródott ki. A hiányzó metódus pótolva (a meglévő `move_file()`-ra épül, azonos forrás- és célvödörrel); a tesztelés során jóváhagyott 316 kategória utólag visszapótolva a B2-n.
+
 ## [V16.3.4] - Slideshow UI finomhangolás + gyors kategorizáló gomb vetítés közben (2026-08-25)
 
 - **Slideshow Setup gyorsgombok**: a "Fényidő" fény-spektrum sáv (V16.3.3 kreatív első próbálkozása) helyett egy egyszerűbb, kompakt megoldás - a Shuffle All Photos alatt Hó/Hét/Nap felirat + zöld lejátszás-ikon + a feloldott dátum, egy kattintásra azonnal indítva, külön megerősítő lépés nélkül.
@@ -185,6 +193,9 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.5 | `a346a45` | Fix: hiányzó B2Client.update_file_info() pótlása (kategória-jóváhagyás nem íródott ki a B2-re) |
+| V16.3.5 | `bbeb15e` | Duplikátum-előszűrés pontosítása (kameramozdulás-toleráns egyezés) + tie-breaker + várakozó animáció |
+| V16.3.5 | `fc35472` | Duplikátum-előszűrés a Mover AI-osztályozásához: perceptual-hash csoportosítás + több-képes AI-döntés |
 | V16.3.4 | `8b46516` | Slideshow UI finomhangolás (Hó/Hét/Nap gyorsgombok, mobil footer) + gyors kategorizáló gomb     |
 | V16.3.3 | `64d1627` | Általános dátumtartomány-szűrő a Slideshow-hoz (Utolsó hónap/hét/nap + kézi dátumok)            |
 | V16.3.2 | `95c2834` | Párhuzamos AI-osztályozás (GEMINI_MAX_CONCURRENCY) + Kanban billentyűparancsok a Jóváhagyóban   |
