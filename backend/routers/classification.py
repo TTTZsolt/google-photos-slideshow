@@ -463,7 +463,8 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
     try:
         import time
         from datetime import datetime, timedelta
-        from ..utils.ai_service import analyze_image_for_sorting
+        from ..utils.ai_service import analyze_image_for_sorting, pick_best_from_duplicate_group
+        from ..utils.duplicate_detection import compute_dhash, group_near_duplicates
         from ..utils.b2_client import B2Client
         b2_account = db.query(B2Account).filter(B2Account.is_active == True).first()
         if not b2_account:
@@ -510,6 +511,98 @@ def process_ai_classification(filenames: List[str], ai_mode: str, ai_model: str,
                     time.sleep(wait)
                     now = time.monotonic()
                 next_call_time[0] = now + min_interval
+
+        # --- Duplikatum-eloszures --------------------------------------------------
+        # A hagyomanyos, kepenkent kulon-kulon hivott AI-osztalyozas soha nem latja
+        # egyszerre ket kepet, igy nem tudja eldonteni, hogy egymas duplikatumai -
+        # ezert nem tudta eddig ervenyesiteni az "ha tobb nagyon hasonlo kep van,
+        # csak egyet tarts meg" egyeni szabalyt. Ez a lepes eloszor perceptual-hash
+        # (dHash) alapjan, olcson csoportositja az egymas utan kovetkezo, vizualisan
+        # szinte azonos kepeket (pl. sorozatfelvetelek), majd csoportonkent EGYETLEN
+        # tobb-kepes AI-hivassal eldonteti, melyiket erdemes megtartani. A vesztesek
+        # azonnal torlesre-javasoltkent kerulnek jelolesre, es kimaradnak a lenti
+        # egyedi-kepes AI-korbol (ami felulirna ezt a dontest).
+        duplicate_losers = set()
+        duplicate_losers_lock = threading.Lock()
+        try:
+            bulk_reverse_status["message"] = "Duplikátumok keresése (kép-hasonlóság elemzése)..."
+            sorted_filenames = sorted(filenames)
+            hash_threshold = int(os.environ.get("DUPLICATE_HASH_THRESHOLD", "10"))
+
+            item_lookup = {
+                mi.file_name: mi
+                for mi in db.query(MediaItem).filter(MediaItem.file_name.in_(sorted_filenames)).all()
+            }
+
+            def compute_hash_for(fname):
+                mi = item_lookup.get(fname)
+                if not mi:
+                    return fname, None
+                try:
+                    thumb_url = client.get_download_url(f"{mi.bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
+                    resp = requests.get(thumb_url, timeout=15)
+                    resp.raise_for_status()
+                    return fname, compute_dhash(resp.content)
+                except Exception as hash_err:
+                    logger.warning(f"Duplikátum-hash számítás sikertelen ehhez: {fname}: {hash_err}")
+                    return fname, None
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as hash_executor:
+                hash_results = list(hash_executor.map(compute_hash_for, sorted_filenames))
+
+            valid_hashes = [(fname, h) for fname, h in hash_results if h is not None]
+            duplicate_groups = [g for g in group_near_duplicates(valid_hashes, threshold=hash_threshold) if len(g) > 1]
+
+            if duplicate_groups:
+                bulk_reverse_status["message"] = (
+                    f"{len(duplicate_groups)} duplikátum-csoport azonosítva, legjobb példány kiválasztása..."
+                )
+
+            def resolve_group(group):
+                try:
+                    urls = [
+                        client.get_download_url(f"{item_lookup[fname].bucket_name}-thumbs", fname, b2_account.cloudflare_proxy_url)
+                        for fname in group
+                    ]
+
+                    wait_for_rate_slot()
+                    keep_idx, used_model = pick_best_from_duplicate_group(urls, combined_rules, ai_model)
+                    if used_model != ai_model:
+                        bulk_reverse_status["fallback_model_used"] = used_model
+
+                    group_db = SessionLocal()
+                    try:
+                        for i, fname in enumerate(group):
+                            if i == keep_idx:
+                                continue
+                            with duplicate_losers_lock:
+                                duplicate_losers.add(fname)
+                            mc = group_db.query(MediaClassification).filter(MediaClassification.file_name == fname).first()
+                            if not mc:
+                                mc = MediaClassification(file_name=fname)
+                                group_db.add(mc)
+                            mc.ai_suggested_category = "delete"
+                            mc.ai_status = "pending"
+                            mc.ai_error = None
+                        group_db.commit()
+                    finally:
+                        group_db.close()
+                except Exception as group_err:
+                    logger.warning(f"Duplikátum-csoport AI döntés sikertelen ({group}): {group_err}")
+                finally:
+                    with progress_lock:
+                        bulk_reverse_status["current"] = bulk_reverse_status.get("current", 0) + (len(group) - 1)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrency) as group_executor:
+                group_futures = [group_executor.submit(resolve_group, g) for g in duplicate_groups]
+                for gf in concurrent.futures.as_completed(group_futures):
+                    gf.result()
+        except Exception as dup_err:
+            logger.error(f"Duplikátum-előszűrési lépés hiba: {dup_err}")
+
+        # A duplikatum-vesztesek mar el vannak donteve (torlesre javasolva) - ne
+        # menjenek at meg egyszer az egyedi-kepes AI-osztalyozason is.
+        filenames = [f for f in filenames if f not in duplicate_losers]
 
         def classify_one(fname):
             if not bulk_reverse_status.get("is_running", False):
