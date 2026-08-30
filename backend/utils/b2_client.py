@@ -147,6 +147,16 @@ class B2Client:
         logger.info(f"Successfully moved and cleaned up {file_name} to {final_dest_name}")
         return new_version
 
+    def update_file_info(self, bucket_name: str, file_name: str, file_info: dict):
+        """
+        A B2-nek nincs kulon 'in-place metadata patch' API-ja - egy fajl file_info-jat
+        csak ugy lehet modositani, hogy ugyanabba a vodorbe, ugyanazzal a nevvel
+        'atmasoljuk' az uj file_info-val (uj verziot hozva letre a szerveren,
+        letoltes nelkul), majd toroljuk a regi verziot. Ez pontosan a move_file-lyal
+        azonos muvelet, csak forras- es celvodor megegyezik.
+        """
+        return self.move_file(bucket_name, bucket_name, file_name, file_info=file_info)
+
     def delete_file_version(self, bucket_name: str, file_name: str, file_id: str):
         """Physically deletes a file version from B2."""
         logger.info(f"Physically deleting {file_name} (ID: {file_id[:8]}...) from {bucket_name}")
