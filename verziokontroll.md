@@ -8,6 +8,11 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.6] - Lomtár-ürítés thumbnail-fix (2026-08-31)
+
+- **Fix: árva thumbnailek a Lomtár-ürítés után**: a fő fájl törlése után a hozzá tartozó thumbnailt egy üresen hagyott (`""`) file_id-vel próbálta törölni a kód - a B2 API ezt mindig elutasította, a csupasz `except: pass` pedig csendben elnyelte a hibát. Emiatt minden eddigi Lomtár-ürítésnél a fő fájlok töröltek, de a thumbnailek örökre a `*-thumbs` vödörben maradtak (kb. 1060 db, ~1.45 GiB felesleges tárhely, most eltakarítva). Javítva: a thumbnail törlése előtt a tényleges B2 file_id-t név alapján kérjük le, azzal törlünk.
+- **Megjegyzés**: az AI-osztályozás (Mover) jelenleg **Gemini 2.5 Flash** modellel fut (`backend/utils/ai_service.py` alapértelmezett modellje és az UI modell-választó alapértéke).
+
 ## [V16.3.5] - Duplikátum-előszűrés a Mover AI-osztályozásához (2026-08-30)
 
 - **Duplikátum-felismerés**: a Mover AI-folyamata eddig minden képet külön-külön küldött a Gemini-nek, így sosem látott egyszerre két képet - nem tudta érvényesíteni az `egyeni_torlesi_szempontok.txt` "ha több nagyon hasonló kép van, csak egyet tarts meg" szabályát. Új előszűrő lépés: olcsó dHash (difference-hash) perceptual ujjlenyomat minden képhez, majd az egymás után következő, nagyon hasonló képek (pl. sorozatfelvételek) csoportosítása, majd csoportonként EGYETLEN több-képes Gemini-hívás dönti el, melyik példányt érdemes megtartani.
@@ -193,6 +198,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.6 | `aa52196` | Fix: Lomtár-ürítésnél a thumbnail törlés üres file_id-vel próbálkozott, sosem sikerült - a törölt képek thumbnailje örökre a *-thumbs vödörben maradt |
 | V16.3.5 | `a346a45` | Fix: hiányzó B2Client.update_file_info() pótlása (kategória-jóváhagyás nem íródott ki a B2-re) |
 | V16.3.5 | `bbeb15e` | Duplikátum-előszűrés pontosítása (kameramozdulás-toleráns egyezés) + tie-breaker + várakozó animáció |
 | V16.3.5 | `fc35472` | Duplikátum-előszűrés a Mover AI-osztályozásához: perceptual-hash csoportosítás + több-képes AI-döntés |
