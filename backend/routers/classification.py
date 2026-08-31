@@ -75,7 +75,7 @@ class BulkReverseRequest(BaseModel):
     folder_path: Optional[str] = None
     category_filter: Optional[str] = None
     ai_mode: Optional[str] = "manual" # "manual", "ai-delete-only", "ai-full"
-    ai_model: Optional[str] = "gemini-2.5-flash"
+    ai_model: Optional[str] = "gemini-3.5-flash-lite"
     ai_custom_rules: Optional[str] = ""
 
 bulk_reverse_status: Dict[str, Any] = {
