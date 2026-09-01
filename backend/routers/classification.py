@@ -288,13 +288,32 @@ def get_next_for_classification(exclude: List[str] = Query(None), db: Session = 
         raise HTTPException(status_code=500, detail=f"Váratlan hiba: {str(e)}")
 
 def b2_move_background_task(key_id: str, app_key: str, source_bucket: str, dest_bucket: str, file_name: str, file_info: dict = None):
-    try:
-        from ..utils.b2_client import B2Client
-        client = B2Client(key_id, app_key)
-        client.move_file(source_bucket, dest_bucket, file_name, file_info=file_info)
-        logger.info(f"Background B2 move successful: {file_name} -> {dest_bucket} (meta: {file_info})")
-    except Exception as e:
-        logger.error(f"Background B2 move failed for {file_name}: {e}")
+    """Egyetlen fajl (kep VAGY thumbnail) athelyezese a hatterben. A ket hivas
+    (kep + thumbnail) fuggetlen szalon fut - ha az egyik atmenetileg elhasal
+    (halozati hiba, B2 throttling), a masik meg sikerulhet, es a ket oldal
+    szetcsuszhat (pl. a kep atkerul a Lomtarba, a thumbnail nem). Ezert itt
+    ujraprobalkozunk, mielott feladnank; vegso biztositekkent a kovetkezo
+    teljes B2-szinkron onjavito lepese (thumb_worker.generate_missing_thumbnails)
+    is potolja, ha meg igy is elmaradna."""
+    import time
+    from ..utils.b2_client import B2Client
+    client = B2Client(key_id, app_key)
+
+    max_attempts = 3
+    last_error = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            client.move_file(source_bucket, dest_bucket, file_name, file_info=file_info)
+            logger.info(f"Background B2 move successful: {file_name} -> {dest_bucket} (meta: {file_info}, attempt {attempt})")
+            return
+        except Exception as e:
+            last_error = e
+            if attempt < max_attempts:
+                wait_seconds = 2 ** attempt  # 2s, 4s
+                logger.warning(f"Background B2 move failed for {file_name} (attempt {attempt}/{max_attempts}): {e}. Retrying in {wait_seconds}s...")
+                time.sleep(wait_seconds)
+
+    logger.error(f"Background B2 move FAILED after {max_attempts} attempts for {file_name}: {last_error}")
 
 @router.post("/api/classify")
 def classify_image(req: ClassificationRequest, db: Session = Depends(get_db)):

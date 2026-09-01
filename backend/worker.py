@@ -147,6 +147,16 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
         
         logger.info(f"Finished sync for account {b2_account_id}. Total items: {total_count}, Cleaned up: {orphaned_count} orphans.")
 
+        # Onjavito thumbnail-potlas: ha egy korabbi mozgatas/uj feltoltes
+        # kozben a thumbnail resze elhasalt (halozati hiba, B2 throttling),
+        # minden resync ezt automatikusan eszreveszi es potolja - igy egy
+        # kep sosem marad tartosan "fekete" a feluleten.
+        try:
+            from .thumb_worker import generate_missing_thumbnails
+            generate_missing_thumbnails(b2_account_id=b2_account_id, ignore_time=True)
+        except Exception as heal_err:
+            logger.error(f"Thumbnail self-heal step failed: {heal_err}")
+
     except Exception as e:
         logger.exception(f"Error syncing B2 account {b2_account_id}: {e}")
         b2_account = db.query(B2Account).filter(B2Account.id == b2_account_id).first()
