@@ -8,6 +8,12 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.7] - Gemini 3.5 migráció + üzembiztos thumbnail/szinkron (2026-09-01)
+
+- **Gemini 2.5 → 3.5 generációváltás**: kiderült, hogy a Google időközben teljesen kivezette a 2.5-ös (és korábbi) Gemini generációt ennél a projektnél - a `gemini-2.5-flash`/`gemini-2.5-pro`/`gemini-2.0-flash`/`gemini-1.5-flash` mind 404 "no longer available" hibát adnak. A meglévő fallback-lánc miatt a Mover eddig sem állt le (a `gemini-flash-latest` alias mentette), de minden képnél 2 felesleges, garantáltan elbukott hívást és extra késleltetést okozott. Új alapértelmezett: `gemini-3.5-flash-lite` (legolcsóbb), UI-választó: Flash-Lite / Flash / Pro Preview, `FALLBACK_MODELS` kitisztítva a halott bejegyzésektől.
+- **Fix: árva thumbnailek a Lomtárban** - egy korábbi tömeges törlésnél a fő kép sikeresen átkerült a Lomtárba, de a hozzá tartozó thumbnail mozgatása 12 esetben elakadt (átmeneti B2/hálózati hiba, újrapróbálkozás nélkül), a fekete/hiányzó képek formájában jelentkezett a felületen. A stranded thumbnailek visszapótolva, plusz kétrétegű üzembiztosítás: (1) `b2_move_background_task` mostantól 3x próbálkozik (2s/4s/8s) mielőtt feladná; (2) minden teljes B2-szinkron végén automatikus önjavító lépés (`thumb_worker.generate_missing_thumbnails`, általánosítva minden vödörre a Lomtárral együtt) újragenerálja a hiányzó thumbnaileket a fő képből.
+- **Fix: adatvesztés-kockázat a teljes B2-szinkronban** - egy resync a B2 "eshetőleges konzisztencia" jelensége miatt átmenetileg kevesebb fájlt látott a Lomtárban a valósnál, és a régi "töröld-és-építsd-újra" logika ez alapján kitörölte a hiányzó elemek `media_items`/`media_classifications` sorát (a törlés-státusszal együtt!), holott a fájlok fizikailag megvoltak. Javítva: a szinkron mostantól egy fájlt csak akkor töröl a DB-ből, ha egy külön, célzott lekérdezéssel megerősítette, hogy tényleg hiányzik - ha a bulk-listázás csak kihagyta, a sor érintetlen marad. A fájlnevenkénti B2-verzióváltást (új file-id) is helyesen kezeli, duplikáció nélkül.
+
 ## [V16.3.6] - Lomtár-ürítés thumbnail-fix (2026-08-31)
 
 - **Fix: árva thumbnailek a Lomtár-ürítés után**: a fő fájl törlése után a hozzá tartozó thumbnailt egy üresen hagyott (`""`) file_id-vel próbálta törölni a kód - a B2 API ezt mindig elutasította, a csupasz `except: pass` pedig csendben elnyelte a hibát. Emiatt minden eddigi Lomtár-ürítésnél a fő fájlok töröltek, de a thumbnailek örökre a `*-thumbs` vödörben maradtak (kb. 1060 db, ~1.45 GiB felesleges tárhely, most eltakarítva). Javítva: a thumbnail törlése előtt a tényleges B2 file_id-t név alapján kérjük le, azzal törlünk.
@@ -198,6 +204,10 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.7 | `32c78ee` | Üzembiztos B2-szinkron: célzott megerősítést kér, mielőtt a listázásból hiányzó fájlokat törölné a DB-ből |
+| V16.3.7 | `7d9a6b3` | Üzembiztos thumbnail-mozgatás: retry a B2 háttérműveleteknél + önjavító thumbnail-pótlás minden szinkron után |
+| V16.3.7 | `5a9c494` | Gemini 2.5 -> 3.5 generáció-váltás (a 2.5 család megszűnt), Flash-Lite választhatóvá tétel |
+| V16.3.7 | `4b109e4` | Verziószám emelése branch-indításkor (új szabály: azonnal, nem a végén) |
 | V16.3.6 | `aa52196` | Fix: Lomtár-ürítésnél a thumbnail törlés üres file_id-vel próbálkozott, sosem sikerült - a törölt képek thumbnailje örökre a *-thumbs vödörben maradt |
 | V16.3.5 | `a346a45` | Fix: hiányzó B2Client.update_file_info() pótlása (kategória-jóváhagyás nem íródott ki a B2-re) |
 | V16.3.5 | `bbeb15e` | Duplikátum-előszűrés pontosítása (kameramozdulás-toleráns egyezés) + tie-breaker + várakozó animáció |
