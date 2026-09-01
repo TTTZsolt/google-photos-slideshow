@@ -13,17 +13,27 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 FALLBACK_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
     "gemini-flash-latest",
-    "gemini-1.5-flash"
 ]
 
+
+def _upgrade_stale_generation(model_name: str) -> str:
+    """Google retires whole model generations over time (e.g. the 1.5 and 2.5
+    families both returned 404 'no longer available' as of 2026-08) - if an old
+    generation number is requested (a stale UI selection, a stored preference,
+    etc.), transparently point it at the 3.5 generation instead of failing."""
+    for old_gen in ("1.5", "2.5"):
+        if old_gen in model_name:
+            return model_name.replace(old_gen, "3.5")
+    return model_name
+
 def analyze_image_for_sorting(
-    image_url: str, 
-    available_categories: list[str], 
-    custom_rules: str = "", 
-    model_name: str = "gemini-2.5-flash"
+    image_url: str,
+    available_categories: list[str],
+    custom_rules: str = "",
+    model_name: str = "gemini-3.5-flash-lite"
 ) -> tuple[str, str]:
     """
     Downloads an image (thumbnail) and uses Gemini API to classify it or suggest deletion.
@@ -45,11 +55,10 @@ def analyze_image_for_sorting(
 
     # Prioritize models
     models_to_try = [model_name]
-    if "1.5" in model_name:
-        mapped = model_name.replace("1.5", "2.5")
-        if mapped not in models_to_try:
-            models_to_try.append(mapped)
-            
+    upgraded = _upgrade_stale_generation(model_name)
+    if upgraded not in models_to_try:
+        models_to_try.append(upgraded)
+
     for fb in FALLBACK_MODELS:
         if fb not in models_to_try:
             models_to_try.append(fb)
@@ -97,7 +106,7 @@ def analyze_image_for_sorting(
 def pick_best_from_duplicate_group(
     image_urls: list[str],
     custom_rules: str = "",
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-3.5-flash-lite"
 ) -> tuple[int, str]:
     """
     Downloads a small group of near-duplicate/burst images (already identified as
@@ -124,10 +133,9 @@ def pick_best_from_duplicate_group(
             raise Exception(f"Failed to download duplicate-group image: {img_err}")
 
     models_to_try = [model_name]
-    if "1.5" in model_name:
-        mapped = model_name.replace("1.5", "2.5")
-        if mapped not in models_to_try:
-            models_to_try.append(mapped)
+    upgraded = _upgrade_stale_generation(model_name)
+    if upgraded not in models_to_try:
+        models_to_try.append(upgraded)
     for fb in FALLBACK_MODELS:
         if fb not in models_to_try:
             models_to_try.append(fb)

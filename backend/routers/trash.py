@@ -233,11 +233,14 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
                         if file_id:
                             try:
                                 client.delete_file_version(current_bucket, file_name, file_id)
-                                # Also try to delete thumbnail
+                                # Also try to delete thumbnail - needs its own real file_id
+                                # looked up by name first, B2 rejects an empty/placeholder id.
                                 try:
-                                    client.delete_file_version(f"{current_bucket}-thumbs", file_name, "")
-                                except:
-                                    pass
+                                    thumb_bucket = client.b2_api.get_bucket_by_name(f"{current_bucket}-thumbs")
+                                    thumb_info = thumb_bucket.get_file_info_by_name(file_name)
+                                    client.delete_file_version(f"{current_bucket}-thumbs", file_name, thumb_info.id_)
+                                except Exception as thumb_err:
+                                    logger.warning(f"Thumbnail delete failed for {file_name}: {thumb_err}")
                             except Exception as b2_err:
                                 logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
 
