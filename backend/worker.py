@@ -63,10 +63,60 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
         for bucket_name, file_versions in all_bucket_files.items():
             logger.info(f"Syncing bucket: {bucket_name} ({len(file_versions)} files)")
             is_trash_bucket = (bucket_name == b2_account.trash_bucket_name)
-            
-            # Clear existing items for THIS bucket only
-            db.execute(delete(MediaItem).where(MediaItem.b2_account_id == b2_account_id, MediaItem.bucket_name == bucket_name))
-            db.commit()
+
+            # Robusztussag B2 "eshetoleges konzisztencia" ellen: a fenti
+            # listazas kozvetlenul sok/gyors B2-muvelet utan atmenetileg
+            # KEVESEBB fajlt adhat vissza, mint amennyi valojaban ott van.
+            # A regi kod ilyenkor vakon torolte a "hianyzo" fajlok DB-sorat
+            # (a torles-statusszal egyutt, ha eppen a Lomtarrol volt szo) -
+            # 2026-09-01-en pontosan ez tortent: egy resync a Lomtarban
+            # 24 valodi elembol csak 3-at latott, es a maradek 24
+            # media_items/media_classifications sora elveszett, holott a
+            # fajlok tenylegesen megvoltak a B2-n. Ezert most, mielott
+            # barmit is torolnenk, fajlonkent celzottan megerositjuk a
+            # hianyt egy kulon, direkt lekerdezessel.
+            fresh_by_name = {fv.file_name: fv for fv in file_versions}
+            existing_rows = {
+                fn: item_id for fn, item_id in
+                db.query(MediaItem.file_name, MediaItem.id)
+                .filter(MediaItem.b2_account_id == b2_account_id, MediaItem.bucket_name == bucket_name)
+                .all()
+            }
+            missing_from_listing = set(existing_rows) - set(fresh_by_name)
+
+            confirmed_removed_names = set()
+            if missing_from_listing:
+                logger.info(f"{bucket_name}: {len(missing_from_listing)} fajl hianyzik a friss listazasbol, egyenkenti megerositas...")
+                try:
+                    check_bucket = client.b2_api.get_bucket_by_name(bucket_name)
+                except Exception as e:
+                    logger.error(f"Nem sikerult megnyitni a {bucket_name} vodort a megerositeshez: {e}")
+                    check_bucket = None
+
+                for fname in missing_from_listing:
+                    still_there = False
+                    if check_bucket:
+                        try:
+                            check_bucket.get_file_info_by_name(fname)
+                            still_there = True
+                        except Exception:
+                            still_there = False
+                    if still_there:
+                        logger.warning(f"{bucket_name}/{fname}: a bulk-listazas kihagyta, de valojaban meg mindig ott van - MEGTARTVA (nem torolve).")
+                    else:
+                        confirmed_removed_names.add(fname)
+
+            # Csak a megerositetten eltunt fajlok soranak torlese, plusz
+            # azoke, amik ugyan megvannak, de uj B2-verziot (uj id-t)
+            # kaptak - ezeket a lenti ciklus ujra beszurja a friss id-vel.
+            ids_to_delete = [
+                item_id for fn, item_id in existing_rows.items()
+                if fn in confirmed_removed_names
+                or (fn in fresh_by_name and fresh_by_name[fn].id_ != item_id)
+            ]
+            if ids_to_delete:
+                db.execute(delete(MediaItem).where(MediaItem.id.in_(ids_to_delete)))
+                db.commit()
 
             count = 0
             for file_version in file_versions:
