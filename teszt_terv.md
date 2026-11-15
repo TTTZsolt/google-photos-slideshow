@@ -42,3 +42,18 @@ Ez a dokumentum a **V16.1.0** (Képválogatás AI segítségével) verzió aszta
 | [ ] | T4.1 | Visszaállítás gomb | Nyisd meg a **Lomtár** felületet. | A jobb felső sarokban vagy a műveleti sávban látható az **"Összes kép visszaállítása"** (Restore All) gomb. | |
 | [ ] | T4.2 | Tömeges visszaállítás | Dobj pár képet a Lomtárba, majd kattints az **"Összes kép visszaállítása"** gombra. | Minden kép kiürül a lomtárból, visszakerül az adatbázisban a kiinduló állapotába, és a B2 felhőben is visszahelyeződik a megfelelő mappába. | |
 | [ ] | T4.3 | Lomtár ürítés | Helyezz képet a Lomtárba, majd kattints a **"Lomtár ürítése"** gombra. | A Lomtár kiürül, a képek véglegesen törlődnek az adatbázisból és a Backblaze B2 felhőtárhelyről is. | |
+
+---
+
+## 5. Felvétel ideje (`creation_time`) és dátumszűrő (V16.3.8)
+
+Automatikus teszt: `python scratch/test_media_dates.py` (a dátumszámoló logika).
+
+| Állapot | ID | Teszt Terület | Teszt lépések | Elvárt működés | Megjegyzés |
+| :---: | :---: | :--- | :--- | :--- | :--- |
+| [ ] | T5.1 | Dry-run | Futtasd: `python scratch/backfill_creation_time.py --db <adatbázis>` (alapból csak olvas). | Összesítést ír a friss és a régi képekről, és előtte/utána példákat a friss képekről. Az adatbázis nem változik. | |
+| [ ] | T5.2 | Friss képek | Nézd meg a dry-run példáit a telefonról érkezett képekre. | A „utána" érték a fájlnévben lévő felvételi idő (pl. `img-20260824-154422.jpg` → 2026-08-24 15:44:22). | |
+| [ ] | T5.3 | Apply és mentés | Futtasd `--apply`-jal. | Előbb elkészül a `photos_app.db.backup-before-creation-time-…` másolat, majd a változó sorok frissülnek. | |
+| [ ] | T5.4 | Szinkron nem rontja el | Futtass teljes B2-szinkront az apply után, majd futtasd újra a dry-run-t. | A dry-run nem talál javítandó (változó) sort a friss képeknél. | |
+| [ ] | T5.5 | „Utolsó hónap" szűrő | Indítsd a vetítést az **Utolsó hónap** gombbal. | Csak az elmúlt 30 napban készült (telefonról érkezett) képek játszanak, régi Takeout-kép nem. | |
+| [ ] | T5.6 | Új telefonos kép | Készíts egy fotót, várd meg a feltöltést és a szinkront. | A kép a felvétel idejével jelenik meg az „Utolsó nap" szűrőben (nem a feltöltés idejével). | |

@@ -8,6 +8,14 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.8] - A felvétel ideje (`creation_time`) javítása (2026-11-15)
+
+- **Fix: a dátumszűrő a feltöltés idejét használta** - a B2-szinkron (`worker.py`) a `media_items.creation_time` mezőbe a B2 feltöltési időt írta, és minden szinkronnál felülírta a telefonos feldolgozó által EXIF-ből beírt pontos időt is. Emiatt a vetítés „Utolsó hónap/hét/nap" szűrője azokat a régi (pl. Takeout) képeket is játszotta, amelyeket az elmúlt időszakban töltöttünk fel. Mostantól a szinkron a felvétel idejét az útvonalból és a fájlnévből számolja (`backend/utils/media_dates.py`), a feltöltési időt nem használja, és a már tárolt, útvonallal összeegyező pontos időt megtartja.
+- **Dátum nélküli képek kimaradnak a szűrőből**: ahol az útvonalban csak év/hónap van és a fájlnévből sem olvasható dátum (jellemzően régi Takeout-képek), a `creation_time` `NULL`, így a dátumszűrt vetítésben nem szerepelnek. A szűrő nélküli vetítés ettől nem változik.
+- **Egyszeri javító szkript** (`scratch/backfill_creation_time.py`): a meglévő sorokat ugyanazzal a szabállyal számolja újra. Alapból dry-run (csak olvas), `--apply`-jal ír, előtte automatikus adatbázis-mentést készít.
+- **Tesztek**: `scratch/test_media_dates.py` és a `teszt_terv.md` 5. fejezete.
+- **Állapot**: fejlesztés alatt (`16.3.8-dev`), a javító szkript az éles (tablet) adatbázison még nem futott.
+
 ## [V16.3.7] - Gemini 3.5 migráció + üzembiztos thumbnail/szinkron (2026-09-01)
 
 - **Gemini 2.5 → 3.5 generációváltás**: kiderült, hogy a Google időközben teljesen kivezette a 2.5-ös (és korábbi) Gemini generációt ennél a projektnél - a `gemini-2.5-flash`/`gemini-2.5-pro`/`gemini-2.0-flash`/`gemini-1.5-flash` mind 404 "no longer available" hibát adnak. A meglévő fallback-lánc miatt a Mover eddig sem állt le (a `gemini-flash-latest` alias mentette), de minden képnél 2 felesleges, garantáltan elbukott hívást és extra késleltetést okozott. Új alapértelmezett: `gemini-3.5-flash-lite` (legolcsóbb), UI-választó: Flash-Lite / Flash / Pro Preview, `FALLBACK_MODELS` kitisztítva a halott bejegyzésektől.
