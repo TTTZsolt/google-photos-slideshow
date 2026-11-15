@@ -4,6 +4,7 @@ from sqlalchemy import delete, func
 from .database import SessionLocal
 from .models import MediaItem, B2Account, MediaClassification
 from datetime import datetime
+from .utils.media_dates import resolve_creation_time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -82,6 +83,16 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                 .filter(MediaItem.b2_account_id == b2_account_id, MediaItem.bucket_name == bucket_name)
                 .all()
             }
+            # A creation_time (felvetel ideje) meglevo erteke, TORLES ELOTT lementve:
+            # az uj B2-verziot (uj id) kapott sorok a lenti torlessel elvesznek,
+            # az erteket viszont meg kell orizni (pl. a telefonos feldolgozo altal
+            # EXIF-bol beirt pontos ido).
+            existing_ctimes = {
+                fn: ct for fn, ct in
+                db.query(MediaItem.file_name, MediaItem.creation_time)
+                .filter(MediaItem.b2_account_id == b2_account_id, MediaItem.bucket_name == bucket_name)
+                .all()
+            }
             missing_from_listing = set(existing_rows) - set(fresh_by_name)
 
             confirmed_removed_names = set()
@@ -141,7 +152,9 @@ def sync_b2_worker(b2_account_id: int, target_bucket: str = None):
                     file_name=file_name,
                     mime_type=mime if (mime and mime.startswith('image/')) else f"image/{ext}",
                     size=file_version.size,
-                    creation_time=datetime.fromtimestamp(file_version.upload_timestamp / 1000),
+                    # V16.3.8: a felvetel ideje az utvonalbol/fajlnevbol, NEM a B2 feltoltesi ido
+                    # (az a regi Takeout-kepeket "frissnek" mutatta a datumszuroben).
+                    creation_time=resolve_creation_time(file_name, existing_ctimes.get(file_name)),
                     sha1=getattr(file_version, "content_sha1", None)
                 )
                 db.merge(media_item)
