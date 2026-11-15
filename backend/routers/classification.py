@@ -123,11 +123,11 @@ def check_sha1(sha1: str, db: Session = Depends(get_db)):
 
 @router.get("/classify")
 def classify_page(request: Request):
-    return templates.TemplateResponse("classify.html", {"request": request, "version": VERSION})
+    return templates.TemplateResponse(request, "classify.html", {"version": VERSION})
 
 @router.get("/folder-kanban")
 def folder_kanban_page(request: Request):
-    return templates.TemplateResponse("folder_kanban.html", {"request": request, "version": VERSION})
+    return templates.TemplateResponse(request, "folder_kanban.html", {"version": VERSION})
 
 @router.get("/api/folders/items")
 def get_folder_items(folder_path: str = Query(""), limit: int = Query(100), offset: int = Query(0), db: Session = Depends(get_db)):
