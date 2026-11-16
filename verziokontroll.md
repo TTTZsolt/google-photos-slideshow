@@ -8,6 +8,20 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 # Lumina Képtár - Verziótörténet
 
+## [V16.3.8] - A felvétel ideje (`creation_time`) javítása (2026-11-15)
+
+- **Fix: a dátumszűrő a feltöltés idejét használta** - a B2-szinkron (`worker.py`) a `media_items.creation_time` mezőbe a B2 feltöltési időt írta, és minden szinkronnál felülírta a telefonos feldolgozó által EXIF-ből beírt pontos időt is. Emiatt a vetítés „Utolsó hónap/hét/nap" szűrője azokat a régi (pl. Takeout) képeket is játszotta, amelyeket az elmúlt időszakban töltöttünk fel. Mostantól a szinkron a felvétel idejét az útvonalból és a fájlnévből számolja (`backend/utils/media_dates.py`), a feltöltési időt nem használja, és a már tárolt, útvonallal összeegyező pontos időt megtartja.
+- **Dátum nélküli képek kimaradnak a szűrőből**: ahol az útvonalban csak év/hónap van és a fájlnévből sem olvasható dátum (jellemzően régi Takeout-képek), a `creation_time` `NULL`, így a dátumszűrt vetítésben nem szerepelnek. A szűrő nélküli vetítés ettől nem változik.
+- **Egyszeri javító szkript** (`scratch/backfill_creation_time.py`): a meglévő sorokat ugyanazzal a szabállyal számolja újra. Alapból dry-run (csak olvas), `--apply`-jal ír, előtte automatikus adatbázis-mentést készít.
+- **Tesztek**: `scratch/test_media_dates.py` és a `teszt_terv.md` 5. fejezete.
+- **Fix: a Lomtár-ürítés árva fájlokat hagyott a B2-ben** - a „törlésre jelölés" a képet a Lomtár vödörbe másolja (a másolat új B2 verzió-azonosítót kap), de a `media_items.id` a régi maradt. Az ürítés ezzel a régi azonosítóval próbált törölni, a B2 `File not present` hibát adott, a hibát a kód csak naplózta, az adatbázis-sorokat viszont mindenképp törölte. Eredmény: a fájl fizikailag a `torles-elott` vödörben maradt, az app viszont már nem látott róla (üres Lomtár, 0 darab), a Takeout feltöltő pedig „a Lomtárban van" státusszal kihagyta. Mostantól az ürítés mindig név alapján kéri le a valódi aktuális verziót; ha a lekérdezés vagy a fizikai törlés hibázik, az elem a Lomtárban marad (újrapróbálható); ha a fájl már nincs a B2-n, a sorok törlődnek.
+- **Fix: a visszaállított kép tombstone-ja megmaradt** - a `restore` és a `restore-all` mostantól törli a kép SHA1-ét a `deleted_content_hashes` táblából és a `deleted_sha1_list.csv`-ből, különben a Takeout feltöltő a visszaállított (élő) képet örökre „törölt"-nek tekintette volna. A `restore-all` hibás B2-mozgatásnál visszaállítja az elem adatbázis-állapotát (`is_deleted=True`), így az adatbázis nem mondja „élő"-nek azt a képet, ami fizikailag még a Lomtárban van.
+- **Egyszeri adattisztítás** (2026-11-16, a Lenovo gépen): a `torles-elott` vödörben árván maradt 539 kép és bélyegképe véglegesen törölve, a SHA1-ek tombstone-ként rögzítve (`trash-empty-orphan`). Mentés: `photos_app.db.backup-before-orphan-trash-20261116`.
+- **Automatikus tesztek**: új `tests/` mappa, `tests/test_trash.py` (8 regressziós teszt memóriabeli adatbázissal és hamis B2-klienssel, valódi B2-höz nem nyúl) és `tests/run_tests.bat` (a virtuális környezetet a Google Drive-on kívül, `%USERPROFILE%\venvs\kepnezegeto-test` alatt hozza létre). A `.gitignore` kivételt kapott a `tests/test_*.py` fájlokra.
+- **B2-méret a Connected B2 Nodes csempén**: a fő vödör (kepek02) mérete GB-ban (10^9 bájt, bélyegképek nélkül).
+- **Tablet-frissítő bat**: a tablet aktuális ágát frissíti (nem vált main-re), csak fast-forward; a leállító bat nem lövi le a saját SSH-parancsát.
+- **Állapot**: kiadva (2026-11-16), a tableten kipróbálva, beolvasztva a main-be.
+
 ## [V16.3.7] - Gemini 3.5 migráció + üzembiztos thumbnail/szinkron (2026-09-01)
 
 - **Gemini 2.5 → 3.5 generációváltás**: kiderült, hogy a Google időközben teljesen kivezette a 2.5-ös (és korábbi) Gemini generációt ennél a projektnél - a `gemini-2.5-flash`/`gemini-2.5-pro`/`gemini-2.0-flash`/`gemini-1.5-flash` mind 404 "no longer available" hibát adnak. A meglévő fallback-lánc miatt a Mover eddig sem állt le (a `gemini-flash-latest` alias mentette), de minden képnél 2 felesleges, garantáltan elbukott hívást és extra késleltetést okozott. Új alapértelmezett: `gemini-3.5-flash-lite` (legolcsóbb), UI-választó: Flash-Lite / Flash / Pro Preview, `FALLBACK_MODELS` kitisztítva a halott bejegyzésektől.
@@ -204,6 +218,12 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.8 | `ec2666c` | Tablet-frissítő bat: a tablet aktuális ágát frissíti (nem vált main-re), csak fast-forward, hibánál megáll; leállító bat pkill-mintája (`[p]ython`) nem lövi le a saját SSH-parancsát |
+| V16.3.8 | `4b199d7` | Connected B2 Nodes csempe: a fő vödör (kepek02) mérete GB-ban (GB = 10^9 bájt, bélyegképek nélkül) |
+| V16.3.8 | `17c1f94` | Lomtár-ürítés javítása: árva fájlok megelőzése (valódi B2-azonosító név alapján, hibánál az elem a Lomtárban marad), tombstone törlése visszaállításkor + automatikus tesztek (`tests/`) |
+| V16.3.8 | `f0f668d` | TemplateResponse új (request-első) hívásforma, az új Starlette-hez |
+| V16.3.8 | `093cecb` | Dokumentáció: terv, specifikáció (videó- és funkciófrissítések), felhasználói útmutató, verziótörténet, teszt terv |
+| V16.3.8 | `088a36c` | A felvétel ideje (`creation_time`) a fájl útvonalából/nevéből, nem a B2 feltöltési időből + javító szkript (dry-run) |
 | V16.3.7 | `32c78ee` | Üzembiztos B2-szinkron: célzott megerősítést kér, mielőtt a listázásból hiányzó fájlokat törölné a DB-ből |
 | V16.3.7 | `7d9a6b3` | Üzembiztos thumbnail-mozgatás: retry a B2 háttérműveleteknél + önjavító thumbnail-pótlás minden szinkron után |
 | V16.3.7 | `5a9c494` | Gemini 2.5 -> 3.5 generáció-váltás (a 2.5 család megszűnt), Flash-Lite választhatóvá tétel |

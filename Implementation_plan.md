@@ -1,4 +1,76 @@
-# Implementation_plan.md — Takeout-feltöltés, szortírozás, kuka: végleges törlés nyomon követése
+# Implementation_plan.md
+
+## V16.3.8 — A felvétel ideje (`creation_time`) javítása
+
+Branch: `16.3.8` (verzió: `16.3.8-dev`). Állapot: **jóváhagyásra vár**.
+
+### Probléma
+
+A `media_items.creation_time` a vetítés dátumszűrőjének (Utolsó hónap/hét/nap, kézi tartomány)
+alapja, és a dokumentáció szerint a felvétel ideje. A B2-szinkron (`backend/worker.py:144`)
+azonban a **B2 feltöltési időt** írja bele, és `db.merge`-dzsel felülírja a helyes értéket is
+(a `incoming_processor.py` helyesen állítja be). Következmény: a Takeout-ból feltöltött régi
+képek az „Utolsó hónap" szűrőben jelennek meg, ha az elmúlt hónapban töltöttük fel őket.
+
+### Döntések (Zsolt, 2026-11-15)
+
+- Az időt **helyi időben** tároljuk (naiv helyi `datetime`, mint a meglévő kód mindenhol).
+- Ahol nem állapítható meg a felvétel ideje, a kép **kimarad a dátumszűrőből** (`creation_time = NULL`).
+- A dátumszűrőnek **csak a telefonról érkező (friss) képeknél** kell pontosnak lennie. A Takeout-képek biztosan
+  régebbiek egy hónapnál, ott a pontosság nem szempont: nem kell velük külön bajlódni, a dry-run sem foglalkozik velük.
+
+### Megoldás
+
+1. **Új függvény**: `backend/utils/media_dates.py` → `derive_capture_date(file_name)`.
+   A Takeout-feltöltő által épített útvonalból (`ÉÉÉÉ/HH/[NN-album/]fájlnév`) és a fájlnévből
+   számol, B2-letöltés nélkül. Sorrend:
+   1. Fájlnévi `ÉÉÉÉHHNN[-_]ÓÓPPMM` (pl. `20170608-211651-0.jpg`, `IMG_20211224_181930.jpg`),
+      **ha a dátuma egyezik az útvonal évével és hónapjával** (és napjával, ha az útvonal a napot is
+      tartalmazza). Ekkor pontos dátum és idő.
+   2. Útvonal napja (`ÉÉÉÉ/HH/NN-album/…`): az adott nap, 00:00.
+   3. Csak év/hónap ismert (a fájlnév nem segít): **NULL** (kimarad).
+   4. Nincs értelmezhető útvonal: **NULL**.
+   A 3–4. eset a régi (Takeout) képeknél fordul elő, ezek a szűrő szempontjából érdektelenek, ezért nem kapnak külön kezelést.
+   Ha a fájlnévi dátum nem egyezik az útvonallal, az **útvonal az irányadó** (a feltöltő eszköz
+   EXIF → Takeout JSON → fájlnév sorrendben számolta, tehát megbízhatóbb).
+2. **`worker.py`**: a feltöltési időt többé nem használja. A `creation_time` értéke:
+   - a már meglévő érték, ha az egyezik az útvonal évével és hónapjával (megőrzi pl. a telefonos
+     képek pontos EXIF-idejét), különben
+   - `derive_capture_date(file_name)` eredménye (lehet NULL).
+3. **Egyszeri javító szkript**: `scratch/backfill_creation_time.py`. Ugyanazt a függvényt és
+   szabályt használja a meglévő sorokra.
+   - Alapértelmezett **dry-run**: kiírja a változó sorok számát, és a **friss képekről** (az útvonal szerint az
+     elmúlt ~3 hónapból, azaz a telefonról érkezőkről) részletesen mutat előtte/utána példákat. A régi képeknél csak
+     összesítést ad. CSV-t ment a változásokról.
+   - `--apply`: előtte `photos_app.db.backup-before-creation-time-ÉÉÉÉHHNN-ÓÓPPMM` biztonsági másolatot
+     készít, majd kötegelve ír.
+4. **Tesztek**: `scratch/test_media_dates.py` (sima Python assert, a `teszt_terv.md`-be is bekerül):
+   a fenti ágak, az eltérő fájlnév/útvonal, a hibás vagy hiányzó útvonal, HEIC→JPG nevek.
+5. **Dokumentáció**: `verziokontroll.md` (V16.3.8 + commit-tábla), `user_guide.md` 11. pont
+   (a dátumszűrő a felvétel ideje alapján szűr, dátum nélküli képek kimaradnak),
+   `specification.md` 11. pont.
+
+### Nem változik
+
+A `slideshow.py` lekérdezései maradnak: a NULL értékre a `>=`/`<` összehasonlítás hamis, ezért a
+dátum nélküli kép magától kimarad a szűrt vetítésből. Dátumszűrő nélkül (Shuffle All) minden kép játszik.
+
+### Kockázatok és bevezetés
+
+- Az adatbázis módosítása éles adatot érint → mindig mentés előtte, a javító szkript alapból dry-run.
+- A `main` és a tablet nem változik jóváhagyás nélkül. Sorrend: helyi teszt egy DB-másolaton →
+  dry-run a tablet DB-jén (`tablet_teszt_branch.bat 16.3.8`) → te jóváhagyod → `--apply` →
+  merge és éles frissítés csak a te kifejezett jóváhagyásod után.
+- A telefonról érkező képeknél a szinkron már felülírta a pontos időt a feltöltési idővel. Ezeket a javító szkript a fájlnévből
+  és az útvonalból állítja vissza. A dry-run friss képekre mutatott példái ezt ellenőrzik, mielőtt bármi íródik.
+
+### Nyitott kérdés
+
+Nincs.
+
+---
+
+## Korábbi terv (V16.1.x) — Takeout-feltöltés, szortírozás, kuka: végleges törlés nyomon követése
 
 Branch: `16.1.5-dev`
 

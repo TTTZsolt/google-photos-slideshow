@@ -40,4 +40,6 @@ Thumbs.db
 log.txt*
 tmp_*.py
 test_*.py
+# ...kiveve a tests/ mappa automatikus tesztjei (ezek a repo reszei)
+!tests/test_*.py
 *.log

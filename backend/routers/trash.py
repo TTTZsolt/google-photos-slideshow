@@ -5,6 +5,7 @@ from ..database import SessionLocal
 from ..models import MediaItem, MediaClassification, B2Account, DeletedContentHash
 from ..slideshow import controller
 from ..utils.b2_client import B2Client
+from b2sdk.v2.exception import FileNotPresent
 import logging
 import os
 import csv
@@ -25,6 +26,45 @@ def append_deleted_sha1_csv(sha1: str, file_name: str, reason: str):
             writer.writerow(["sha1", "last_known_file_name", "deleted_at", "reason"])
         from datetime import datetime, timezone
         writer.writerow([sha1, file_name, datetime.now(timezone.utc).isoformat(), reason])
+
+def remove_tombstone(db: Session, sha1: Optional[str], file_name: Optional[str] = None):
+    """Undo the 'deliberately deleted' record of an item that was restored from
+    the trash. Without this a restored (live) image would stay on the tombstone
+    list and the Takeout uploader would treat it as deleted forever.
+    Matches by SHA1; falls back to the last known file name only if the SHA1 is
+    unknown. Never raises - a failure here must not break the restore itself."""
+    try:
+        q = db.query(DeletedContentHash)
+        if sha1:
+            q = q.filter(DeletedContentHash.sha1 == sha1)
+        elif file_name:
+            q = q.filter(DeletedContentHash.last_known_file_name == file_name)
+        else:
+            return
+        rows_to_remove = q.all()
+        removed = [r.sha1 for r in rows_to_remove]
+        if not removed:
+            return
+        for r in rows_to_remove:
+            db.delete(r)
+        db.commit()
+
+        # Keep the shared CSV (read by the Takeout uploader) in sync.
+        if os.path.exists(DELETED_SHA1_CSV):
+            with open(DELETED_SHA1_CSV, "r", newline="", encoding="utf-8") as f:
+                rows = list(csv.reader(f))
+            kept = [r for i, r in enumerate(rows) if i == 0 or not r or r[0] not in removed]
+            if len(kept) != len(rows):
+                tmp_path = DELETED_SHA1_CSV + ".tmp"
+                with open(tmp_path, "w", newline="", encoding="utf-8") as f:
+                    csv.writer(f).writerows(kept)
+                os.replace(tmp_path, DELETED_SHA1_CSV)
+    except Exception as e:
+        logger.error(f"Failed to remove tombstone (sha1={sha1}, file={file_name}): {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
 def get_db():
     db = SessionLocal()
@@ -113,6 +153,7 @@ def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
                 mi_real.is_in_sorter = True
                 
             db.commit()
+            remove_tombstone(db, None, mc.file_name)
             return {"status": "ok", "message": f"{mc.file_name} visszaállítva (adatbázis szinten)."}
         
         raise HTTPException(status_code=404, detail="Fájl nem található.")
@@ -144,6 +185,7 @@ def restore_from_trash(file_id: str, db: Session = Depends(get_db)):
             mc.category = None # Put back to unclassified
             
         db.commit()
+        remove_tombstone(db, mi.sha1 or getattr(new_version, "content_sha1", None), mi.file_name)
         return {"status": "ok", "message": f"{mi.file_name} visszaállítva a forrásba."}
     except Exception as e:
         db.rollback()
@@ -204,17 +246,30 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
 
                 try:
                     if not is_virtual:
-                        # Fetch missing B2 ID (and SHA1, if still missing) if needed
-                        if not file_id or not sha1:
-                            try:
-                                trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
-                                file_info = trash_bucket.get_file_info_by_name(file_name)
-                                if not file_id:
-                                    file_id = file_info.id_
-                                if not sha1:
-                                    sha1 = getattr(file_info, "content_sha1", None)
-                            except:
-                                pass
+                        # ALWAYS resolve the real, current B2 version by name. The
+                        # media_items.id is stale for trashed items: moving a file
+                        # into the trash bucket is a server-side copy that creates
+                        # a NEW version id, and the "delete" classification only
+                        # updates bucket_name, not id. Deleting by the stored id
+                        # fails with "File not present" and used to leave the file
+                        # physically in the trash bucket with no DB row (orphan).
+                        file_present = True
+                        try:
+                            trash_bucket = client.b2_api.get_bucket_by_name(current_bucket)
+                            file_info = trash_bucket.get_file_info_by_name(file_name)
+                            file_id = file_info.id_
+                            if not sha1:
+                                sha1 = getattr(file_info, "content_sha1", None)
+                        except FileNotPresent:
+                            # Genuinely gone from B2 - nothing left to delete.
+                            file_present = False
+                            file_id = None
+                        except Exception as lookup_err:
+                            # Transient/unknown error: we cannot tell whether the file
+                            # exists. Keep the DB rows so the item stays visible in
+                            # the trash and the empty can simply be retried.
+                            logger.error(f"Trash empty: lookup failed for {file_name}, keeping it in the trash: {lookup_err}")
+                            continue
 
                         # Record the tombstone BEFORE the physical delete, so a crash
                         # mid-way still leaves the "don't re-upload this" record.
@@ -229,20 +284,26 @@ def empty_trash(background_tasks: BackgroundTasks, db: Session = Depends(get_db)
                                 logger.error(f"Failed to record tombstone for {file_name}: {tomb_err}")
                                 tombstone_db.rollback()
 
-                        # Delete B2 file
-                        if file_id:
+                        # Delete B2 file. If this fails the file is STILL physically in
+                        # the trash bucket, so the DB rows must stay (retry possible).
+                        if file_present and file_id:
                             try:
                                 client.delete_file_version(current_bucket, file_name, file_id)
-                                # Also try to delete thumbnail - needs its own real file_id
-                                # looked up by name first, B2 rejects an empty/placeholder id.
-                                try:
-                                    thumb_bucket = client.b2_api.get_bucket_by_name(f"{current_bucket}-thumbs")
-                                    thumb_info = thumb_bucket.get_file_info_by_name(file_name)
-                                    client.delete_file_version(f"{current_bucket}-thumbs", file_name, thumb_info.id_)
-                                except Exception as thumb_err:
-                                    logger.warning(f"Thumbnail delete failed for {file_name}: {thumb_err}")
+                            except FileNotPresent:
+                                pass  # already gone, that is the desired end state
                             except Exception as b2_err:
-                                logger.warning(f"B2 Delete error for {file_name}: {b2_err}")
+                                logger.error(f"Trash empty: B2 delete FAILED for {file_name}, keeping it in the trash: {b2_err}")
+                                continue
+
+                        # Thumbnail: best effort, needs its own real file_id by name.
+                        try:
+                            thumb_bucket = client.b2_api.get_bucket_by_name(f"{current_bucket}-thumbs")
+                            thumb_info = thumb_bucket.get_file_info_by_name(file_name)
+                            client.delete_file_version(f"{current_bucket}-thumbs", file_name, thumb_info.id_)
+                        except FileNotPresent:
+                            pass
+                        except Exception as thumb_err:
+                            logger.warning(f"Thumbnail delete failed for {file_name}: {thumb_err}")
 
                     # Only now remove the DB rows for this item - after its own
                     # tombstone + physical delete attempt has actually run.
@@ -309,23 +370,51 @@ def restore_all_from_trash(background_tasks: BackgroundTasks, db: Session = Depe
                 mi_id = item["mi_id"]
                 current_bucket = item["current_bucket"]
                 
+                moved = False
                 try:
                     # Move in B2
                     new_version = client.move_file(current_bucket, target_bucket_name, file_name)
+                    moved = True
                     try:
                         client.move_file(f"{current_bucket}-thumbs", f"{target_bucket_name}-thumbs", file_name)
                     except Exception as th_err:
                         pass
-                    
+
                     # Update new ID in DB if it was an active MediaItem
+                    sha1 = getattr(new_version, "content_sha1", None)
                     if mi_id:
                         db_mi = local_db.query(MediaItem).filter(MediaItem.id == mi_id).first()
                         if db_mi:
                             db_mi.bucket_name = target_bucket_name
                             db_mi.id = new_version.id_
+                            sha1 = db_mi.sha1 or sha1
                             local_db.commit()
+
+                    # The image is alive again: it must no longer be on the
+                    # "deliberately deleted" list (Takeout uploader would skip it).
+                    remove_tombstone(local_db, sha1, file_name)
                 except Exception as b2_err:
                     logger.error(f"Failed to restore {file_name}: {b2_err}")
+                    # The DB was optimistically switched to "restored" up front. The
+                    # file is still physically in the trash, so revert that - otherwise
+                    # the DB says "live" while the bucket says "trash". Only when the
+                    # move itself failed: if it succeeded the file IS live already.
+                    if moved:
+                        local_db.rollback()
+                        continue
+                    try:
+                        local_db.rollback()
+                        mc_row = local_db.query(MediaClassification).filter(MediaClassification.file_name == file_name).first()
+                        if mc_row:
+                            mc_row.is_deleted = True
+                            mc_row.category = None
+                        mi_row = local_db.query(MediaItem).filter(MediaItem.file_name == file_name).first()
+                        if mi_row:
+                            mi_row.is_in_sorter = False
+                        local_db.commit()
+                    except Exception as revert_err:
+                        logger.error(f"Failed to revert DB state for {file_name}: {revert_err}")
+                        local_db.rollback()
         finally:
             local_db.close()
 

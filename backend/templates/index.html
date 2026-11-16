@@ -447,6 +447,9 @@
                                     <span class="count-text text-[10px] font-bold text-slate-400">
                                         {{ b2_account.sync_count }}{% if b2_account.sync_total and b2_account.sync_total > 0 %}/{{ b2_account.sync_total }}{% endif %} items
                                     </span>
+                                    <span class="text-[10px] font-bold text-slate-500" title="A fő vödör mérete (GB = 10^9 bájt), bélyegképek nélkül">
+                                        · {{ "%.2f"|format((bucket_sizes.get(b2_account.id, 0)) / 1000000000) }} GB
+                                    </span>
                                 </div>
                                 <div class="sync-progress-container w-full bg-slate-100/50 rounded-full h-1.5 mt-2.5 overflow-hidden border border-slate-200/30 {% if b2_account.sync_status != 'Syncing' %}hidden{% endif %}">
                                     <div class="sync-progress-bar bg-gradient-to-r from-indigo-500 to-purple-500 h-full transition-all duration-1000" 

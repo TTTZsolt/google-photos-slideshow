@@ -141,7 +141,7 @@ templates.env.globals.update(version=VERSION)
 
 @app.get("/")
 def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "version": VERSION})
+    return templates.TemplateResponse(request, "index.html", {"version": VERSION})
 
 # --- Incoming bucket (beerkezo) idoszakos feldolgozasa ---
 # A telefon (pl. FolderSync app, S3-kompatibilis modon) ide szinkronizal
