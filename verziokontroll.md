@@ -216,6 +216,7 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.8 | `ec2666c` | Tablet-frissítő bat: a tablet aktuális ágát frissíti (nem vált main-re), csak fast-forward, hibánál megáll; leállító bat pkill-mintája (`[p]ython`) nem lövi le a saját SSH-parancsát |
 | V16.3.8 | `4b199d7` | Connected B2 Nodes csempe: a fő vödör (kepek02) mérete GB-ban (GB = 10^9 bájt, bélyegképek nélkül) |
 | V16.3.8 | `17c1f94` | Lomtár-ürítés javítása: árva fájlok megelőzése (valódi B2-azonosító név alapján, hibánál az elem a Lomtárban marad), tombstone törlése visszaállításkor + automatikus tesztek (`tests/`) |
 | V16.3.8 | `f0f668d` | TemplateResponse új (request-első) hívásforma, az új Starlette-hez |
