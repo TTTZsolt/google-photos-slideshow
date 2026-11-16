@@ -216,6 +216,10 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 
 | Verzió  | Commit    | Magyarázat                                                                                     |
 |:------- |:--------- |:---------------------------------------------------------------------------------------------- |
+| V16.3.8 | `17c1f94` | Lomtár-ürítés javítása: árva fájlok megelőzése (valódi B2-azonosító név alapján, hibánál az elem a Lomtárban marad), tombstone törlése visszaállításkor + automatikus tesztek (`tests/`) |
+| V16.3.8 | `f0f668d` | TemplateResponse új (request-első) hívásforma, az új Starlette-hez |
+| V16.3.8 | `093cecb` | Dokumentáció: terv, specifikáció (videó- és funkciófrissítések), felhasználói útmutató, verziótörténet, teszt terv |
+| V16.3.8 | `088a36c` | A felvétel ideje (`creation_time`) a fájl útvonalából/nevéből, nem a B2 feltöltési időből + javító szkript (dry-run) |
 | V16.3.7 | `32c78ee` | Üzembiztos B2-szinkron: célzott megerősítést kér, mielőtt a listázásból hiányzó fájlokat törölné a DB-ből |
 | V16.3.7 | `7d9a6b3` | Üzembiztos thumbnail-mozgatás: retry a B2 háttérműveleteknél + önjavító thumbnail-pótlás minden szinkron után |
 | V16.3.7 | `5a9c494` | Gemini 2.5 -> 3.5 generáció-váltás (a 2.5 család megszűnt), Flash-Lite választhatóvá tétel |
