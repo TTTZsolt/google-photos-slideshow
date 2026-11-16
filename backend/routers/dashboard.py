@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request, Depends, HTTPException, BackgroundTasks
 from typing import Optional
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from ..database import SessionLocal
 from ..models import B2Account, MediaItem, FlaggedImage, CategoryDefinition, MediaClassification
 from pydantic import BaseModel
@@ -31,8 +32,18 @@ def get_db():
 @router.get("/")
 def dashboard(request: Request, db: Session = Depends(get_db)):
     b2_accounts = db.query(B2Account).all()
+    # Fiókonként a fő vödör (pl. kepek02) teljes mérete a szinkronnál eltárolt
+    # fájlméretekből; bélyegképek, Lomtár és archív vödör nélkül.
+    bucket_sizes = {}
+    for acc in b2_accounts:
+        total = (db.query(func.sum(MediaItem.size))
+                 .filter(MediaItem.b2_account_id == acc.id,
+                         func.lower(MediaItem.bucket_name) == (acc.bucket_name or "").lower())
+                 .scalar())
+        bucket_sizes[acc.id] = total or 0
     return templates.TemplateResponse(request, "index.html", {
         "b2_accounts": b2_accounts,
+        "bucket_sizes": bucket_sizes,
         "version": VERSION
     })
 
