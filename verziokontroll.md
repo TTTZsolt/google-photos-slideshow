@@ -18,7 +18,9 @@ Ez a dokumentum követi a Lumina projekt mérföldköveit és fejlesztési szaka
 - **Fix: a visszaállított kép tombstone-ja megmaradt** - a `restore` és a `restore-all` mostantól törli a kép SHA1-ét a `deleted_content_hashes` táblából és a `deleted_sha1_list.csv`-ből, különben a Takeout feltöltő a visszaállított (élő) képet örökre „törölt"-nek tekintette volna. A `restore-all` hibás B2-mozgatásnál visszaállítja az elem adatbázis-állapotát (`is_deleted=True`), így az adatbázis nem mondja „élő"-nek azt a képet, ami fizikailag még a Lomtárban van.
 - **Egyszeri adattisztítás** (2026-11-16, a Lenovo gépen): a `torles-elott` vödörben árván maradt 539 kép és bélyegképe véglegesen törölve, a SHA1-ek tombstone-ként rögzítve (`trash-empty-orphan`). Mentés: `photos_app.db.backup-before-orphan-trash-20261116`.
 - **Automatikus tesztek**: új `tests/` mappa, `tests/test_trash.py` (8 regressziós teszt memóriabeli adatbázissal és hamis B2-klienssel, valódi B2-höz nem nyúl) és `tests/run_tests.bat` (a virtuális környezetet a Google Drive-on kívül, `%USERPROFILE%\venvs\kepnezegeto-test` alatt hozza létre). A `.gitignore` kivételt kapott a `tests/test_*.py` fájlokra.
-- **Állapot**: fejlesztés alatt (`16.3.8-dev`), a javító szkript az éles (tablet) adatbázison még nem futott. A Lomtár-javítás a tableten még nincs kipróbálva.
+- **B2-méret a Connected B2 Nodes csempén**: a fő vödör (kepek02) mérete GB-ban (10^9 bájt, bélyegképek nélkül).
+- **Tablet-frissítő bat**: a tablet aktuális ágát frissíti (nem vált main-re), csak fast-forward; a leállító bat nem lövi le a saját SSH-parancsát.
+- **Állapot**: kiadva (2026-11-16), a tableten kipróbálva, beolvasztva a main-be.
 
 ## [V16.3.7] - Gemini 3.5 migráció + üzembiztos thumbnail/szinkron (2026-09-01)
 
